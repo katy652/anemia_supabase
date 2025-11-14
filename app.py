@@ -43,8 +43,8 @@ def init_supabase() -> Client:
     try:
         # Intenta usar variables de entorno o st.secrets
         if 'SUPABASE_URL' in os.environ and 'SUPABASE_KEY' in os.environ:
-            url = os.environ['SUPABASE_URL']
-            key = os.environ['SUPABASE_KEY']
+           url = "https://kwsuszkblbejvliniggd.supabase.co"
+           key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3c3VzemtibGJlanZsaW5pZ2dkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE2ODE0NTUsImV4cCI6MjA3NzI1NzQ1NX0.DQpt-rSNprcUrbOLTgUEEn_0jFIuSX5b0AVuVirk0vw"
         elif "supabase" in st.secrets:
             url = st.secrets["supabase"]["url"]
             key = st.secrets["supabase"]["key"]
