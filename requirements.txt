@@ -1,8 +1,8 @@
-streamligth
+streamlit
 supabase
-plotly
 pandas
 numpy
+plotly
 matplotlib
 scikit-learn
 joblib
