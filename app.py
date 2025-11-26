@@ -95,7 +95,21 @@ TABLE_NAME = "alertas"
 MODEL_PATH = "modelo_columns.joblib"
 
 SUPABASE_URL = "https://kwsuszkblbejvliniggd.supabase.co"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3c3VzemtibGJlanZsaW5pZ2dkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE2ODE0NTUsImV4cCI6MjA3NzI1NzQ1NX0.DQpt-rSNprcUrbOLTgUEEn_0jFIuSX5b0AVuVirk0vw"
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3c3VzemtibGJlanZsaW5pZ2dkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE2ODE0NTUsImV4cCI6MjA3NzI1NzQ1NX0.DQpt-rSNprcUrbOLTgUEEn_0jFIuSX5b0AVuVirk0vw" 
+
+try:
+    # Verificar longitud de la clave
+    print(f"Longitud de la clave: {len(SUPABASE_KEY)} caracteres")
+    
+    # Crear cliente
+    client = supabase.create_client(SUPABASE_URL, SUPABASE_KEY)
+    
+    # Test simple
+    response = client.from_("alertas").select("count", count="exact").execute()
+    print("✅ Conexión exitosa a Supabase!")
+    
+except Exception as e:
+    print(f"❌ Error: {e}")
 
 # --- CLIMA PREDOMINANTE POR ZONAS DEL PERÚ ---
 CLIMA_POR_REGION = {
