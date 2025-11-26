@@ -95,7 +95,7 @@ TABLE_NAME = "alertas"
 MODEL_PATH = "modelo_columns.joblib"
 
 SUPABASE_URL = "https://kwsuszkblbejvliniggd.supabase.co"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3c3VzemtibGJlanZsaW5pZ2dkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQ2MjU0MzMsImV4cCI6MjA1MDIwMTQzM30.DpWyb9LfXqiZBlmuSWfgIw_O2-LDm2b"
+SUPABASE_KEY = "sb_publishable_DpWyb9LfXqiZBlmuSWfgIw_O2-LDm2b"
 
 # --- CLIMA PREDOMINANTE POR ZONAS DEL PERÚ ---
 CLIMA_POR_REGION = {
