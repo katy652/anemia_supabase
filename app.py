@@ -665,4 +665,4 @@ if st.button("🔄 Actualizar Dashboard Nixon desde Supabase", key="load_histori
             display_df['fecha_alerta'] = pd.to_datetime(display_df['fecha_alerta']).dt.strftime('%d/%m/%Y %H:%M')
             st.dataframe(display_df, use_container_width=True)
     else:
-        st.info("💡 Sistema Nixon listo. Comience
+        st.info("💡 Sistema Nixon listo. Comience ingresando el primer caso.")
