@@ -78,21 +78,27 @@ def load_anemia_model(path):
 # Inicializar y cachear el cliente de Supabase (Cambiado a st.cache_data para más estabilidad)
 @st.cache_data(ttl=3600)
 def init_supabase() -> Client:
-    """Inicializa y retorna el cliente de Supabase usando st.secrets o variables de entorno."""
+    """
+    Inicializa y retorna el cliente de Supabase.
+    Busca credenciales en st.secrets y luego en variables de entorno.
+    """
     try:
         url = None
         key = None
         
+        # 1. Intentar usar st.secrets (MÉTODO SEGURO DE STREAMLIT)
         if "supabase" in st.secrets:
             url = st.secrets["supabase"].get("url")
             key = st.secrets["supabase"].get("key")
         
-        if not url and 'SUPABASE_URL' in os.environ:
+        # 2. Si no se encuentra en st.secrets, intentar usar variables de entorno
+        if not url:
             url = os.environ.get('SUPABASE_URL')
             key = os.environ.get('SUPABASE_KEY')
 
+        # 3. Si aún no se encuentran, mostrar error.
         if not url or not key:
-            st.error("Error: Las credenciales de Supabase (url y key) no se encontraron. Asegúrate de usar st.secrets o variables de entorno.")
+            st.error("Error: Las credenciales de Supabase (url y key) no se encontraron. Asegúrate de usar el archivo '.streamlit/secrets.toml' o variables de entorno.")
             return None
             
         return create_client(url, key)
@@ -283,7 +289,7 @@ with col_form:
         # 1. Realizar la Predicción
         prediction_result = make_prediction(hb_modelo, mch_modelo, mchc_modelo, mcv_modelo, sex_paciente, edad_paciente, model)
         
-        if "error" in prediction_result:
+        if "error" in prediction_result.lower():
             st.error("No se pudo obtener la predicción. Revise la consola para detalles.")
         else:
             # 2. Mapear la predicción al campo 'riesgo' y establecer 'sugerencia' para Supabase
