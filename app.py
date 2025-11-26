@@ -7,11 +7,12 @@ import joblib
 import numpy as np
 import os
 import time
+from datetime import datetime
 
 # --- CONFIGURACIÓN E INICIALIZACIÓN ---
 
 st.set_page_config(
-    page_title="Sistema de Predicción de Anemia",
+    page_title="Sistema de Control Oportuno de Anemia",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -20,32 +21,54 @@ st.markdown("""
 <style>
     .stApp {
         background-color: #f0f2f6;
+        font-family: 'Arial', sans-serif;
     }
-    .st-emotion-cache-1jri6hr, .st-emotion-cache-lgl293 {
+    .main-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 2rem;
         border-radius: 10px;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        padding: 20px;
-        background-color: white;
+        color: white;
+        margin-bottom: 2rem;
     }
-    h1, h2, h3 {
-        color: #2c3e50;
+    .risk-high {
+        background-color: #ffebee;
+        border-left: 5px solid #f44336;
+        padding: 1rem;
+        border-radius: 5px;
+        margin: 1rem 0;
     }
-    @media (max-width: 600px) {
-        .st-emotion-cache-1jri6hr, .st-emotion-cache-lgl293 {
-            padding: 10px;
-        }
+    .risk-moderate {
+        background-color: #fff3e0;
+        border-left: 5px solid #ff9800;
+        padding: 1rem;
+        border-radius: 5px;
+        margin: 1rem 0;
+    }
+    .risk-low {
+        background-color: #e8f5e8;
+        border-left: 5px solid #4caf50;
+        padding: 1rem;
+        border-radius: 5px;
+        margin: 1rem 0;
+    }
+    .factor-card {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 10px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 1rem;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# --- CONFIGURACIÓN ---
+# --- CONFIGURACIÓN SUPABASE ---
 TABLE_NAME = "alertas"
 MODEL_PATH = "modelo_columns.joblib"
 
-# INTENTA CON ESTA CLAVE - SINO USA MODO DEMO
 SUPABASE_URL = "https://kwsuszkblbejvliniggd.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3c3VzemtibGJlanZsaW5pZ2dkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQ2MjU0MzMsImV4cCI6MjA1MDIwMTQzM30.DpWyb9LfXqiZBlmuSWfgIw_O2-LDm2b"
 
+# --- LISTAS DE OPCIONES ---
 PERU_REGIONS = [
     "NO ESPECIFICADO", "AMAZONAS", "ÁNCASH", "APURÍMAC", "AREQUIPA", "AYACUCHO", 
     "CAJAMARCA", "CALLAO", "CUSCO", "HUANCAVELICA", "HUÁNUCO", "ICA", "JUNÍN", 
@@ -53,236 +76,322 @@ PERU_REGIONS = [
     "PASCO", "PIURA", "PUNO", "SAN MARTÍN", "TACNA", "TUMBES", "UCAYALI"
 ]
 
-# --- MODO DEMO (DATOS LOCALES) ---
-demo_data = []
+FACTORES_CLINICOS = [
+    "Historial familiar de anemia",
+    "Embarazo múltiple",
+    "Intervalos intergenésicos cortos",
+    "Enfermedades crónicas",
+    "Medicamentos que afectan absorción",
+    "Problemas gastrointestinales"
+]
 
-# Cargar modelo
-@st.cache_resource
-def load_anemia_model(path):
-    if not os.path.exists(path):
-        st.error(f"❌ Archivo '{path}' no encontrado")
-        return None
-    try:
-        loaded_data = joblib.load(path)
-        
-        # Buscar modelo dentro del archivo
-        if hasattr(loaded_data, 'predict'):
-            st.success("✅ Modelo ML cargado correctamente")
-            return loaded_data
-        elif isinstance(loaded_data, (list, tuple, dict)):
-            # Buscar cualquier objeto con método predict
-            def find_model(obj):
-                if hasattr(obj, 'predict'):
-                    return obj
-                elif isinstance(obj, (list, tuple)):
-                    for item in obj:
-                        result = find_model(item)
-                        if result:
-                            return result
-                elif isinstance(obj, dict):
-                    for value in obj.values():
-                        result = find_model(value)
-                        if result:
-                            return result
-                return None
-            
-            model = find_model(loaded_data)
-            if model:
-                st.success("✅ Modelo encontrado dentro del archivo")
-                return model
-        
-        st.error("❌ No se encontró un modelo válido en el archivo")
-        return None
-        
-    except Exception as e:
-        st.error(f"❌ Error cargando modelo: {e}")
-        return None
+FACTORES_SOCIOECONOMICOS = [
+    "Bajo nivel educativo",
+    "Ingresos familiares reducidos",
+    "Hacinamiento en vivienda",
+    "Acceso limitado a servicios básicos",
+    "Zona rural o alejada",
+    "Trabajo informal o precario"
+]
 
-# Cliente Supabase simplificado
+ACCESO_SERVICIOS = [
+    "Control prenatal irregular",
+    "Limitado acceso a suplementos",
+    "Barreras geográficas a centros de salud",
+    "Falta de información nutricional",
+    "Cobertura insuficiente de seguros",
+    "Horarios inadecuados de atención"
+]
+
+# --- INICIALIZACIÓN ---
 @st.cache_resource
 def init_supabase():
     try:
-        client = create_client(SUPABASE_URL, SUPABASE_KEY)
-        # Test simple
-        client.from_(TABLE_NAME).select("count", count="exact").limit(1).execute()
-        st.success("✅ Supabase: Conectado")
-        return client
-    except Exception as e:
-        st.warning(f"🔶 Supabase: Usando modo demo ({e})")
+        return create_client(SUPABASE_URL, SUPABASE_KEY)
+    except:
         return None
 
-# Cargar componentes
-model = load_anemia_model(MODEL_PATH)
-supabase = init_supabase()
-
-# --- FUNCIONES CON MODO DEMO ---
-def insert_data_to_supabase(data):
-    if supabase:
-        try:
-            data['fecha_alerta'] = pd.Timestamp.now().isoformat()
-            response = supabase.table(TABLE_NAME).insert(data).execute()
-            if response.data:
-                get_data_from_supabase.clear()
-                return response.data[0]
-        except Exception as e:
-            st.error(f"❌ Error insertando en Supabase: {e}")
-    
-    # MODO DEMO: Guardar localmente
-    data['id'] = len(demo_data) + 1
-    data['fecha_alerta'] = pd.Timestamp.now().isoformat()
-    demo_data.append(data)
-    st.info("🔶 Modo demo: Datos guardados localmente")
-    return data
-
-@st.cache_data(ttl=600)
-def get_data_from_supabase():
-    if supabase:
-        try:
-            response = supabase.table(TABLE_NAME).select("*").order("fecha_alerta", desc=True).limit(5000).execute()
-            return pd.DataFrame(response.data) if response.data else pd.DataFrame()
-        except Exception:
-            return pd.DataFrame()
-    
-    # MODO DEMO: Devolver datos locales
-    return pd.DataFrame(demo_data)
-
-# --- FUNCIONES PRINCIPALES (MANTENIDAS) ---
-def make_prediction(Hb, MCH, MCHC, MCV, sex, age, model):
-    if not model:
-        # Predicción simple basada en hemoglobina si no hay modelo
-        if Hb < 12:
-            return "anemia"
-        else:
-            return "normal"
-    
+@st.cache_resource
+def load_model():
     try:
-        sex_code = sex[0].upper()
-        sex_F = 1 if sex_code == "F" else 0
-        sex_M = 1 if sex_code == "M" else 0
-        X = np.array([[Hb, MCH, MCHC, MCV, age, sex_F, sex_M]])
-        return str(model.predict(X)[0]).lower()
-    except Exception as e:
-        st.error(f"❌ Error en predicción: {e}")
-        return "normal"  # Valor por defecto
+        if os.path.exists(MODEL_PATH):
+            return joblib.load(MODEL_PATH)
+    except:
+        pass
+    return None
 
-def plot_histogram(df, column, title):
-    if df.empty or 'riesgo' not in df.columns:
-        return go.Figure()
+supabase = init_supabase()
+model = load_model()
+
+# --- FUNCIONES PRINCIPALES ---
+def calcular_riesgo_anemia(hb, factores_clinicos, factores_sociales, acceso_servicios):
+    """Calcula el nivel de riesgo basado en múltiples factores"""
+    puntaje = 0
     
-    color_map = {
-        "RIESGO INDEFINIDO (¡A DESHABILITAD...)": "red", 
-        "REGISTRADO": "green"
-    }
+    # Base por hemoglobina
+    if hb < 9.0:
+        puntaje += 30
+    elif hb < 11.0:
+        puntaje += 20
+    elif hb < 12.0:
+        puntaje += 10
     
-    fig = px.histogram(
-        df, x=column, color='riesgo', marginal="box",
-        nbins=20, title=f'Histograma de {title}',
-        template="plotly_white", color_discrete_map=color_map
-    )
-    fig.update_layout(bargap=0.1)
-    return fig
+    # Factores clínicos
+    puntaje += len(factores_clinicos) * 5
+    
+    # Factores socioeconómicos
+    puntaje += len(factores_sociales) * 4
+    
+    # Acceso a servicios
+    puntaje += len(acceso_servicios) * 3
+    
+    # Determinar nivel de riesgo
+    if puntaje >= 30:
+        return "ALTO RIESGO (Alerta Clínica - ALTA)", puntaje
+    elif puntaje >= 20:
+        return "ALTO RIESGO (Alerta Clínica - MODERADA)", puntaje
+    elif puntaje >= 10:
+        return "RIESGO MODERADO", puntaje
+    else:
+        return "BAJO RIESGO", puntaje
+
+def generar_recomendaciones(riesgo, factores_clinicos, factores_sociales, acceso_servicios):
+    """Genera recomendaciones personalizadas basadas en el perfil de riesgo"""
+    recomendaciones = []
+    
+    if "ALTO" in riesgo:
+        recomendaciones.append("🔴 **Consulta médica inmediata** dentro de las próximas 48 horas")
+        recomendaciones.append("💊 **Suplementación urgente** con hierro y ácido fólico")
+        recomendaciones.append("🩺 **Evaluación completa** de parámetros hematológicos")
+    else:
+        recomendaciones.append("🟡 **Control médico programado** en los próximos 7 días")
+        recomendaciones.append("🥩 **Refuerzo nutricional** con alimentos ricos en hierro")
+    
+    # Recomendaciones específicas por factores
+    if factores_clinicos:
+        recomendaciones.append("📋 **Manejo de condiciones clínicas** identificadas")
+    
+    if factores_sociales:
+        recomendaciones.append("🏠 **Atención a factores socioeconómicos** con trabajo social")
+    
+    if acceso_servicios:
+        recomendaciones.append("🏥 **Facilitar acceso** a servicios de salud")
+    
+    recomendaciones.append("📊 **Seguimiento continuo** cada 15 días")
+    
+    return recomendaciones
 
 # --- INTERFAZ PRINCIPAL ---
-st.title("🩸 Sistema de Detección de Anemia")
-st.markdown("---")
+st.markdown('<div class="main-header">', unsafe_allow_html=True)
+st.title("🩸 Sistema de Control Oportuno de Anemia")
+st.markdown("**Análisis Integral de Factores de Riesgo y Seguimiento**")
+st.markdown('</div>', unsafe_allow_html=True)
 
 # Estado del sistema
-st.subheader("Estado del Sistema")
 col1, col2, col3 = st.columns(3)
 with col1:
-    st.write("**Modelo ML:**", "✅ Cargado" if model else "❌ Error")
+    st.metric("Estado Sistema", "🟢 OPERATIVO" if supabase else "🟡 MODO LOCAL")
 with col2:
-    st.write("**Base de datos:**", "✅ Supabase" if supabase else "🔶 Modo Demo")
+    st.metric("Modelo ML", "✅ CARGADO" if model else "⚠️ BÁSICO")
 with col3:
-    st.write("**Registros:**", f"📊 {len(get_data_from_supabase())}")
+    st.metric("Última Actualización", datetime.now().strftime("%d/%m/%Y %H:%M"))
 
-# Columnas principales
-col_form, col_data = st.columns([1, 1])
-
-# FORMULARIO
-with col_form:
-    st.header("1. Ingreso de Datos")
-    with st.form("prediction_form"):
-        st.subheader("Datos del Paciente")
-        nombre = st.text_input("Nombre y Apellido")
-        edad = st.number_input("Edad (años)", 1, 120, 35)
+# --- FORMULARIO PRINCIPAL ---
+with st.form("formulario_anemia"):
+    st.header("1. Factores Clínicos y Demográficos Clave")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        codigo_paciente = st.text_input("Código de Paciente", value="0")
+        fecha_consulta = st.date_input("Fecha de Consulta", datetime.now())
+        nombre_completo = st.text_input("Nombre Completo")
+        edad = st.number_input("Edad (años)", 1, 100, 25)
         sexo = st.selectbox("Sexo", ["Femenino", "Masculino"])
         region = st.selectbox("Región", PERU_REGIONS)
-        
-        st.subheader("Valores Hematológicos")
-        hb = st.number_input("Hemoglobina (g/dL)", 0.0, 25.0, 12.5, 0.1)
+    
+    with col2:
+        hemoglobina = st.number_input("Hemoglobina (g/dL)", 5.0, 20.0, 9.7, 0.1)
         mch = st.number_input("MCH (pg)", 15.0, 40.0, 28.0, 0.1)
         mchc = st.number_input("MCHC (g/dL)", 25.0, 40.0, 33.0, 0.1)
         mcv = st.number_input("MCV (fL)", 60.0, 120.0, 90.0, 0.1)
-        
-        if st.form_submit_button("🎯 Obtener Predicción y Guardar"):
-            if nombre:
-                prediction = make_prediction(hb, mch, mchc, mcv, sexo, edad, model)
-                
-                riesgo = "RIESGO INDEFINIDO (¡A DESHABILITAD...)" if prediction == "anemia" else "REGISTRADO"
-                sugerencia = "¡Alerta! Posible anemia - Consultar médico" if prediction == "anemia" else "Resultados normales"
-                
-                new_record = {
-                    "nombre_apellido": nombre,
-                    "edad": edad, "hemoglobina": hb, "riesgo": riesgo,
-                    "sugerencia": sugerencia, "region": region,
-                    "Hb": hb, "MCH": mch, "MCHC": mchc, "MCV": mcv,
-                    "sex": sexo[0].upper(), "prediction": prediction
-                }
-                
-                if insert_data_to_supabase(new_record):
-                    st.success("✅ Datos guardados exitosamente")
-                    st.metric("Resultado", "ANEMIA 🛑" if prediction == "anemia" else "NORMAL ✅")
-                    st.info(sugerencia)
-            else:
-                st.error("❌ Ingresa el nombre del paciente")
+    
+    st.markdown("---")
+    st.header("2. Factores Socioeconómicos y Contextuales")
+    
+    col3, col4 = st.columns(2)
+    
+    with col3:
+        st.subheader("Factores Clínicos Adicionales")
+        factores_clinicos = st.multiselect(
+            "Seleccione factores presentes:",
+            FACTORES_CLINICOS
+        )
+    
+    with col4:
+        st.subheader("Factores Socioeconómicos")
+        factores_sociales = st.multiselect(
+            "Seleccione factores presentes:",
+            FACTORES_SOCIOECONOMICOS
+        )
+    
+    st.markdown("---")
+    st.header("3. Acceso a Programas y Servicios")
+    
+    acceso_servicios = st.multiselect(
+        "Barreras de acceso identificadas:",
+        ACCESO_SERVICIOS
+    )
+    
+    # Botón de envío
+    submitted = st.form_submit_button("🎯 ANALIZAR RIESGO Y GENERAR REPORTE", type="primary")
 
-# VISUALIZACIÓN
-with col_data:
-    st.header("2. Registros Históricos")
+# --- PROCESAMIENTO Y RESULTADOS ---
+if submitted:
+    # Calcular riesgo
+    nivel_riesgo, puntaje = calcular_riesgo_anemia(
+        hemoglobina, factores_clinicos, factores_sociales, acceso_servicios
+    )
     
-    if st.button("🔄 Actualizar Datos"):
-        get_data_from_supabase.clear()
-        st.rerun()
+    # Generar recomendaciones
+    recomendaciones = generar_recomendaciones(
+        nivel_riesgo, factores_clinicos, factores_sociales, acceso_servicios
+    )
     
-    df = get_data_from_supabase()
+    # Mostrar resultados
+    st.markdown("---")
+    st.header("📊 Análisis y Reporte de Control Oportuno")
     
-    if not df.empty:
-        st.metric("Total de registros", len(df))
-        
-        tab1, tab2 = st.tabs(["📋 Datos", "📊 Gráficos"])
-        
-        with tab1:
-            st.dataframe(df[['nombre_apellido', 'edad', 'hemoglobina', 'riesgo', 'region']], use_container_width=True)
-            
-            if 'riesgo' in df.columns:
-                fig_pie = px.pie(
-                    df, names='riesgo', title='Distribución de Resultados'
-                )
-                st.plotly_chart(fig_pie, use_container_width=True)
-        
-        with tab2:
-            if 'hemoglobina' in df.columns:
-                fig_hist = plot_histogram(df, 'hemoglobina', 'Hemoglobina')
-                st.plotly_chart(fig_hist, use_container_width=True)
+    # Tarjeta de riesgo
+    if "ALTO" in nivel_riesgo:
+        st.markdown(f'<div class="risk-high">', unsafe_allow_html=True)
+    elif "MODERADO" in nivel_riesgo:
+        st.markdown(f'<div class="risk-moderate">', unsafe_allow_html=True)
     else:
-        st.info("💡 No hay registros. Usa el formulario para agregar el primero.")
+        st.markdown(f'<div class="risk-low">', unsafe_allow_html=True)
+    
+    st.markdown(f"### **RIESGO: {nivel_riesgo}**")
+    st.markdown(f"**Puntaje de riesgo:** {puntaje}/50 puntos")
+    st.markdown('</div>', unsafe_allow_html=True)
+    
+    # Métricas clave
+    col_met1, col_met2, col_met3 = st.columns(3)
+    
+    with col_met1:
+        deficit_hb = max(0, 12 - hemoglobina)
+        st.metric(
+            "Déficit de Hemoglobina", 
+            f"{deficit_hb:.1f} g/dL",
+            delta=f"-{deficit_hb:.1f} g/dL del objetivo"
+        )
+    
+    with col_met2:
+        porcentaje_objetivo = (hemoglobina / 12) * 100
+        st.metric(
+            "Porcentaje del Objetivo",
+            f"{porcentaje_objetivo:.1f}%",
+            delta=f"{porcentaje_objetivo - 100:.1f}%"
+        )
+    
+    with col_met3:
+        st.metric(
+            "Factores de Riesgo Identificados",
+            f"{len(factores_clinicos) + len(factores_sociales) + len(acceso_servicios)}",
+            "factores críticos"
+        )
+    
+    # Recomendaciones personalizadas
+    st.markdown("---")
+    st.header("🎯 Estrategia Personalizada de Intervención Oportuna")
+    
+    for i, recomendacion in enumerate(recomendaciones, 1):
+        st.markdown(f"""
+        <div class="factor-card">
+            <h4>🔷 {recomendacion}</h4>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    # Guardar en Supabase si está disponible
+    if supabase and nombre_completo:
+        try:
+            record = {
+                "codigo_paciente": codigo_paciente,
+                "nombre_apellido": nombre_completo,
+                "edad": edad,
+                "sexo": sexo[0].upper(),
+                "region": region,
+                "hemoglobina": hemoglobina,
+                "Hb": hemoglobina,
+                "MCH": mch,
+                "MCHC": mchc,
+                "MCV": mcv,
+                "factores_clinicos": str(factores_clinicos),
+                "factores_sociales": str(factores_sociales),
+                "acceso_servicios": str(acceso_servicios),
+                "nivel_riesgo": nivel_riesgo,
+                "puntaje_riesgo": puntaje,
+                "recomendaciones": str(recomendaciones),
+                "fecha_alerta": datetime.now().isoformat()
+            }
+            
+            supabase.table(TABLE_NAME).insert(record).execute()
+            st.success("✅ Datos guardados en el sistema")
+            
+        except Exception as e:
+            st.warning("⚠️ Datos guardados localmente (error de conexión)")
 
-# --- INSTRUCCIONES PARA OBTENER API KEY ---
-with st.expander("🔧 Configuración de Supabase"):
+# --- SECCIÓN DE HISTÓRICO ---
+st.markdown("---")
+st.header("📈 Histórico de Casos y Análisis")
+
+if st.button("🔄 Cargar Datos Históricos"):
+    try:
+        if supabase:
+            response = supabase.table(TABLE_NAME).select("*").order("fecha_alerta", desc=True).limit(100).execute()
+            historico_df = pd.DataFrame(response.data) if response.data else pd.DataFrame()
+        else:
+            historico_df = pd.DataFrame()
+        
+        if not historico_df.empty:
+            st.subheader("Resumen de Riesgos")
+            
+            # Gráfico de distribución de riesgos
+            if 'nivel_riesgo' in historico_df.columns:
+                fig_riesgos = px.pie(
+                    historico_df, 
+                    names='nivel_riesgo',
+                    title='Distribución de Niveles de Riesgo',
+                    color_discrete_sequence=px.colors.qualitative.Set3
+                )
+                st.plotly_chart(fig_riesgos, use_container_width=True)
+            
+            # Tabla de casos recientes
+            st.subheader("Casos Recientes")
+            columnas_display = ['nombre_apellido', 'edad', 'hemoglobina', 'nivel_riesgo', 'region', 'fecha_alerta']
+            columnas_disponibles = [col for col in columnas_display if col in historico_df.columns]
+            
+            if columnas_disponibles:
+                st.dataframe(
+                    historico_df[columnas_disponibles].head(10),
+                    use_container_width=True
+                )
+        else:
+            st.info("No hay datos históricos disponibles. Comienza ingresando casos nuevos.")
+            
+    except Exception as e:
+        st.error(f"Error cargando datos históricos: {e}")
+
+# --- INFORMACIÓN ADICIONAL ---
+with st.expander("ℹ️ Guía de Interpretación"):
     st.markdown("""
-    **Para conectar con Supabase:**
+    **Escala de Riesgo:**
+    - **ALTO RIESGO (Alerta Clínica - ALTA)**: 30-50 puntos - Intervención inmediata requerida
+    - **ALTO RIESGO (Alerta Clínica - MODERADA)**: 20-29 puntos - Acción prioritaria necesaria
+    - **RIESGO MODERADO**: 10-19 puntos - Seguimiento estrecho recomendado
+    - **BAJO RIESGO**: 0-9 puntos - Mantener vigilancia rutinaria
     
-    1. Ve a [tu proyecto en Supabase](https://supabase.com/dashboard)
-    2. Haz clic en **Settings (Configuración)**
-    3. Ve a **API** en el menú lateral
-    4. Copia la **URL** y la **API Key** (clave anónima public)
-    5. Reemplázalas en el código:
-    
-    ```python
-    SUPABASE_URL = "tu_url_de_supabase"
-    SUPABASE_KEY = "tu_clave_anonima_public"
-    ```
-    
-    **La API Key debe comenzar con:** `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`
+    **Parámetros de Referencia:**
+    - Hemoglobina objetivo: 12-16 g/dL (mujeres), 13-17 g/dL (hombres)
+    - Cada factor identificado suma puntos al puntaje de riesgo
+    - La intervención se personaliza según factores específicos
     """)
