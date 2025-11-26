@@ -6,6 +6,7 @@ import plotly.graph_objects as go
 import joblib
 import numpy as np
 import os
+import time # Importar time para el backoff
 
 # --- CONFIGURACIÓN E INICIALIZACIÓN ---
 
@@ -24,7 +25,7 @@ st.markdown("""
         background-color: #f0f2f6;
     }
     /* Estilo de los contenedores (columnas) para añadir sombra y bordes redondeados */
-    .st-emotion-cache-1jri6hr { /* Esta clase es específica de Streamlit, puede cambiar */
+    .st-emotion-cache-1jri6hr, .st-emotion-cache-lgl293 { /* Ajuste las clases de cache para Streamlit */
         border-radius: 10px;
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         padding: 20px;
@@ -36,7 +37,7 @@ st.markdown("""
     }
     /* Mejorar la apariencia en móvil (menos margen interno en contenedores) */
     @media (max-width: 600px) {
-        .st-emotion-cache-1jri6hr {
+        .st-emotion-cache-1jri6hr, .st-emotion-cache-lgl293 {
             padding: 10px;
         }
     }
@@ -57,8 +58,9 @@ PERU_REGIONS = [
 ]
 
 
-# Inicializar y cachear el modelo de ML (Cambiado a st.cache_data para más estabilidad)
-@st.cache_data
+# Inicializar y cachear el modelo de ML
+# CAMBIO CRÍTICO: Usamos @st.cache_resource para objetos NO SERIALIZABLES (modelos joblib)
+@st.cache_resource
 def load_anemia_model(path):
     """Carga el modelo de Machine Learning usando joblib."""
     if not os.path.exists(path):
@@ -75,50 +77,60 @@ def load_anemia_model(path):
         st.error(f"❌ Error al cargar el modelo joblib: {e}")
         return None
 
-# Inicializar y cachear el cliente de Supabase (Cambiado a st.cache_data para más estabilidad)
-@st.cache_data(ttl=3600)
+# Inicializar y cachear el cliente de Supabase
+# CAMBIO CRÍTICO: Usamos @st.cache_resource para objetos NO SERIALIZABLES (cliente Supabase)
+@st.cache_resource(ttl=3600)
 def init_supabase() -> Client:
     """
     Inicializa y retorna el cliente de Supabase.
     Busca credenciales en st.secrets y luego en variables de entorno.
     """
-    try:
-        url = None
-        key = None
-        
-        # 1. Intentar usar st.secrets (MÉTODO SEGURO DE STREAMLIT)
-        if "supabase" in st.secrets:
-            url = st.secrets["supabase"].get("url")
-            key = st.secrets["supabase"].get("key")
-        
-        # 2. Si no se encuentra en st.secrets, intentar usar variables de entorno
-        if not url:
-            url = os.environ.get('SUPABASE_URL')
-            key = os.environ.get('SUPABASE_KEY')
-
-        # 3. Si aún no se encuentran, mostrar error.
-        if not url or not key:
-            st.error("Error: Las credenciales de Supabase (url y key) no se encontraron. Asegúrate de usar el archivo '.streamlit/secrets.toml' o variables de entorno.")
-            return None
+    MAX_RETRIES = 3
+    for attempt in range(MAX_RETRIES):
+        try:
+            url = None
+            key = None
             
-        return create_client(url, key)
-    except Exception as e:
-        st.error(f"Error al inicializar Supabase: {e}")
-        return None
+            # 1. Intentar usar st.secrets (MÉTODO SEGURO DE STREAMLIT)
+            if "supabase" in st.secrets:
+                url = st.secrets["supabase"].get("url")
+                key = st.secrets["supabase"].get("key")
+            
+            # 2. Si no se encuentra en st.secrets, intentar usar variables de entorno
+            if not url:
+                url = os.environ.get('SUPABASE_URL')
+                key = os.environ.get('SUPABASE_KEY')
+
+            # 3. Si aún no se encuentran, mostrar error.
+            if not url or not key:
+                st.error("Error: Las credenciales de Supabase (url y key) no se encontraron. Asegúrate de usar el archivo '.streamlit/secrets.toml' o variables de entorno.")
+                return None
+                
+            return create_client(url, key)
+        except Exception as e:
+            if attempt < MAX_RETRIES - 1:
+                st.warning(f"Error de inicialización de Supabase (Intento {attempt + 1}/{MAX_RETRIES}): {e}. Reintentando en {2 ** attempt} segundos...")
+                time.sleep(2 ** attempt) # Espera exponencial
+            else:
+                st.error(f"Error fatal al inicializar Supabase después de {MAX_RETRIES} intentos: {e}")
+                return None
+    return None
 
 # Carga el modelo y el cliente de Supabase
 model = load_anemia_model(MODEL_PATH)
 supabase = init_supabase()
 
 
-# --- FUNCIONES DE INTERACCIÓN CON SUPABASE (Sin cambios importantes) ---
+# --- FUNCIONES DE INTERACCIÓN CON SUPABASE ---
 
 def insert_data_to_supabase(data_to_insert: dict):
     """Inserta una nueva fila de datos en la tabla de Supabase."""
     if supabase is None:
+        st.error("❌ Fallo en la inserción: Cliente Supabase no inicializado.")
         return False
     
     try:
+        # Intenta la inserción
         response = supabase.table(TABLE_NAME).insert(data_to_insert).execute()
         
         if response.data:
@@ -129,10 +141,11 @@ def insert_data_to_supabase(data_to_insert: dict):
             return False
             
     except Exception as e:
-        st.error(f"❌ Error al insertar datos. Verifique los nombres y tipos de columna en la tabla '{TABLE_NAME}': {e}")
+        st.error(f"❌ Error al insertar datos. Verifique los nombres de columna y las reglas de RLS: {e}")
         get_data_from_supabase.clear() 
         return False
 
+# Mantenemos @st.cache_data aquí porque se guarda un objeto serializable (DataFrame)
 @st.cache_data(ttl=600)
 def get_data_from_supabase():
     """Obtiene y procesa todos los datos de la tabla para visualización."""
@@ -140,6 +153,7 @@ def get_data_from_supabase():
         return pd.DataFrame()
         
     try:
+        # Solicitud de datos
         response = supabase.table(TABLE_NAME).select("*").order("fecha_alerta", desc=True).limit(5000).execute()
         data = response.data
         if not data:
@@ -164,7 +178,7 @@ def get_data_from_supabase():
         return df
         
     except Exception as e:
-        st.error(f"Error al cargar datos existentes desde Supabase. Error: {e}")
+        st.error(f"Error al cargar datos existentes desde Supabase. Verifique las reglas de RLS: {e}")
         return pd.DataFrame()
 
 
@@ -196,23 +210,27 @@ def make_prediction(Hb, MCH, MCHC, MCV, sex, age, model):
         prediction_result = str(model.predict(X)[0]).lower() 
         return prediction_result
     except Exception as e:
-        # Este error es el que corregimos: 'list object has no attribute predict'
-        st.error(f"❌ Error al ejecutar la predicción: {e}. El modelo esperaba 7 columnas.")
+        # El error 'list object has no attribute predict' indica un fallo en la carga del modelo
+        st.error(f"❌ Error al ejecutar la predicción: {e}. Confirme la estructura de entrada (7 columnas) y que el modelo cargó correctamente.")
         return "ERROR_PREDICCION"
 
 
-# --- FUNCIONES DE VISUALIZACIÓN (Sin cambios importantes) ---
+# --- FUNCIONES DE VISUALIZACIÓN ---
 
 def plot_histogram(df, column, title):
     """Genera un histograma para una columna numérica, coloreado por columna de riesgo/predicción."""
+    # Mapeo de colores para los resultados de riesgo/predicción
     color_map = {
         "RIESGO INDEFINIDO (¡A DESHABILITAD...)": "red", 
         "REGISTRADO": "green", 
         "ANEMIA": "red", 
-        "NORMAL": "green"
+        "NORMAL": "green",
+        "DESCONOCIDO": "orange"
     }
     color_col = 'riesgo' 
-    if color_col not in df.columns: return go.Figure()
+    if color_col not in df.columns: 
+        st.warning(f"Columna '{color_col}' no encontrada en los datos para colorear.")
+        return go.Figure()
 
     fig = px.histogram(
         df, 
@@ -233,10 +251,13 @@ def plot_boxplot(df, column, title):
         "RIESGO INDEFINIDO (¡A DESHABILITAD...)": "red", 
         "REGISTRADO": "green", 
         "ANEMIA": "red", 
-        "NORMAL": "green"
+        "NORMAL": "green",
+        "DESCONOCIDO": "orange"
     }
     color_col = 'riesgo' 
-    if color_col not in df.columns: return go.Figure()
+    if color_col not in df.columns: 
+        st.warning(f"Columna '{color_col}' no encontrada en los datos para colorear.")
+        return go.Figure()
 
     fig = px.box(
         df, 
@@ -253,6 +274,22 @@ def plot_boxplot(df, column, title):
 
 st.title("🩸 Sistema de Detección y Predicción de Anemia")
 st.markdown("---")
+
+# Muestra el estado de las dependencias
+dependency_status = []
+if model:
+    dependency_status.append(("Modelo ML", "✅ Cargado"))
+else:
+    dependency_status.append(("Modelo ML", "❌ Error"))
+
+if supabase:
+    dependency_status.append(("Supabase", "✅ Conectado"))
+else:
+    dependency_status.append(("Supabase", "❌ Error"))
+
+st.subheader("Estado de Conexión y Modelo:")
+st.table(pd.DataFrame(dependency_status, columns=['Componente', 'Estado']))
+
 
 # Crea dos columnas principales para el formulario y el estado. En móvil se apilan.
 col_form, col_data = st.columns([1, 1])
@@ -286,56 +323,59 @@ with col_form:
 
     # Lógica al enviar el formulario
     if submit_button:
-        # 1. Realizar la Predicción
-        prediction_result = make_prediction(hb_modelo, mch_modelo, mchc_modelo, mcv_modelo, sex_paciente, edad_paciente, model)
-        
-        if "error" in prediction_result.lower():
-            st.error("No se pudo obtener la predicción. Revise la consola para detalles.")
+        if not model or not supabase:
+            st.error("❌ No se puede proceder. El modelo o la conexión a Supabase no se cargaron correctamente. Revise la consola.")
         else:
-            # 2. Mapear la predicción al campo 'riesgo' y establecer 'sugerencia' para Supabase
-            if prediction_result == "anemia":
-                # Mapeo a tu valor de riesgo existente
-                riesgo_supa = "RIESGO INDEFINIDO (¡A DESHABILITAD...)" 
-                sugerencia_supa = "¡Alerta! Resultados sugieren un posible estado de anemia. Revisión urgente de historial clínico y hábitos alimenticios. Consulta con un médico especialista."
-            elif prediction_result == "normal":
-                riesgo_supa = "REGISTRADO" 
-                sugerencia_supa = "Resultados normales. Recomendaciones Generales de seguimiento y dieta balanceada."
+            # 1. Realizar la Predicción
+            prediction_result = make_prediction(hb_modelo, mch_modelo, mchc_modelo, mcv_modelo, sex_paciente, edad_paciente, model)
+            
+            if "error" in prediction_result.lower():
+                st.error("No se pudo obtener la predicción. Revise la consola para detalles.")
             else:
-                riesgo_supa = "DESCONOCIDO" 
-                sugerencia_supa = "Resultado atípico. Revisar datos ingresados."
-                
-            # 3. Preparar los datos para Supabase
-            new_record = {
-                "nombre_apellido": nombre_paciente,
-                "edad": edad_paciente,
-                "hemoglobina": hb_modelo, 
-                "riesgo": riesgo_supa,
-                "sugerencia": sugerencia_supa,
-                "region": region_paciente,
-                "Hb": hb_modelo, "MCH": mch_modelo, "MCHC": mchc_modelo, "MCV": mcv_modelo,
-                "sex": sex_paciente[0].upper(), 
-                "prediction": prediction_result, 
-            }
-            
-            # 4. Insertar datos en Supabase
-            inserted_data = insert_data_to_supabase(new_record)
-            
-            if inserted_data:
-                # 5. Mostrar el Resultado de la Predicción al usuario
-                st.success("✅ ¡Datos guardados en Supabase con éxito! La tabla de registros se ha actualizado.")
-
-                st.markdown("### Resultado de la Predicción del Modelo:")
+                # 2. Mapear la predicción al campo 'riesgo' y establecer 'sugerencia' para Supabase
                 if prediction_result == "anemia":
-                    st.error(f"Resultado: **ANEMIA** 🛑")
-                    st.warning("Se sugiere revisión médica basada en la predicción del modelo.")
+                    # Mapeo a tu valor de riesgo existente
+                    riesgo_supa = "RIESGO INDEFINIDO (¡A DESHABILITAD...)" 
+                    sugerencia_supa = "¡Alerta! Resultados sugieren un posible estado de anemia. Revisión urgente de historial clínico y hábitos alimenticios. Consulta con un médico especialista."
                 elif prediction_result == "normal":
-                    st.success(f"Resultado: **NORMAL** ✅")
-                    st.info("El modelo predice un estado normal.")
-                else: 
-                    st.warning(f"Resultado: **{prediction_result.upper()}** 🟡")
-                    st.info("Resultado desconocido. Revisar valores.")
-            else:
-                st.error("❌ Fallo en la inserción de datos. Revise la configuración de Supabase.")
+                    riesgo_supa = "REGISTRADO" 
+                    sugerencia_supa = "Resultados normales. Recomendaciones Generales de seguimiento y dieta balanceada."
+                else:
+                    riesgo_supa = "DESCONOCIDO" 
+                    sugerencia_supa = "Resultado atípico. Revisar datos ingresados."
+                    
+                # 3. Preparar los datos para Supabase
+                new_record = {
+                    "nombre_apellido": nombre_paciente,
+                    "edad": edad_paciente,
+                    "hemoglobina": hb_modelo, 
+                    "riesgo": riesgo_supa,
+                    "sugerencia": sugerencia_supa,
+                    "region": region_paciente,
+                    "Hb": hb_modelo, "MCH": mch_modelo, "MCHC": mchc_modelo, "MCV": mcv_modelo,
+                    "sex": sex_paciente[0].upper(), 
+                    "prediction": prediction_result, 
+                }
+                
+                # 4. Insertar datos en Supabase
+                inserted_data = insert_data_to_supabase(new_record)
+                
+                if inserted_data:
+                    # 5. Mostrar el Resultado de la Predicción al usuario
+                    st.success("✅ ¡Datos guardados en Supabase con éxito! La tabla de registros se ha actualizado.")
+
+                    st.markdown("### Resultado de la Predicción del Modelo:")
+                    if prediction_result == "anemia":
+                        st.error(f"Resultado: **ANEMIA** 🛑")
+                        st.warning(sugerencia_supa)
+                    elif prediction_result == "normal":
+                        st.success(f"Resultado: **NORMAL** ✅")
+                        st.info(sugerencia_supa)
+                    else: 
+                        st.warning(f"Resultado: **{prediction_result.upper()}** 🟡")
+                        st.info(sugerencia_supa)
+                else:
+                    st.error("❌ Fallo en la inserción de datos. Revise la configuración de Supabase.")
 
 
 # --- Columna de Visualización de Datos (CARGA Y ANÁLISIS) ---
@@ -368,6 +408,7 @@ with col_data:
                 counts = df_cleaned['riesgo'].value_counts().reset_index()
                 counts.columns = ['Resultado', 'Cantidad']
                 
+                # Asegurando mapeo de colores para los dos estados principales
                 color_map_pie = {
                     'RIESGO INDEFINIDO (¡A DESHABILITAD...)': '#E91E63', 
                     'REGISTRADO': '#4CAF50'
