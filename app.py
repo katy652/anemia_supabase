@@ -74,14 +74,18 @@ st.markdown("""
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         text-align: center;
     }
-    .prediction-badge {
-        background: #e3f2fd;
-        color: #1976d2;
-        padding: 0.5rem 1rem;
-        border-radius: 20px;
-        font-weight: bold;
-        display: inline-block;
-        margin: 0.2rem;
+    .climate-card {
+        background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
+        color: white;
+        padding: 1rem;
+        border-radius: 10px;
+        margin: 0.5rem 0;
+    }
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin: 1rem 0;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -92,6 +96,23 @@ MODEL_PATH = "modelo_columns.joblib"
 
 SUPABASE_URL = "https://kwsuszkblbejvliniggd.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3c3VzemtibGJlanZsaW5pZ2dkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQ2MjU0MzMsImV4cCI6MjA1MDIwMTQzM30.DpWyb9LfXqiZBlmuSWfgIw_O2-LDm2b"
+
+# --- CLIMA PREDOMINANTE POR ZONAS DEL PERÚ ---
+CLIMA_POR_REGION = {
+    "LIMA": {"clima": "Desértico subtropical", "temp_promedio": "21°C", "humedad": "85%", "precipitacion": "10 mm"},
+    "AREQUIPA": {"clima": "Semiárido", "temp_promedio": "18°C", "humedad": "45%", "precipitacion": "100 mm"},
+    "CUSCO": {"clima": "Templado subhúmedo", "temp_promedio": "14°C", "humedad": "65%", "precipitacion": "700 mm"},
+    "PUNO": {"clima": "Frío de altura", "temp_promedio": "8°C", "humedad": "55%", "precipitacion": "600 mm"},
+    "ICA": {"clima": "Desértico", "temp_promedio": "22°C", "humedad": "70%", "precipitacion": "5 mm"},
+    "LORETO": {"clima": "Tropical húmedo", "temp_promedio": "27°C", "humedad": "85%", "precipitacion": "2800 mm"},
+    "SAN MARTÍN": {"clima": "Tropical húmedo", "temp_promedio": "25°C", "humedad": "80%", "precipitacion": "1200 mm"},
+    "LA LIBERTAD": {"clima": "Semiárido", "temp_promedio": "20°C", "humedad": "75%", "precipitacion": "200 mm"},
+    "ANCASH": {"clima": "Variado de costa y sierra", "temp_promedio": "16°C", "humedad": "70%", "precipitacion": "500 mm"},
+    "JUNÍN": {"clima": "Templado frío", "temp_promedio": "12°C", "humedad": "65%", "precipitacion": "800 mm"},
+    "PIURA": {"clima": "Semiárido tropical", "temp_promedio": "25°C", "humedad": "70%", "precipitacion": "100 mm"},
+    "LAMBAYEQUE": {"clima": "Semiárido", "temp_promedio": "23°C", "humedad": "75%", "precipitacion": "150 mm"},
+    "NO ESPECIFICADO": {"clima": "No especificado", "temp_promedio": "N/A", "humedad": "N/A", "precipitacion": "N/A"}
+}
 
 # --- LISTAS DE OPCIONES MEJORADAS ---
 PERU_REGIONS = [
@@ -158,13 +179,14 @@ ACCESO_SERVICIOS = [
     "Estigma social por anemia"
 ]
 
-# --- INICIALIZACIÓN ---
+# --- INICIALIZACIÓN SUPABASE ---
 @st.cache_resource
 def init_supabase():
     try:
         client = create_client(SUPABASE_URL, SUPABASE_KEY)
         # Test de conexión
-        client.table(TABLE_NAME).select("count", count="exact").limit(1).execute()
+        test_response = client.table(TABLE_NAME).select("count", count="exact").limit(1).execute()
+        st.success("✅ Conexión a Supabase establecida correctamente")
         return client
     except Exception as e:
         st.error(f"❌ Error conectando a Supabase: {e}")
@@ -175,6 +197,7 @@ def load_model():
     try:
         if os.path.exists(MODEL_PATH):
             model = joblib.load(MODEL_PATH)
+            st.success("✅ Modelo ML cargado correctamente")
             return model
     except Exception as e:
         st.error(f"❌ Error cargando modelo: {e}")
@@ -183,51 +206,70 @@ def load_model():
 supabase = init_supabase()
 model = load_model()
 
-# --- FUNCIONES PRINCIPALES MEJORADAS ---
-def calcular_predicciones_diarias():
-    """Calcula métricas de predicciones por día"""
+# --- FUNCIONES DE DATOS SUPABASE ---
+def obtener_datos_supabase():
+    """Obtiene todos los datos de Supabase"""
     try:
         if supabase:
-            # Obtener datos de los últimos 7 días
-            fecha_limite = (datetime.now() - timedelta(days=7)).isoformat()
-            response = supabase.table(TABLE_NAME).select("fecha_alerta, riesgo").gte("fecha_alerta", fecha_limite).execute()
+            response = supabase.table(TABLE_NAME).select("*").order("fecha_alerta", desc=True).execute()
+            return pd.DataFrame(response.data) if response.data else pd.DataFrame()
+    except Exception as e:
+        st.error(f"Error obteniendo datos: {e}")
+    return pd.DataFrame()
+
+def insertar_datos_supabase(datos):
+    """Inserta datos en Supabase"""
+    try:
+        if supabase:
+            response = supabase.table(TABLE_NAME).insert(datos).execute()
+            return response.data[0] if response.data else None
+    except Exception as e:
+        st.error(f"Error insertando datos: {e}")
+    return None
+
+def obtener_estadisticas_tiempo_real():
+    """Obtiene estadísticas en tiempo real desde Supabase"""
+    try:
+        if supabase:
+            # Obtener datos de los últimos 30 días
+            fecha_limite = (datetime.now() - timedelta(days=30)).isoformat()
+            response = supabase.table(TABLE_NAME).select("*").gte("fecha_alerta", fecha_limite).execute()
             
             if response.data:
                 df = pd.DataFrame(response.data)
-                df['fecha'] = pd.to_datetime(df['fecha_alerta']).dt.date
-                predicciones_por_dia = df.groupby('fecha').size()
-                return {
-                    'promedio_diario': predicciones_por_dia.mean() if not predicciones_por_dia.empty else 0,
-                    'total_semana': len(df),
-                    'tendencia': '↗️' if len(predicciones_por_dia) > 1 and predicciones_por_dia.iloc[-1] > predicciones_por_dia.iloc[-2] else '↘️'
-                }
-    except:
-        pass
-    return {'promedio_diario': 0, 'total_semana': 0, 'tendencia': '➡️'}
-
-def obtener_estadisticas_alertas():
-    """Obtiene estadísticas de monitoreo de alertas"""
-    try:
-        if supabase:
-            response = supabase.table(TABLE_NAME).select("riesgo, fecha_alerta").execute()
-            if response.data:
-                df = pd.DataFrame(response.data)
+                
+                # Estadísticas básicas
                 total_casos = len(df)
                 alto_riesgo = len(df[df['riesgo'].str.contains('ALTO', na=False)])
                 moderado_riesgo = len(df[df['riesgo'].str.contains('MODERADO', na=False)])
+                
+                # Casos por día (últimos 7 días)
+                df['fecha'] = pd.to_datetime(df['fecha_alerta']).dt.date
+                ultimos_7_dias = df[df['fecha'] >= (datetime.now().date() - timedelta(days=7))]
+                casos_por_dia = ultimos_7_dias.groupby('fecha').size()
                 
                 return {
                     'total_casos': total_casos,
                     'alto_riesgo': alto_riesgo,
                     'moderado_riesgo': moderado_riesgo,
-                    'tasa_alto_riesgo': (alto_riesgo / total_casos * 100) if total_casos > 0 else 0
+                    'tasa_alto_riesgo': (alto_riesgo / total_casos * 100) if total_casos > 0 else 0,
+                    'casos_por_dia': casos_por_dia.mean() if not casos_por_dia.empty else 0,
+                    'total_semana': len(ultimos_7_dias),
+                    'tendencia': '↗️' if len(casos_por_dia) > 1 and casos_por_dia.iloc[-1] > casos_por_dia.iloc[-2] else '↘️'
                 }
-    except:
-        pass
-    return {'total_casos': 0, 'alto_riesgo': 0, 'moderado_riesgo': 0, 'tasa_alto_riesgo': 0}
+    except Exception as e:
+        st.error(f"Error calculando estadísticas: {e}")
+    
+    return {'total_casos': 0, 'alto_riesgo': 0, 'moderado_riesgo': 0, 'tasa_alto_riesgo': 0, 
+            'casos_por_dia': 0, 'total_semana': 0, 'tendencia': '➡️'}
 
-def calcular_riesgo_anemia(hb, edad_meses, factores_clinicos, factores_sociales, acceso_servicios):
-    """Calcula el nivel de riesgo basado en múltiples factores"""
+def obtener_clima_region(region):
+    """Obtiene información climática de la región"""
+    return CLIMA_POR_REGION.get(region.upper(), CLIMA_POR_REGION["NO ESPECIFICADO"])
+
+# --- FUNCIONES PRINCIPALES MEJORADAS ---
+def calcular_riesgo_anemia(hb, edad_meses, factores_clinicos, factores_sociales, acceso_servicios, clima_region):
+    """Calcula el nivel de riesgo basado en múltiples factores incluyendo clima"""
     puntaje = 0
     
     # Base por hemoglobina según edad
@@ -253,6 +295,10 @@ def calcular_riesgo_anemia(hb, edad_meses, factores_clinicos, factores_sociales,
     # Acceso a servicios
     puntaje += len(acceso_servicios) * 2
     
+    # Factor clima (zonas tropicales húmedas tienen mayor riesgo de parasitosis)
+    if "tropical" in clima_region.lower() or "húmedo" in clima_region.lower():
+        puntaje += 5
+    
     # Determinar nivel de riesgo
     if puntaje >= 35:
         return "ALTO RIESGO (Alerta Clínica - ALTA)", puntaje, "URGENTE"
@@ -263,7 +309,7 @@ def calcular_riesgo_anemia(hb, edad_meses, factores_clinicos, factores_sociales,
     else:
         return "BAJO RIESGO", puntaje, "VIGILANCIA"
 
-def generar_sugerencias(riesgo, puntaje, factores_clinicos, factores_sociales, acceso_servicios, hemoglobina, edad_meses):
+def generar_sugerencias(riesgo, puntaje, factores_clinicos, factores_sociales, acceso_servicios, hemoglobina, edad_meses, clima):
     """Genera sugerencias personalizadas basadas en el perfil de riesgo"""
     sugerencias = []
     
@@ -295,6 +341,10 @@ def generar_sugerencias(riesgo, puntaje, factores_clinicos, factores_sociales, a
     if any("barrera" in factor.lower() or "geográf" in factor.lower() for factor in acceso_servicios):
         sugerencias.append("📍 **FACILITAR ACCESO** - Coordinar consultas móviles o transporte subsidiado")
     
+    # Sugerencias por clima
+    if "tropical" in clima.lower() or "húmedo" in clima.lower():
+        sugerencias.append("🌧️ **VIGILANCIA CLIMÁTICA** - Mayor riesgo de enfermedades parasitarias en zona tropical húmeda")
+    
     # Sugerencia nutricional específica por edad
     if edad_meses < 24:
         sugerencias.append("🍼 **LACTANCIA Y ALIMENTACIÓN** - Promover lactancia materna y alimentos fortificados")
@@ -315,12 +365,11 @@ st.title("🏥 SISTEMA NIXON - Control de Anemia")
 st.markdown("**Predicts/day reports • Monitoring de Alertas • Panel de control estadístico**")
 st.markdown('</div>', unsafe_allow_html=True)
 
-# --- DASHBOARD SUPERIOR ---
-st.header("📊 Dashboard Nixon - Métricas en Tiempo Real")
+# --- DASHBOARD SUPERIOR CON DATOS REALES ---
+st.header("📊 Dashboard Nixon - Métricas en Tiempo Real desde Supabase")
 
-# Obtener métricas
-predicciones_metrics = calcular_predicciones_diarias()
-alertas_metrics = obtener_estadisticas_alertas()
+# Obtener métricas en tiempo real
+stats = obtener_estadisticas_tiempo_real()
 
 col1, col2, col3, col4 = st.columns(4)
 
@@ -328,9 +377,9 @@ with col1:
     st.markdown('<div class="metric-card">', unsafe_allow_html=True)
     st.metric(
         "Predicts/Day Reports",
-        f"{predicciones_metrics['promedio_diario']:.1f}",
-        predicciones_metrics['tendencia'],
-        help="Promedio de predicciones por día (última semana)"
+        f"{stats['casos_por_dia']:.1f}",
+        stats['tendencia'],
+        help="Promedio de casos por día (última semana)"
     )
     st.markdown('</div>', unsafe_allow_html=True)
 
@@ -338,8 +387,8 @@ with col2:
     st.markdown('<div class="metric-card">', unsafe_allow_html=True)
     st.metric(
         "Total Predictions Week",
-        predicciones_metrics['total_semana'],
-        help="Total de predicciones en los últimos 7 días"
+        stats['total_semana'],
+        help="Total de casos en los últimos 7 días"
     )
     st.markdown('</div>', unsafe_allow_html=True)
 
@@ -347,8 +396,8 @@ with col3:
     st.markdown('<div class="metric-card">', unsafe_allow_html=True)
     st.metric(
         "Monitoring de Alertas",
-        alertas_metrics['alto_riesgo'],
-        f"{alertas_metrics['tasa_alto_riesgo']:.1f}%",
+        stats['alto_riesgo'],
+        f"{stats['tasa_alto_riesgo']:.1f}%",
         help="Casos de alto riesgo activos"
     )
     st.markdown('</div>', unsafe_allow_html=True)
@@ -357,13 +406,13 @@ with col4:
     st.markdown('<div class="metric-card">', unsafe_allow_html=True)
     st.metric(
         "Panel Control Estadístico",
-        alertas_metrics['total_casos'],
-        f"+{alertas_metrics['moderado_riesgo']} moderados",
-        help="Total de casos en el sistema"
+        stats['total_casos'],
+        f"+{stats['moderado_riesgo']} moderados",
+        help="Total de casos en el sistema (30 días)"
     )
     st.markdown('</div>', unsafe_allow_html=True)
 
-# --- FORMULARIO PRINCIPAL MEJORADO ---
+# --- FORMULARIO PRINCIPAL CON CLIMA ---
 with st.form("formulario_anemia"):
     st.header("1. Factores Clínicos y Demográficos Clave")
     
@@ -379,6 +428,18 @@ with st.form("formulario_anemia"):
                                          help="Nivel de hemoglobina en gramos por decilitro")
         estado_paciente = st.selectbox("Estado del Paciente", ESTADOS_PACIENTE, index=0)
         region = st.selectbox("Región", PERU_REGIONS, index=0)
+        
+        # Mostrar información climática de la región seleccionada
+        if region != "NO ESPECIFICADO":
+            clima_info = obtener_clima_region(region)
+            st.markdown(f"""
+            <div class="climate-card">
+                <h4>🌤️ Clima {region}</h4>
+                <p><strong>{clima_info['clima']}</strong></p>
+                <p>Temp: {clima_info['temp_promedio']} | Humedad: {clima_info['humedad']}</p>
+                <p>Precipitación: {clima_info['precipitacion']}</p>
+            </div>
+            """, unsafe_allow_html=True)
     
     with col3:
         st.subheader("Parámetros Hematológicos")
@@ -430,15 +491,19 @@ if submitted:
     if not dni or not nombre_completo:
         st.error("❌ Por favor complete el DNI y nombre del paciente")
     else:
+        # Obtener información climática
+        clima_info = obtener_clima_region(region)
+        
         # Calcular riesgo
         nivel_riesgo, puntaje, estado_recomendado = calcular_riesgo_anemia(
-            hemoglobina_g_dl, edad_meses, factores_clinicos, factores_sociales, acceso_servicios
+            hemoglobina_g_dl, edad_meses, factores_clinicos, factores_sociales, 
+            acceso_servicios, clima_info['clima']
         )
         
         # Generar sugerencias
         sugerencias = generar_sugerencias(
             nivel_riesgo, puntaje, factores_clinicos, factores_sociales, 
-            acceso_servicios, hemoglobina_g_dl, edad_meses
+            acceso_servicios, hemoglobina_g_dl, edad_meses, clima_info['clima']
         )
         
         # Mostrar resultados
@@ -480,7 +545,7 @@ if submitted:
             st.metric("Factores Riesgo", f"{total_factores}", "identificados")
         
         with col_met4:
-            st.metric("Edad", f"{edad_meses} meses", f"{(edad_meses/12):.1f} años")
+            st.metric("Clima Zona", clima_info['clima'], f"Temp: {clima_info['temp_promedio']}")
         
         # Sugerencias personalizadas
         st.markdown("---")
@@ -494,116 +559,110 @@ if submitted:
             """, unsafe_allow_html=True)
         
         # Guardar en Supabase
-        if supabase:
-            try:
-                record = {
-                    "DNI": dni,
-                    "nombre_apellido": nombre_completo,
-                    "edad_meses": int(edad_meses),
-                    "hemoglobina_g_dL": float(hemoglobina_g_dl),
-                    "riesgo": nivel_riesgo,
-                    "fecha_alerta": datetime.now().isoformat(),
-                    "estado": estado_recomendado,
-                    "sugerencias": "; ".join(sugerencias),
-                    "región": region,
-                    "MCH": float(mch),
-                    "MCHC": float(mchc),
-                    "MCV": float(mcv),
-                    "factores_clinicos": ", ".join(factores_clinicos),
-                    "factores_sociales": ", ".join(factores_sociales),
-                    "acceso_servicios": ", ".join(acceso_servicios),
-                    "puntaje_riesgo": int(puntaje)
-                }
-                
-                response = supabase.table(TABLE_NAME).insert(record).execute()
-                if response.data:
-                    st.success("✅ Datos guardados en Sistema Nixon")
-                else:
-                    st.error("❌ Error al guardar en Nixon System")
-                    
-            except Exception as e:
-                st.error(f"❌ Error guardando datos: {e}")
-
-# --- PANEL DE CONTROL ESTADÍSTICO ---
-st.markdown("---")
-st.header("📈 Panel de Control Estadístico Nixon")
-
-if st.button("🔄 Actualizar Dashboard Nixon", key="load_historical"):
-    try:
-        if supabase:
-            response = supabase.table(TABLE_NAME).select("*").order("fecha_alerta", desc=True).limit(200).execute()
-            historico_df = pd.DataFrame(response.data) if response.data else pd.DataFrame()
-        else:
-            historico_df = pd.DataFrame()
+        record = {
+            "DNI": dni,
+            "nombre_apellido": nombre_completo,
+            "edad_meses": int(edad_meses),
+            "hemoglobina_g_dL": float(hemoglobina_g_dl),
+            "riesgo": nivel_riesgo,
+            "fecha_alerta": datetime.now().isoformat(),
+            "estado": estado_recomendado,
+            "sugerencias": "; ".join(sugerencias),
+            "región": region,
+            "MCH": float(mch),
+            "MCHC": float(mchc),
+            "MCV": float(mcv),
+            "factores_clinicos": ", ".join(factores_clinicos),
+            "factores_sociales": ", ".join(factores_sociales),
+            "acceso_servicios": ", ".join(acceso_servicios),
+            "puntaje_riesgo": int(puntaje),
+            "clima_region": clima_info['clima']
+        }
         
-        if not historico_df.empty:
-            # Estadísticas Nixon
-            col_stat1, col_stat2, col_stat3, col_stat4 = st.columns(4)
-            
-            with col_stat1:
-                total_casos = len(historico_df)
-                st.metric("Total Casos Nixon", total_casos)
-            
-            with col_stat2:
-                alto_riesgo = len(historico_df[historico_df['riesgo'].str.contains('ALTO', na=False)])
-                st.metric("Alertas Activas", alto_riesgo)
-            
-            with col_stat3:
-                avg_hemoglobina = historico_df['hemoglobina_g_dL'].mean()
-                st.metric("Hb Promedio", f"{avg_hemoglobina:.1f} g/dL")
-            
-            with col_stat4:
-                region_mas_casos = historico_df['región'].mode()[0] if not historico_df['región'].mode().empty else "N/A"
-                st.metric("Región Más Afectada", region_mas_casos)
-            
-            # Gráficos Nixon
-            col_chart1, col_chart2 = st.columns(2)
-            
-            with col_chart1:
-                st.subheader("📊 Distribución de Riesgos Nixon")
-                if 'riesgo' in historico_df.columns:
-                    fig_riesgos = px.pie(
-                        historico_df, 
-                        names='riesgo',
-                        title='Distribución de Niveles de Riesgo',
-                        color_discrete_sequence=['#ff5252', '#ff9800', '#4caf50', '#2196f3']
-                    )
-                    st.plotly_chart(fig_riesgos, use_container_width=True)
-            
-            with col_chart2:
-                st.subheader("📈 Tendencia Hemoglobina por Edad")
-                if all(col in historico_df.columns for col in ['hemoglobina_g_dL', 'edad_meses']):
-                    fig_scatter = px.scatter(
-                        historico_df,
-                        x='edad_meses',
-                        y='hemoglobina_g_dL',
-                        color='riesgo',
-                        title='Relación Edad vs Hemoglobina',
-                        labels={'edad_meses': 'Edad (meses)', 'hemoglobina_g_dL': 'Hemoglobina (g/dL)'}
-                    )
-                    st.plotly_chart(fig_scatter, use_container_width=True)
-            
-            # Tabla de casos recientes
-            st.subheader("🕐 Casos Recientes - Monitoring Nixon")
-            columnas_display = ['DNI', 'nombre_apellido', 'edad_meses', 'hemoglobina_g_dL', 'riesgo', 'región', 'fecha_alerta']
-            columnas_disponibles = [col for col in columnas_display if col in historico_df.columns]
-            
-            if columnas_disponibles:
-                display_df = historico_df[columnas_disponibles].head(15)
-                display_df['fecha_alerta'] = pd.to_datetime(display_df['fecha_alerta']).dt.strftime('%d/%m/%Y %H:%M')
-                st.dataframe(display_df, use_container_width=True)
+        resultado = insertar_datos_supabase(record)
+        if resultado:
+            st.success("✅ Datos guardados en Sistema Nixon - Supabase")
         else:
-            st.info("💡 Sistema Nixon listo. Comience ingresando el primer caso.")
-            
-    except Exception as e:
-        st.error(f"Error cargando datos Nixon: {e}")
+            st.error("❌ Error al guardar en Nixon System - Supabase")
 
-# --- PIE DE PÁGINA NIXON ---
+# --- PANEL DE CONTROL ESTADÍSTICO CON DATOS REALES ---
 st.markdown("---")
-st.markdown("""
-<div style='text-align: center; color: #666; padding: 2rem;'>
-    <h3>🏥 SISTEMA NIXON v3.0</h3>
-    <p>Predicts/day reports • Monitoring de Alertas • Panel de control estadístico</p>
-    <p>Desarrollado para el control oportuno y seguimiento integral de anemia</p>
-</div>
-""", unsafe_allow_html=True)
+st.header("📈 Panel de Control Estadístico Nixon - Datos en Tiempo Real")
+
+if st.button("🔄 Actualizar Dashboard Nixon desde Supabase", key="load_historical"):
+    datos_reales = obtener_datos_supabase()
+    
+    if not datos_reales.empty:
+        # Estadísticas Nixon con datos reales
+        col_stat1, col_stat2, col_stat3, col_stat4 = st.columns(4)
+        
+        with col_stat1:
+            total_casos = len(datos_reales)
+            st.metric("Total Casos Nixon", total_casos)
+        
+        with col_stat2:
+            alto_riesgo = len(datos_reales[datos_reales['riesgo'].str.contains('ALTO', na=False)])
+            st.metric("Alertas Activas", alto_riesgo)
+        
+        with col_stat3:
+            avg_hemoglobina = datos_reales['hemoglobina_g_dL'].mean()
+            st.metric("Hb Promedio", f"{avg_hemoglobina:.1f} g/dL")
+        
+        with col_stat4:
+            region_mas_casos = datos_reales['región'].mode()[0] if not datos_reales['región'].mode().empty else "N/A"
+            st.metric("Región Más Afectada", region_mas_casos)
+        
+        # Gráficos Nixon con datos reales
+        col_chart1, col_chart2 = st.columns(2)
+        
+        with col_chart1:
+            st.subheader("📊 Distribución de Riesgos Nixon")
+            if 'riesgo' in datos_reales.columns:
+                fig_riesgos = px.pie(
+                    datos_reales, 
+                    names='riesgo',
+                    title='Distribución de Niveles de Riesgo - Datos Reales',
+                    color_discrete_sequence=['#ff5252', '#ff9800', '#4caf50', '#2196f3']
+                )
+                st.plotly_chart(fig_riesgos, use_container_width=True)
+        
+        with col_chart2:
+            st.subheader("📈 Tendencia por Región")
+            if all(col in datos_reales.columns for col in ['región', 'riesgo']):
+                casos_por_region = datos_reales['región'].value_counts().head(10)
+                fig_barras = px.bar(
+                    x=casos_por_region.index,
+                    y=casos_por_region.values,
+                    title='Top 10 Regiones con Más Casos',
+                    labels={'x': 'Región', 'y': 'Número de Casos'}
+                )
+                st.plotly_chart(fig_barras, use_container_width=True)
+        
+        # Mapa de clima y casos
+        st.subheader("🌤️ Mapa Climático y Distribución de Casos")
+        col_map1, col_map2 = st.columns(2)
+        
+        with col_map1:
+            st.markdown("**Clima por Regiones:**")
+            for region_clima in list(CLIMA_POR_REGION.keys())[:6]:  # Mostrar primeras 6
+                info = CLIMA_POR_REGION[region_clima]
+                st.markdown(f"**{region_clima}**: {info['clima']} - {info['temp_promedio']}")
+        
+        with col_map2:
+            st.markdown("**Distribución Geográfica:**")
+            regiones_con_casos = datos_reales['región'].value_counts()
+            for region, count in regiones_con_casos.head(5).items():
+                clima_reg = obtener_clima_region(region)
+                st.markdown(f"**{region}**: {count} casos - {clima_reg['clima']}")
+        
+        # Tabla de casos recientes
+        st.subheader("🕐 Casos Recientes - Monitoring Nixon")
+        columnas_display = ['DNI', 'nombre_apellido', 'edad_meses', 'hemoglobina_g_dL', 'riesgo', 'región', 'fecha_alerta']
+        columnas_disponibles = [col for col in columnas_display if col in datos_reales.columns]
+        
+        if columnas_disponibles:
+            display_df = datos_reales[columnas_disponibles].head(15)
+            display_df['fecha_alerta'] = pd.to_datetime(display_df['fecha_alerta']).dt.strftime('%d/%m/%Y %H:%M')
+            st.dataframe(display_df, use_container_width=True)
+    else:
+        st.info("💡 Sistema Nixon listo. Comience
