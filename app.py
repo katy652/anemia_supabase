@@ -94,9 +94,9 @@ st.markdown("""
 TABLE_NAME = "alertas"
 MODEL_PATH = "modelo_columns.joblib"
 
-# Configuración de Supabase - USAR VARIABLES DE ENTORNO EN PRODUCCIÓN
-SUPABASE_URL = st.secrets.get("SUPABASE_URL", "https://kwsuszkblbejvliniggd.supabase.co")
-SUPABASE_KEY = st.secrets.get("SUPABASE_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3c3VzemtibGJlanZsaW5pZ2dkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE2ODE0NTUsImV4cCI6MjA3NzI1NzQ1NX0.DQpt-rSNprcUrbOLTgUEEn_0jFIuSX5b0AVuVirk0vw")
+# Configuración de Supabase
+SUPABASE_URL = "https://kwsuszkblbejvliniggd.supabase.co"
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3c3VzemtibGJlanZsaW5pZ2dkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE2ODE0NTUsImV4cCI6MjA3NzI1NzQ1NX0.DQpt-rSNprcUrbOLTgUEEn_0jFIuSX5b0AVuVirk0vw"
 
 # --- CLIMA PREDOMINANTE POR ZONAS DEL PERÚ ---
 CLIMA_POR_REGION = {
@@ -220,18 +220,151 @@ def load_model():
         st.error(f"❌ Error cargando modelo: {e}")
         return None
 
-# Inicializar conexiones
-supabase = init_supabase()
-model = load_model()
+# --- FUNCIONES SUPABASE MEJORADAS ---
+def descubrir_estructura_tabla():
+    """Descubre automáticamente la estructura de la tabla alertas"""
+    try:
+        if supabase:
+            # Obtener una fila de ejemplo para ver la estructura
+            response = supabase.table(TABLE_NAME).select("*").limit(1).execute()
+            
+            if response.data:
+                st.success("🎯 Estructura de la tabla ALERTAS descubierta:")
+                primera_fila = response.data[0]
+                
+                st.write("**Columnas disponibles:**")
+                for columna, valor in primera_fila.items():
+                    st.write(f"- `{columna}`: {type(valor).__name__} = `{valor}`")
+                
+                return list(primera_fila.keys())
+            else:
+                st.info("📭 La tabla está vacía, no se puede descubrir estructura")
+                return None
+    except Exception as e:
+        st.error(f"Error descubriendo estructura: {e}")
+        return None
 
-# --- FUNCIONES DE DATOS SUPABASE CORREGIDAS ---
+def insertar_datos_supabase_mejorado(datos):
+    """Inserta datos adaptándose a la estructura real de la tabla"""
+    try:
+        if not supabase:
+            st.warning("⚠️ No hay conexión a Supabase")
+            return None
+            
+        # Primero descubrir la estructura real
+        response = supabase.table(TABLE_NAME).select("*").limit(1).execute()
+        
+        if hasattr(response, 'error') and response.error:
+            st.error(f"Error leyendo tabla: {response.error}")
+            return None
+        
+        columnas_reales = list(response.data[0].keys()) if response.data else []
+        
+        if not columnas_reales:
+            st.error("❌ No se pudieron obtener las columnas de la tabla")
+            return None
+            
+        st.info(f"📋 Columnas reales en la tabla: {columnas_reales}")
+        
+        # Mapeo inteligente de columnas
+        datos_mapeados = {}
+        mapeos_posibles = {
+            # Posibles nombres en tu tabla vs nombres en el código
+            'dni': ['dni', 'documento', 'cedula', 'DNI'],
+            'nombre': ['nombre_apellido', 'nombre', 'paciente', 'nombre_completo'],
+            'edad': ['edad_meses', 'edad', 'edad_mes'],
+            'hemoglobina': ['hemoglobina_g_dL', 'hemoglobina', 'hb', 'hemo'],
+            'riesgo': ['riesgo', 'nivel_riesgo', 'categoria'],
+            'fecha': ['fecha_alerta', 'fecha', 'created_at', 'timestamp'],
+            'estado': ['estado', 'status', 'condicion'],
+            'sugerencias': ['sugerencias', 'recomendaciones', 'sugerencia'],
+            'region': ['región', 'region', 'departamento', 'zona'],
+            'mch': ['MCH', 'mch'],
+            'mchc': ['MCHC', 'mchc'],
+            'mcv': ['MCV', 'mcv'],
+            'factores_clinicos': ['factores_clinicos', 'factores_clin', 'clinicos'],
+            'factores_sociales': ['factores_sociales', 'factores_soc', 'sociales'],
+            'acceso_servicios': ['acceso_servicios', 'acceso_serv', 'servicios'],
+            'puntaje': ['puntaje_riesgo', 'puntaje', 'score'],
+            'clima': ['clima_region', 'clima', 'clima_zona']
+        }
+        
+        # Buscar coincidencias
+        for col_real in columnas_reales:
+            if col_real == 'id':  # Saltar ID auto-generado
+                continue
+                
+            valor_encontrado = None
+            for posible_grupo, nombres_posibles in mapeos_posibles.items():
+                if col_real in nombres_posibles:
+                    # Buscar en los datos originales
+                    for dato_key, dato_value in datos.items():
+                        if dato_key in nombres_posibles:
+                            valor_encontrado = dato_value
+                            break
+                    if valor_encontrado:
+                        break
+            
+            if valor_encontrado is not None:
+                datos_mapeados[col_real] = valor_encontrado
+            else:
+                st.warning(f"⚠️ Columna '{col_real}' en tabla no tiene datos mapeados")
+        
+        st.info(f"🎯 Insertando en {len(datos_mapeados)} columnas: {list(datos_mapeados.keys())}")
+        
+        # Insertar datos
+        response = supabase.table(TABLE_NAME).insert(datos_mapeados).execute()
+        
+        if hasattr(response, 'error') and response.error:
+            st.error(f"❌ Error insertando datos: {response.error}")
+            return None
+            
+        st.success("✅ Datos insertados correctamente!")
+        return response.data[0] if response.data else None
+        
+    except Exception as e:
+        st.error(f"❌ Error en inserción: {e}")
+        return None
+
+def insertar_datos_minimos(datos):
+    """Inserta solo las columnas esenciales para probar"""
+    try:
+        if not supabase:
+            return None
+            
+        # Datos mínimos para probar
+        datos_minimos = {
+            'dni': datos.get('DNI', ''),
+            'nombre': datos.get('nombre_apellido', ''),
+            'edad': datos.get('edad_meses', 0),
+            'hemoglobina': datos.get('hemoglobina_g_dL', 0.0),
+            'riesgo': datos.get('riesgo', ''),
+            'fecha_alerta': datos.get('fecha_alerta', datetime.now().isoformat())
+        }
+        
+        # Filtrar campos vacíos
+        datos_minimos = {k: v for k, v in datos_minimos.items() if v}
+        
+        st.info(f"🔧 Insertando datos mínimos: {list(datos_minimos.keys())}")
+        
+        response = supabase.table(TABLE_NAME).insert(datos_minimos).execute()
+        
+        if hasattr(response, 'error') and response.error:
+            st.error(f"Error: {response.error}")
+            return None
+            
+        return response.data[0] if response.data else None
+        
+    except Exception as e:
+        st.error(f"Error: {e}")
+        return None
+
 def obtener_datos_supabase():
     """Obtiene todos los datos de Supabase"""
     try:
         if supabase:
             response = supabase.table(TABLE_NAME).select("*").order("fecha_alerta", desc=True).execute()
             
-            # Verificar si hay error en la respuesta
             if hasattr(response, 'error') and response.error:
                 st.error(f"Error en consulta: {response.error}")
                 return pd.DataFrame()
@@ -243,24 +376,6 @@ def obtener_datos_supabase():
     except Exception as e:
         st.error(f"Error obteniendo datos: {e}")
         return pd.DataFrame()
-
-def insertar_datos_supabase(datos):
-    """Inserta datos en Supabase"""
-    try:
-        if supabase:
-            response = supabase.table(TABLE_NAME).insert(datos).execute()
-            
-            if hasattr(response, 'error') and response.error:
-                st.error(f"Error insertando datos: {response.error}")
-                return None
-                
-            return response.data[0] if response.data else None
-        else:
-            st.warning("⚠️ No hay conexión a Supabase")
-            return None
-    except Exception as e:
-        st.error(f"Error insertando datos: {e}")
-        return None
 
 def obtener_estadisticas_tiempo_real():
     """Obtiene estadísticas en tiempo real desde Supabase"""
@@ -399,6 +514,10 @@ def generar_sugerencias(riesgo, puntaje, factores_clinicos, factores_sociales, a
     
     return sugerencias
 
+# --- INICIALIZAR CONEXIONES ---
+supabase = init_supabase()
+model = load_model()
+
 # --- INTERFAZ PRINCIPAL MEJORADA ---
 st.markdown('<div class="main-header">', unsafe_allow_html=True)
 st.title("🏥 SISTEMA NIXON - Control de Anemia")
@@ -410,6 +529,52 @@ if supabase:
     st.success("🟢 CONECTADO A SUPABASE - Sistema operativo")
 else:
     st.error("🔴 SIN CONEXIÓN A SUPABASE - Modo demostración")
+
+# --- SIDEBAR CON HERRAMIENTAS DIAGNÓSTICO ---
+with st.sidebar:
+    st.header("🔧 Herramientas Supabase")
+    
+    if st.button("🔍 Descubrir Estructura de Tabla"):
+        columnas = descubrir_estructura_tabla()
+        if columnas:
+            st.session_state.columnas_tabla = columnas
+    
+    st.markdown("---")
+    st.header("🩺 Diagnóstico Supabase")
+    
+    if st.button("Ejecutar Diagnóstico Completo"):
+        with st.spinner("Diagnosticando..."):
+            # Test conexión
+            if supabase:
+                st.success("✅ Conexión a Supabase: OK")
+                
+                # Test estructura
+                columnas = descubrir_estructura_tabla()
+                if columnas:
+                    st.success(f"✅ Estructura tabla: {len(columnas)} columnas")
+                    
+                    # Test inserción simple
+                    test_data = {
+                        'dni': 'TEST123',
+                        'nombre': 'Test Diagnóstico',
+                        'edad': 36,
+                        'hemoglobina': 10.5,
+                        'riesgo': 'TEST',
+                        'fecha_alerta': datetime.now().isoformat()
+                    }
+                    
+                    # Filtrar solo columnas que existen
+                    test_data_filtrado = {k: v for k, v in test_data.items() if k in columnas}
+                    resultado_test = supabase.table(TABLE_NAME).insert(test_data_filtrado).execute()
+                    
+                    if not hasattr(resultado_test, 'error') or not resultado_test.error:
+                        st.success("✅ Inserción de prueba: OK")
+                        # Limpiar dato de prueba
+                        supabase.table(TABLE_NAME).delete().eq('dni', 'TEST123').execute()
+                    else:
+                        st.error(f"❌ Inserción prueba falló: {resultado_test.error}")
+            else:
+                st.error("❌ Conexión a Supabase: FALLÓ")
 
 # --- DASHBOARD SUPERIOR CON DATOS REALES ---
 st.header("📊 Dashboard Nixon - Métricas en Tiempo Real desde Supabase")
@@ -536,136 +701,4 @@ with st.form("formulario_anemia"):
 if submitted:
     if not dni or not nombre_completo:
         st.error("❌ Por favor complete el DNI y nombre del paciente")
-    else:
-        # Obtener información climática
-        clima_info = obtener_clima_region(region)
-        
-        # Calcular riesgo
-        nivel_riesgo, puntaje, estado_recomendado = calcular_riesgo_anemia(
-            hemoglobina_g_dl, edad_meses, factores_clinicos, factores_sociales, 
-            acceso_servicios, clima_info['clima']
-        )
-        
-        # Generar sugerencias
-        sugerencias = generar_sugerencias(
-            nivel_riesgo, puntaje, factores_clinicos, factores_sociales, 
-            acceso_servicios, hemoglobina_g_dl, edad_meses, clima_info['clima']
-        )
-        
-        # Mostrar resultados
-        st.markdown("---")
-        st.header("📊 Análisis y Reporte de Control Oportuno - Nixon System")
-        
-        # Tarjeta de riesgo
-        if "ALTO" in nivel_riesgo and "ALTA" in nivel_riesgo:
-            st.markdown('<div class="risk-high">', unsafe_allow_html=True)
-        elif "ALTO" in nivel_riesgo:
-            st.markdown('<div class="risk-moderate">', unsafe_allow_html=True)
-        elif "MODERADO" in nivel_riesgo:
-            st.markdown('<div class="risk-moderate">', unsafe_allow_html=True)
-        else:
-            st.markdown('<div class="risk-low">', unsafe_allow_html=True)
-        
-        st.markdown(f"### **RIESGO: {nivel_riesgo}**")
-        st.markdown(f"**Puntaje Nixon:** {puntaje}/60 puntos | **Estado recomendado:** {estado_recomendado}")
-        st.markdown('</div>', unsafe_allow_html=True)
-        
-        # Métricas clave
-        col_met1, col_met2, col_met3, col_met4 = st.columns(4)
-        
-        with col_met1:
-            # Calcular déficit según edad
-            if edad_meses < 12: objetivo_hb = 11.0
-            elif edad_meses < 60: objetivo_hb = 11.5
-            else: objetivo_hb = 12.0
-            
-            deficit_hb = max(0, objetivo_hb - hemoglobina_g_dl)
-            st.metric("Déficit de Hb", f"{deficit_hb:.1f} g/dL", f"Objetivo: {objetivo_hb} g/dL")
-        
-        with col_met2:
-            porcentaje_objetivo = (hemoglobina_g_dl / objetivo_hb) * 100
-            st.metric("% Objetivo", f"{porcentaje_objetivo:.1f}%", f"{porcentaje_objetivo - 100:.1f}%")
-        
-        with col_met3:
-            total_factores = len(factores_clinicos) + len(factores_sociales) + len(acceso_servicios)
-            st.metric("Factores Riesgo", f"{total_factores}", "identificados")
-        
-        with col_met4:
-            st.metric("Clima Zona", clima_info['clima'], f"Temp: {clima_info['temp_promedio']}")
-        
-        # Sugerencias personalizadas
-        st.markdown("---")
-        st.header("🎯 Estrategia Nixon - Intervención Oportuna Personalizada")
-        
-        for i, sugerencia in enumerate(sugerencias, 1):
-            st.markdown(f"""
-            <div class="factor-card">
-                <h4>📍 {sugerencia}</h4>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        # Guardar en Supabase solo si hay conexión
-        if supabase:
-            record = {
-                "DNI": dni,
-                "nombre_apellido": nombre_completo,
-                "edad_meses": int(edad_meses),
-                "hemoglobina_g_dL": float(hemoglobina_g_dl),
-                "riesgo": nivel_riesgo,
-                "fecha_alerta": datetime.now().isoformat(),
-                "estado": estado_recomendado,
-                "sugerencias": "; ".join(sugerencias),
-                "región": region,
-                "MCH": float(mch),
-                "MCHC": float(mchc),
-                "MCV": float(mcv),
-                "factores_clinicos": ", ".join(factores_clinicos),
-                "factores_sociales": ", ".join(factores_sociales),
-                "acceso_servicios": ", ".join(acceso_servicios),
-                "puntaje_riesgo": int(puntaje),
-                "clima_region": clima_info['clima']
-            }
-            
-            resultado = insertar_datos_supabase(record)
-            if resultado:
-                st.success("✅ Datos guardados en Sistema Nixon - Supabase")
-            else:
-                st.error("❌ Error al guardar en Nixon System - Supabase")
-        else:
-            st.warning("⚠️ Datos no guardados - Sin conexión a Supabase")
-
-# --- PANEL DE CONTROL ESTADÍSTICO CON DATOS REALES ---
-st.markdown("---")
-st.header("📈 Panel de Control Estadístico Nixon - Datos en Tiempo Real")
-
-if st.button("🔄 Actualizar Dashboard Nixon desde Supabase", key="load_historical"):
-    with st.spinner("Cargando datos desde Supabase..."):
-        datos_reales = obtener_datos_supabase()
-    
-    if not datos_reales.empty:
-        st.success(f"✅ {len(datos_reales)} registros cargados desde Supabase")
-        
-        # Estadísticas Nixon con datos reales
-        col_stat1, col_stat2, col_stat3, col_stat4 = st.columns(4)
-        
-        with col_stat1:
-            total_casos = len(datos_reales)
-            st.metric("Total Casos Nixon", total_casos)
-        
-        with col_stat2:
-            alto_riesgo = len(datos_reales[datos_reales['riesgo'].str.contains('ALTO', na=False)]) if 'riesgo' in datos_reales.columns else 0
-            st.metric("Alertas Activas", alto_riesgo)
-        
-        with col_stat3:
-            avg_hemoglobina = datos_reales['hemoglobina_g_dL'].mean() if 'hemoglobina_g_dL' in datos_reales.columns else 0
-            st.metric("Hb Promedio", f"{avg_hemoglobina:.1f} g/dL")
-        
-        with col_stat4:
-            if 'región' in datos_reales.columns and not datos_reales['región'].empty:
-                region_mas_casos = datos_reales['región'].mode()[0] if not datos_reales['región'].mode().empty else "N/A"
-                st.metric("Región Más Afectada", region_mas_casos)
-            else:
-                st.metric("Región Más Afectada", "N/A")
-        
-        # Gráficos Nixon con datos reales
-        col_chart1, col_chart2 = st.columns(2)
+   
