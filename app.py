@@ -220,145 +220,7 @@ def load_model():
         st.error(f"❌ Error cargando modelo: {e}")
         return None
 
-# --- FUNCIONES SUPABASE MEJORADAS ---
-def descubrir_estructura_tabla():
-    """Descubre automáticamente la estructura de la tabla alertas"""
-    try:
-        if supabase:
-            # Obtener una fila de ejemplo para ver la estructura
-            response = supabase.table(TABLE_NAME).select("*").limit(1).execute()
-            
-            if response.data:
-                st.success("🎯 Estructura de la tabla ALERTAS descubierta:")
-                primera_fila = response.data[0]
-                
-                st.write("**Columnas disponibles:**")
-                for columna, valor in primera_fila.items():
-                    st.write(f"- `{columna}`: {type(valor).__name__} = `{valor}`")
-                
-                return list(primera_fila.keys())
-            else:
-                st.info("📭 La tabla está vacía, no se puede descubrir estructura")
-                return None
-    except Exception as e:
-        st.error(f"Error descubriendo estructura: {e}")
-        return None
-
-def insertar_datos_supabase_mejorado(datos):
-    """Inserta datos adaptándose a la estructura real de la tabla"""
-    try:
-        if not supabase:
-            st.warning("⚠️ No hay conexión a Supabase")
-            return None
-            
-        # Primero descubrir la estructura real
-        response = supabase.table(TABLE_NAME).select("*").limit(1).execute()
-        
-        if hasattr(response, 'error') and response.error:
-            st.error(f"Error leyendo tabla: {response.error}")
-            return None
-        
-        columnas_reales = list(response.data[0].keys()) if response.data else []
-        
-        if not columnas_reales:
-            st.error("❌ No se pudieron obtener las columnas de la tabla")
-            return None
-            
-        st.info(f"📋 Columnas reales en la tabla: {columnas_reales}")
-        
-        # Mapeo inteligente de columnas
-        datos_mapeados = {}
-        mapeos_posibles = {
-            # Posibles nombres en tu tabla vs nombres en el código
-            'dni': ['dni', 'documento', 'cedula', 'DNI'],
-            'nombre': ['nombre_apellido', 'nombre', 'paciente', 'nombre_completo'],
-            'edad': ['edad_meses', 'edad', 'edad_mes'],
-            'hemoglobina': ['hemoglobina_g_dL', 'hemoglobina', 'hb', 'hemo'],
-            'riesgo': ['riesgo', 'nivel_riesgo', 'categoria'],
-            'fecha': ['fecha_alerta', 'fecha', 'created_at', 'timestamp'],
-            'estado': ['estado', 'status', 'condicion'],
-            'sugerencias': ['sugerencias', 'recomendaciones', 'sugerencia'],
-            'region': ['región', 'region', 'departamento', 'zona'],
-            'mch': ['MCH', 'mch'],
-            'mchc': ['MCHC', 'mchc'],
-            'mcv': ['MCV', 'mcv'],
-            'factores_clinicos': ['factores_clinicos', 'factores_clin', 'clinicos'],
-            'factores_sociales': ['factores_sociales', 'factores_soc', 'sociales'],
-            'acceso_servicios': ['acceso_servicios', 'acceso_serv', 'servicios'],
-            'puntaje': ['puntaje_riesgo', 'puntaje', 'score'],
-            'clima': ['clima_region', 'clima', 'clima_zona']
-        }
-        
-        # Buscar coincidencias
-        for col_real in columnas_reales:
-            if col_real == 'id':  # Saltar ID auto-generado
-                continue
-                
-            valor_encontrado = None
-            for posible_grupo, nombres_posibles in mapeos_posibles.items():
-                if col_real in nombres_posibles:
-                    # Buscar en los datos originales
-                    for dato_key, dato_value in datos.items():
-                        if dato_key in nombres_posibles:
-                            valor_encontrado = dato_value
-                            break
-                    if valor_encontrado:
-                        break
-            
-            if valor_encontrado is not None:
-                datos_mapeados[col_real] = valor_encontrado
-            else:
-                st.warning(f"⚠️ Columna '{col_real}' en tabla no tiene datos mapeados")
-        
-        st.info(f"🎯 Insertando en {len(datos_mapeados)} columnas: {list(datos_mapeados.keys())}")
-        
-        # Insertar datos
-        response = supabase.table(TABLE_NAME).insert(datos_mapeados).execute()
-        
-        if hasattr(response, 'error') and response.error:
-            st.error(f"❌ Error insertando datos: {response.error}")
-            return None
-            
-        st.success("✅ Datos insertados correctamente!")
-        return response.data[0] if response.data else None
-        
-    except Exception as e:
-        st.error(f"❌ Error en inserción: {e}")
-        return None
-
-def insertar_datos_minimos(datos):
-    """Inserta solo las columnas esenciales para probar"""
-    try:
-        if not supabase:
-            return None
-            
-        # Datos mínimos para probar
-        datos_minimos = {
-            'dni': datos.get('DNI', ''),
-            'nombre': datos.get('nombre_apellido', ''),
-            'edad': datos.get('edad_meses', 0),
-            'hemoglobina': datos.get('hemoglobina_g_dL', 0.0),
-            'riesgo': datos.get('riesgo', ''),
-            'fecha_alerta': datos.get('fecha_alerta', datetime.now().isoformat())
-        }
-        
-        # Filtrar campos vacíos
-        datos_minimos = {k: v for k, v in datos_minimos.items() if v}
-        
-        st.info(f"🔧 Insertando datos mínimos: {list(datos_minimos.keys())}")
-        
-        response = supabase.table(TABLE_NAME).insert(datos_minimos).execute()
-        
-        if hasattr(response, 'error') and response.error:
-            st.error(f"Error: {response.error}")
-            return None
-            
-        return response.data[0] if response.data else None
-        
-    except Exception as e:
-        st.error(f"Error: {e}")
-        return None
-
+# --- FUNCIONES SUPABASE CORREGIDAS CON LA ESTRUCTURA REAL ---
 def obtener_datos_supabase():
     """Obtiene todos los datos de Supabase"""
     try:
@@ -376,6 +238,42 @@ def obtener_datos_supabase():
     except Exception as e:
         st.error(f"Error obteniendo datos: {e}")
         return pd.DataFrame()
+
+def insertar_datos_supabase_corregido(datos):
+    """Inserta datos usando los nombres EXACTOS de las columnas de tu tabla"""
+    try:
+        if not supabase:
+            st.warning("⚠️ No hay conexión a Supabase")
+            return None
+            
+        # Según tu tabla, estas son las columnas EXACTAS que tienes:
+        datos_corregidos = {
+            "dni": datos.get('dni', ''),
+            "nombre": datos.get('nombre_completo', ''),
+            "edad": datos.get('edad_meses', 0),
+            "hemoglobina": datos.get('hemoglobina_g_dL', 0.0),
+            "riesgo": datos.get('nivel_riesgo', ''),
+            "fecha_alerta": datos.get('fecha_alerta', datetime.now().isoformat()),
+            "estado": datos.get('estado_recomendado', ''),
+            "sugerencias": datos.get('sugerencias_texto', ''),
+            "region": datos.get('region', 'NO ESPECIFICADO')
+        }
+        
+        st.info(f"🎯 Insertando datos en columnas: {list(datos_corregidos.keys())}")
+        
+        # Insertar datos
+        response = supabase.table(TABLE_NAME).insert(datos_corregidos).execute()
+        
+        if hasattr(response, 'error') and response.error:
+            st.error(f"❌ Error insertando datos: {response.error}")
+            return None
+            
+        st.success("✅ Datos insertados correctamente en Supabase!")
+        return response.data[0] if response.data else None
+        
+    except Exception as e:
+        st.error(f"❌ Error en inserción: {e}")
+        return None
 
 def obtener_estadisticas_tiempo_real():
     """Obtiene estadísticas en tiempo real desde Supabase"""
@@ -534,47 +432,13 @@ else:
 with st.sidebar:
     st.header("🔧 Herramientas Supabase")
     
-    if st.button("🔍 Descubrir Estructura de Tabla"):
-        columnas = descubrir_estructura_tabla()
-        if columnas:
-            st.session_state.columnas_tabla = columnas
-    
-    st.markdown("---")
-    st.header("🩺 Diagnóstico Supabase")
-    
-    if st.button("Ejecutar Diagnóstico Completo"):
-        with st.spinner("Diagnosticando..."):
-            # Test conexión
-            if supabase:
-                st.success("✅ Conexión a Supabase: OK")
-                
-                # Test estructura
-                columnas = descubrir_estructura_tabla()
-                if columnas:
-                    st.success(f"✅ Estructura tabla: {len(columnas)} columnas")
-                    
-                    # Test inserción simple
-                    test_data = {
-                        'dni': 'TEST123',
-                        'nombre': 'Test Diagnóstico',
-                        'edad': 36,
-                        'hemoglobina': 10.5,
-                        'riesgo': 'TEST',
-                        'fecha_alerta': datetime.now().isoformat()
-                    }
-                    
-                    # Filtrar solo columnas que existen
-                    test_data_filtrado = {k: v for k, v in test_data.items() if k in columnas}
-                    resultado_test = supabase.table(TABLE_NAME).insert(test_data_filtrado).execute()
-                    
-                    if not hasattr(resultado_test, 'error') or not resultado_test.error:
-                        st.success("✅ Inserción de prueba: OK")
-                        # Limpiar dato de prueba
-                        supabase.table(TABLE_NAME).delete().eq('dni', 'TEST123').execute()
-                    else:
-                        st.error(f"❌ Inserción prueba falló: {resultado_test.error}")
-            else:
-                st.error("❌ Conexión a Supabase: FALLÓ")
+    if st.button("🔄 Ver Datos Actuales"):
+        datos = obtener_datos_supabase()
+        if not datos.empty:
+            st.success(f"📊 {len(datos)} registros en la base de datos")
+            st.dataframe(datos[['dni', 'nombre', 'edad', 'hemoglobina', 'riesgo']].head(10))
+        else:
+            st.info("📭 No hay datos en la tabla")
 
 # --- DASHBOARD SUPERIOR CON DATOS REALES ---
 st.header("📊 Dashboard Nixon - Métricas en Tiempo Real desde Supabase")
@@ -701,4 +565,107 @@ with st.form("formulario_anemia"):
 if submitted:
     if not dni or not nombre_completo:
         st.error("❌ Por favor complete el DNI y nombre del paciente")
-   
+    else:
+        # Obtener información climática
+        clima_info = obtener_clima_region(region)
+        
+        # Calcular riesgo
+        nivel_riesgo, puntaje, estado_recomendado = calcular_riesgo_anemia(
+            hemoglobina_g_dl, edad_meses, factores_clinicos, factores_sociales, 
+            acceso_servicios, clima_info['clima']
+        )
+        
+        # Generar sugerencias
+        sugerencias = generar_sugerencias(
+            nivel_riesgo, puntaje, factores_clinicos, factores_sociales, 
+            acceso_servicios, hemoglobina_g_dl, edad_meses, clima_info['clima']
+        )
+        
+        # Mostrar resultados
+        st.markdown("---")
+        st.header("📊 Análisis y Reporte de Control Oportuno - Nixon System")
+        
+        # Tarjeta de riesgo
+        if "ALTO" in nivel_riesgo and "ALTA" in nivel_riesgo:
+            st.markdown('<div class="risk-high">', unsafe_allow_html=True)
+        elif "ALTO" in nivel_riesgo:
+            st.markdown('<div class="risk-moderate">', unsafe_allow_html=True)
+        elif "MODERADO" in nivel_riesgo:
+            st.markdown('<div class="risk-moderate">', unsafe_allow_html=True)
+        else:
+            st.markdown('<div class="risk-low">', unsafe_allow_html=True)
+        
+        st.markdown(f"### **RIESGO: {nivel_riesgo}**")
+        st.markdown(f"**Puntaje Nixon:** {puntaje}/60 puntos | **Estado recomendado:** {estado_recomendado}")
+        st.markdown('</div>', unsafe_allow_html=True)
+        
+        # Métricas clave
+        col_met1, col_met2, col_met3, col_met4 = st.columns(4)
+        
+        with col_met1:
+            # Calcular déficit según edad
+            if edad_meses < 12: objetivo_hb = 11.0
+            elif edad_meses < 60: objetivo_hb = 11.5
+            else: objetivo_hb = 12.0
+            
+            deficit_hb = max(0, objetivo_hb - hemoglobina_g_dl)
+            st.metric("Déficit de Hb", f"{deficit_hb:.1f} g/dL", f"Objetivo: {objetivo_hb} g/dL")
+        
+        with col_met2:
+            porcentaje_objetivo = (hemoglobina_g_dl / objetivo_hb) * 100
+            st.metric("% Objetivo", f"{porcentaje_objetivo:.1f}%", f"{porcentaje_objetivo - 100:.1f}%")
+        
+        with col_met3:
+            total_factores = len(factores_clinicos) + len(factores_sociales) + len(acceso_servicios)
+            st.metric("Factores Riesgo", f"{total_factores}", "identificados")
+        
+        with col_met4:
+            st.metric("Clima Zona", clima_info['clima'], f"Temp: {clima_info['temp_promedio']}")
+        
+        # Sugerencias personalizadas
+        st.markdown("---")
+        st.header("🎯 Estrategia Nixon - Intervención Oportuna Personalizada")
+        
+        for i, sugerencia in enumerate(sugerencias, 1):
+            st.markdown(f"""
+            <div class="factor-card">
+                <h4>📍 {sugerencia}</h4>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        # Guardar en Supabase CON LOS NOMBRES CORRECTOS
+        if supabase:
+            record = {
+                "dni": dni,
+                "nombre_completo": nombre_completo,
+                "edad_meses": int(edad_meses),
+                "hemoglobina_g_dL": float(hemoglobina_g_dl),
+                "nivel_riesgo": nivel_riesgo,
+                "fecha_alerta": datetime.now().isoformat(),
+                "estado_recomendado": estado_recomendado,
+                "sugerencias_texto": "; ".join(sugerencias),
+                "region": region
+            }
+            
+            resultado = insertar_datos_supabase_corregido(record)
+            if resultado:
+                st.success("✅ Datos guardados correctamente en Supabase!")
+                st.balloons()
+            else:
+                st.error("❌ Error al guardar en Supabase. Verifica los datos.")
+        else:
+            st.warning("⚠️ Datos no guardados - Sin conexión a Supabase")
+
+# --- PANEL DE CONTROL ESTADÍSTICO CON DATOS REALES ---
+st.markdown("---")
+st.header("📈 Panel de Control Estadístico Nixon - Datos en Tiempo Real")
+
+if st.button("🔄 Actualizar Dashboard desde Supabase"):
+    with st.spinner("Cargando datos desde Supabase..."):
+        datos_reales = obtener_datos_supabase()
+    
+    if not datos_reales.empty:
+        st.success(f"✅ {len(datos_reales)} registros cargados desde Supabase")
+        
+        # Estadísticas con datos reales
+        col_stat1, col_stat2, col_stat3, col_stat4 = st
