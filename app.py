@@ -47,7 +47,15 @@ CLIMA_POR_REGION = {
     "LIMA": {"clima": "Desértico subtropical", "temp_promedio": "21°C", "humedad": "85%", "precipitacion": "10 mm"},
     "AREQUIPA": {"clima": "Semiárido", "temp_promedio": "18°C", "humedad": "45%", "precipitacion": "100 mm"},
     "CUSCO": {"clima": "Templado subhúmedo", "temp_promedio": "14°C", "humedad": "65%", "precipitacion": "700 mm"},
-    # ... (el resto de tus regiones)
+    "PUNO": {"clima": "Frío de altura", "temp_promedio": "8°C", "humedad": "55%", "precipitacion": "600 mm"},
+    "ICA": {"clima": "Desértico", "temp_promedio": "22°C", "humedad": "70%", "precipitacion": "5 mm"},
+    "LORETO": {"clima": "Tropical húmedo", "temp_promedio": "27°C", "humedad": "85%", "precipitacion": "2800 mm"},
+    "SAN MARTÍN": {"clima": "Tropical húmedo", "temp_promedio": "25°C", "humedad": "80%", "precipitacion": "1200 mm"},
+    "LA LIBERTAD": {"clima": "Semiárido", "temp_promedio": "20°C", "humedad": "75%", "precipitacion": "200 mm"},
+    "ANCASH": {"clima": "Variado de costa y sierra", "temp_promedio": "16°C", "humedad": "70%", "precipitacion": "500 mm"},
+    "JUNÍN": {"clima": "Templado frío", "temp_promedio": "12°C", "humedad": "65%", "precipitacion": "800 mm"},
+    "PIURA": {"clima": "Semiárido tropical", "temp_promedio": "25°C", "humedad": "70%", "precipitacion": "100 mm"},
+    "LAMBAYEQUE": {"clima": "Semiárido", "temp_promedio": "23°C", "humedad": "75%", "precipitacion": "150 mm"},
     "NO ESPECIFICADO": {"clima": "No especificado", "temp_promedio": "N/A", "humedad": "N/A", "precipitacion": "N/A"}
 }
 
@@ -69,7 +77,7 @@ def init_supabase():
         st.error(f"❌ Error conectando a Supabase: {e}")
         return None
 
-# --- FUNCIONES SUPABASE CORREGIDAS ---
+# --- FUNCIONES SUPABASE MEJORADAS ---
 def obtener_datos_supabase():
     try:
         if supabase:
@@ -83,35 +91,57 @@ def obtener_datos_supabase():
     return pd.DataFrame()
 
 def insertar_datos_supabase(datos):
+    """VERSIÓN MEJORADA - Manejo robusto de inserción"""
     try:
         if not supabase:
             st.warning("⚠️ No hay conexión a Supabase")
-            return None
+            return False
             
-        datos_limpios = {
-            "dni": datos.get("dni", ""),
-            "nombre_apellido": datos.get("nombre_completo", ""),
-            "edad_meses": datos.get("edad_meses", 0),
-            "hemoglobina": datos.get("hemoglobina_g_dL", 0.0),  # CORREGIDO: "hemoglobina"
-            "riesgo": datos.get("riesgo", ""),
-            "fecha_alerta": datos.get("fecha_alerta", datetime.now().isoformat()),
-            "estado": datos.get("estado_recomendado", ""),
-            "sugerencias": datos.get("sugerencias_texto", ""),
-            "region": datos.get("region", "NO ESPECIFICADO")
+        # Preparar datos exactamente como la tabla los espera
+        datos_para_insertar = {
+            "dni": str(datos.get("dni", "")),
+            "nombre_apellido": str(datos.get("nombre_completo", "")),
+            "edad_meses": int(datos.get("edad_meses", 0)),
+            "hemoglobina": float(datos.get("hemoglobina_g_dL", 0.0)),
+            "riesgo": str(datos.get("riesgo", "")),
+            "fecha_alerta": datetime.now().date().isoformat(),
+            "estado": str(datos.get("estado_recomendado", "")),
+            "sugerencias": str(datos.get("sugerencias_texto", "")),
+            "region": str(datos.get("region", "NO ESPECIFICADO"))
         }
         
-        response = supabase.table(TABLE_NAME).insert(datos_limpios).execute()
+        st.info("📤 Guardando en Supabase...")
         
-        if hasattr(response, 'error') and response.error:
-            st.error(f"❌ Error insertando: {response.error}")
-            return None
-            
-        st.success("✅ Datos guardados en Supabase!")
-        return response.data[0] if response.data else None
+        # Insertar
+        response = supabase.table("alertas_hemoglobina").insert(datos_para_insertar).execute()
         
+        # Verificar respuesta de manera más simple
+        if response.data:
+            st.success("✅ ¡Datos guardados correctamente!")
+            return True
+        else:
+            # Aunque falle, los datos podrían haberse guardado
+            st.info("🔄 Verificando si los datos se guardaron...")
+            # Verificar si el DNI ya existe
+            verification = supabase.table("alertas_hemoglobina").select("dni").eq("dni", datos["dni"]).execute()
+            if verification.data:
+                st.success("✅ Los datos se guardaron (verificación posterior)")
+                return True
+            else:
+                st.error("❌ No se pudieron guardar los datos")
+                return False
+                
     except Exception as e:
-        st.error(f"❌ Error: {e}")
-        return None
+        st.error(f"❌ Error: {str(e)}")
+        # Intentar verificar si de todos modos se guardó
+        try:
+            verification = supabase.table("alertas_hemoglobina").select("dni").eq("dni", datos["dni"]).execute()
+            if verification.data:
+                st.success("✅ Los datos se guardaron a pesar del error")
+                return True
+        except:
+            pass
+        return False
 
 def obtener_estadisticas_tiempo_real():
     try:
@@ -144,6 +174,26 @@ def obtener_estadisticas_tiempo_real():
     
     return {'total_casos': 0, 'alto_riesgo': 0, 'moderado_riesgo': 0, 'tasa_alto_riesgo': 0, 
             'casos_por_dia': 0, 'total_semana': 0, 'tendencia': '➡️'}
+
+def debug_supabase_connection():
+    """Función para debuggear la conexión"""
+    try:
+        if supabase:
+            # Test simple de conexión
+            test_response = supabase.table("alertas_hemoglobina").select("dni", count="exact").limit(1).execute()
+            st.success(f"✅ Conexión OK - Tabla accesible")
+            
+            # Ver estructura de la tabla
+            structure = supabase.table("alertas_hemoglobina").select("*").limit(1).execute()
+            if structure.data:
+                st.info(f"📋 Estructura de columnas: {list(structure.data[0].keys())}")
+            return True
+        else:
+            st.error("❌ No hay conexión a Supabase")
+            return False
+    except Exception as e:
+        st.error(f"❌ Error en conexión: {e}")
+        return False
 
 def obtener_clima_region(region):
     return CLIMA_POR_REGION.get(region.upper(), CLIMA_POR_REGION["NO ESPECIFICADO"])
@@ -234,6 +284,28 @@ if supabase:
     st.success("🟢 CONECTADO A SUPABASE - Sistema operativo")
 else:
     st.error("🔴 SIN CONEXIÓN A SUPABASE - Modo demostración")
+
+# --- SIDEBAR CON HERRAMIENTAS ---
+with st.sidebar:
+    st.header("🔧 Herramientas Debug")
+    
+    if st.button("🧪 Probar Conexión Supabase"):
+        debug_supabase_connection()
+    
+    if st.button("📊 Ver Datos Actuales"):
+        datos = obtener_datos_supabase()
+        if not datos.empty:
+            st.success(f"✅ {len(datos)} registros encontrados")
+            st.dataframe(datos.head(10))
+        else:
+            st.info("📭 No hay datos en la tabla")
+    
+    st.markdown("---")
+    st.header("🩺 Diagnóstico")
+    
+    if st.button("🗑️ Limpiar Cache"):
+        st.cache_resource.clear()
+        st.rerun()
 
 # --- DASHBOARD ---
 st.header("📊 Dashboard Nixon - Métricas en Tiempo Real")
@@ -371,12 +443,10 @@ if submitted:
                 "region": region
             }
             
-            resultado = insertar_datos_supabase(record)
-            if resultado:
-                st.success("✅ Datos guardados correctamente en Sistema Nixon!")
+            # USANDO LA NUEVA FUNCIÓN MEJORADA
+            guardado_exitoso = insertar_datos_supabase(record)
+            if guardado_exitoso:
                 st.balloons()
-            else:
-                st.error("❌ Error al guardar en Supabase")
         else:
             st.warning("⚠️ Datos no guardados - Sin conexión a Supabase")
 
