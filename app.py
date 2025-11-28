@@ -1,287 +1,369 @@
 import streamlit as st
 import pandas as pd
+from supabase import create_client, Client
 import plotly.express as px
 import plotly.graph_objects as go
-from datetime import datetime
-import psycopg2
+import joblib
+import numpy as np
+import os
+import time
+from datetime import datetime, timedelta
 
-# Configuración de la página
+# ==================================================
+# 1. CONFIGURACIÓN E INICIALIZACIÓN
+# ==================================================
+
 st.set_page_config(
-    page_title="Sistema de Alertas de Hemoglobina",
-    page_icon="🩺",
-    layout="wide"
+    page_title="Sistema Nixon - Control de Anemia",
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
-# Conexión a la base de datos
+# Estilos CSS
+st.markdown("""
+<style>
+    .main-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 2rem;
+        border-radius: 10px;
+        color: white;
+        margin-bottom: 2rem;
+    }
+    .risk-high { background-color: #ffebee; border-left: 5px solid #f44336; }
+    .risk-moderate { background-color: #fff3e0; border-left: 5px solid #ff9800; }
+    .risk-low { background-color: #e8f5e8; border-left: 5px solid #4caf50; }
+    .factor-card { background: white; padding: 1.5rem; border-radius: 10px; margin-bottom: 1rem; }
+    .metric-card { background: white; padding: 1rem; border-radius: 8px; text-align: center; }
+    .climate-card { background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%); color: white; }
+</style>
+""", unsafe_allow_html=True)
+
+# ==================================================
+# 2. CONFIGURACIÓN SUPABASE
+# ==================================================
+
+TABLE_NAME = "alertas_hemoglobina"
+SUPABASE_URL = st.secrets.get("SUPABASE_URL", "https://kwsuszkblbejvliniggd.supabase.co")
+SUPABASE_KEY = st.secrets.get("SUPABASE_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3c3VzemtibGJlanZsaW5pZ2dkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE2ODE0NTUsImV4cCI6MjA3NzI1NzQ1NX0.DQpt-rSNprcUrbOLTgUEEn_0jFIuSX5b0AVuVirk0vw")
+
 @st.cache_resource
-def init_connection():
-    return psycopg2.connect(**st.secrets["postgres"])
+def init_supabase():
+    try:
+        supabase_client = create_client(SUPABASE_URL, SUPABASE_KEY)
+        test_response = supabase_client.table(TABLE_NAME).select("*").limit(1).execute()
+        st.success("✅ Conexión a Supabase establecida")
+        return supabase_client
+    except Exception as e:
+        st.error(f"❌ Error conectando a Supabase: {str(e)}")
+        return None
 
-conn = init_connection()
+supabase = init_supabase()
 
-# Funciones de base de datos
-@st.cache_data(ttl=600)
-def run_query(query):
-    with conn.cursor() as cur:
-        cur.execute(query)
-        return cur.fetchall()
+# ==================================================
+# 3. DATOS PERSONALES
+# ==================================================
 
-def get_pacientes():
-    return run_query("SELECT * FROM alertas_hemoglobina;")
+def mostrar_seccion_datos_personales():
+    st.header("👤 Datos Personales del Paciente")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        dni = st.text_input("DNI*", key="dni_personal")
+        nombre_completo = st.text_input("Nombre Completo*", key="nombre_personal")
+        edad_meses = st.number_input("Edad (meses)*", 1, 240, 24, key="edad_personal")
+        peso_kg = st.number_input("Peso (kg)", 0.0, 50.0, 12.5, 0.1, key="peso_personal")
+        
+    with col2:
+        talla_cm = st.number_input("Talla (cm)", 0.0, 150.0, 85.0, 0.1, key="talla_personal")
+        genero = st.selectbox("Género*", ["M", "F", "Otro"], key="genero_personal")
+        telefono = st.text_input("Teléfono", key="telefono_personal")
+        estado_paciente = st.selectbox("Estado del Paciente*", 
+                                     ["Activo", "En seguimiento", "Dado de alta", "Inactivo"], 
+                                     key="estado_personal")
+    
+    return {
+        'dni': dni,
+        'nombre_completo': nombre_completo,
+        'edad_meses': edad_meses,
+        'peso_kg': peso_kg,
+        'talla_cm': talla_cm,
+        'genero': genero,
+        'telefono': telefono,
+        'estado_paciente': estado_paciente
+    }
 
-def insert_paciente(datos):
-    with conn.cursor() as cur:
-        cur.execute("""
-            INSERT INTO alertas_hemoglobina (
-                dni, nombre_apellido, edad_meses, peso_kg, talla_cm, genero, telefono, estado_paciente,
-                region, departamento, altitud_msnm, nivel_educativo, acceso_agua_potable, tiene_servicio_salud,
-                hemoglobina_dl1, en_seguimiento, consume_hierro, tipo_suplemento_hierro, frecuencia_suplemento, 
-                antecedentes_anemia, enfermedades_cronicas, riesgo, estado_alerta, sugerencias
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-        """, datos)
-        conn.commit()
+# ==================================================
+# 4. FACTORES DEMOGRÁFICOS
+# ==================================================
 
-# Título principal
-st.title("🩺 Sistema de Monitoreo de Hemoglobina en Niños")
-st.markdown("---")
+PERU_REGIONS = [
+    "LIMA", "AREQUIPA", "CUSCO", "PUNO", "ICA", "LORETO", "SAN MARTÍN", 
+    "LA LIBERTAD", "ANCASH", "JUNÍN", "PIURA", "LAMBAYEQUE", "OTRO"
+]
+
+CLIMA_POR_REGION = {
+    "LIMA": {"clima": "Desértico subtropical", "temp_promedio": "21°C", "humedad": "85%"},
+    "AREQUIPA": {"clima": "Semiárido", "temp_promedio": "18°C", "humedad": "45%"},
+    "CUSCO": {"clima": "Templado subhúmedo", "temp_promedio": "14°C", "humedad": "65%"},
+    "PUNO": {"clima": "Frío de altura", "temp_promedio": "8°C", "humedad": "55%"},
+    "OTRO": {"clima": "No especificado", "temp_promedio": "N/A", "humedad": "N/A"}
+}
+
+def mostrar_seccion_demograficos():
+    st.header("🌍 Factores Demográficos")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        region = st.selectbox("Región*", PERU_REGIONS, key="region_demo")
+        departamento = st.text_input("Departamento/Distrito", key="depto_demo")
+        altitud_msnm = st.number_input("Altitud (msnm)", 0, 5000, 150, key="altitud_demo")
+        
+    with col2:
+        # Mostrar información climática
+        clima_info = CLIMA_POR_REGION.get(region, CLIMA_POR_REGION["OTRO"])
+        st.markdown(f"""
+        <div class="climate-card" style="padding: 1rem; border-radius: 10px; margin: 0.5rem 0;">
+            <h4>🌤️ Clima {region}</h4>
+            <p><strong>{clima_info['clima']}</strong></p>
+            <p>🌡️ Temp: {clima_info['temp_promedio']} | 💧 Humedad: {clima_info['humedad']}</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    return {
+        'region': region,
+        'departamento': departamento,
+        'altitud_msnm': altitud_msnm,
+        'clima_info': clima_info
+    }
+
+# ==================================================
+# 5. FACTORES SOCIOECONÓMICOS
+# ==================================================
+
+FACTORES_SOCIOECONOMICOS = [
+    "Bajo nivel educativo de padres",
+    "Ingresos familiares reducidos",
+    "Hacinamiento en vivienda",
+    "Acceso limitado a agua potable",
+    "Zona rural o alejada",
+    "Trabajo informal o precario",
+    "Desnutrición familiar",
+    "Falta de saneamiento básico"
+]
+
+def mostrar_seccion_socioeconomicos():
+    st.header("💰 Factores Socioeconómicos")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        nivel_educativo = st.selectbox("Nivel Educativo Familiar", 
+                                     ["Sin educación", "Primaria", "Secundaria", "Superior"], 
+                                     key="educacion_socio")
+        acceso_agua_potable = st.checkbox("Acceso a agua potable", key="agua_socio")
+        tiene_servicio_salud = st.checkbox("Tiene servicio de salud", key="salud_socio")
+        
+    with col2:
+        st.subheader("Factores de Riesgo Social")
+        factores_sociales = st.multiselect(
+            "Seleccione factores presentes:",
+            FACTORES_SOCIOECONOMICOS,
+            help="Condiciones sociales que afectan la salud",
+            key="factores_socio"
+        )
+    
+    return {
+        'nivel_educativo': nivel_educativo,
+        'acceso_agua_potable': acceso_agua_potable,
+        'tiene_servicio_salud': tiene_servicio_salud,
+        'factores_sociales': factores_sociales
+    }
+
+# ==================================================
+# 6. FACTORES CLÍNICOS
+# ==================================================
+
+FACTORES_CLINICOS = [
+    "Historial familiar de anemia",
+    "Bajo peso al nacer (<2500g)",
+    "Prematurez (<37 semanas)",
+    "Infecciones recurrentes",
+    "Parasitosis intestinal",
+    "Enfermedades crónicas",
+    "Problemas gastrointestinales",
+    "Medicamentos que afectan absorción"
+]
+
+ACCESO_SERVICIOS = [
+    "Control prenatal irregular",
+    "Limitado acceso a suplementos",
+    "Barreras geográficas a centros de salud",
+    "Falta de información nutricional",
+    "Cobertura insuficiente de seguros"
+]
+
+def mostrar_seccion_clinicos():
+    st.header("🏥 Factores Clínicos")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.subheader("Parámetros Hematológicos")
+        hemoglobina_dl1 = st.number_input("Hemoglobina (g/dL)*", 5.0, 20.0, 9.7, 0.1, key="hemo_clinico")
+        mch = st.number_input("MCH (pg)", 15.0, 40.0, 28.0, 0.1, key="mch_clinico")
+        mchc = st.number_input("MCHC (g/dL)", 25.0, 40.0, 33.0, 0.1, key="mchc_clinico")
+        mcv = st.number_input("MCV (fL)", 60.0, 120.0, 90.0, 0.1, key="mcv_clinico")
+        
+    with col2:
+        st.subheader("Estado y Seguimiento")
+        en_seguimiento = st.checkbox("En seguimiento activo", key="seguimiento_clinico")
+        consume_hierro = st.checkbox("Consume suplemento de hierro", key="hierro_clinico")
+        tipo_suplemento = st.text_input("Tipo de suplemento", key="tipo_clinico")
+        frecuencia_suplemento = st.selectbox("Frecuencia", 
+                                           ["Diario", "3 veces/semana", "Semanal", "Otra"], 
+                                           key="frecuencia_clinico")
+    
+    st.subheader("Factores Clínicos de Riesgo")
+    col3, col4 = st.columns(2)
+    
+    with col3:
+        factores_clinicos = st.multiselect(
+            "Factores Clínicos:",
+            FACTORES_CLINICOS,
+            key="factores_clinicos"
+        )
+        antecedentes_anemia = st.checkbox("Antecedentes de anemia", key="antecedentes_clinico")
+        enfermedades_cronicas = st.text_area("Enfermedades crónicas", key="cronicas_clinico")
+    
+    with col4:
+        acceso_servicios = st.multiselect(
+            "Barreras de Acceso:",
+            ACCESO_SERVICIOS,
+            key="acceso_clinico"
+        )
+    
+    return {
+        'hemoglobina_dl1': hemoglobina_dl1,
+        'mch': mch,
+        'mchc': mchc,
+        'mcv': mcv,
+        'en_seguimiento': en_seguimiento,
+        'consume_hierro': consume_hierro,
+        'tipo_suplemento': tipo_suplemento,
+        'frecuencia_suplemento': frecuencia_suplemento,
+        'factores_clinicos': factores_clinicos,
+        'antecedentes_anemia': antecedentes_anemia,
+        'enfermedades_cronicas': enfermedades_cronicas,
+        'acceso_servicios': acceso_servicios
+    }
+
+# ==================================================
+# 7. CÁLCULO DE RIESGO
+# ==================================================
+
+def calcular_riesgo_anemia(hb, edad_meses, factores_clinicos, factores_sociales, acceso_servicios, clima_region):
+    puntaje = 0
+    
+    # Base por hemoglobina según edad
+    if edad_meses < 12:
+        if hb < 9.0: puntaje += 30
+        elif hb < 10.0: puntaje += 20
+        elif hb < 11.0: puntaje += 10
+    elif edad_meses < 60:
+        if hb < 9.5: puntaje += 30
+        elif hb < 10.5: puntaje += 20
+        elif hb < 11.5: puntaje += 10
+    else:
+        if hb < 10.0: puntaje += 30
+        elif hb < 11.0: puntaje += 20
+        elif hb < 12.0: puntaje += 10
+    
+    puntaje += len(factores_clinicos) * 4
+    puntaje += len(factores_sociales) * 3
+    puntaje += len(acceso_servicios) * 2
+    
+    if "tropical" in clima_region.lower() or "húmedo" in clima_region.lower():
+        puntaje += 5
+    
+    if puntaje >= 35:
+        return "ALTO RIESGO (Alerta Clínica - ALTA)", puntaje, "URGENTE"
+    elif puntaje >= 25:
+        return "ALTO RIESGO (Alerta Clínica - MODERADA)", puntaje, "PRIORITARIO"
+    elif puntaje >= 15:
+        return "RIESGO MODERADO", puntaje, "EN SEGUIMIENTO"
+    else:
+        return "BAJO RIESGO", puntaje, "VIGILANCIA"
+
+# ==================================================
+# 8. INTERFAZ PRINCIPAL CON PESTAÑAS
+# ==================================================
+
+st.markdown('<div class="main-header">', unsafe_allow_html=True)
+st.title("🏥 SISTEMA NIXON - Control de Anemia")
+st.markdown("**Sistema integrado de monitoreo y alertas tempranas**")
+st.markdown('</div>', unsafe_allow_html=True)
 
 # Crear pestañas
-tab1, tab2, tab3, tab4, tab5 = st.tabs([
-    "📊 Dashboard Principal", 
-    "👥 Registrar Paciente", 
+tab1, tab2, tab3, tab4 = st.tabs([
+    "📝 Registro Completo", 
     "🔍 Casos en Seguimiento", 
-    "📈 Estadísticas", 
-    "👁️ Ver Todos los Pacientes"
+    "📊 Parámetros Hematológicos", 
+    "📈 Estadísticas"
 ])
 
-# Pestaña 1: Dashboard Principal
+# Pestaña 1: REGISTRO COMPLETO
 with tab1:
-    st.header("📊 Resumen General")
+    st.header("📝 Registro Completo de Paciente")
     
-    try:
-        pacientes = get_pacientes()
-        df = pd.DataFrame(pacientes, columns=[
-            'dni', 'nombre_apellido', 'edad_meses', 'peso_kg', 'talla_cm', 'genero', 'telefono', 'estado_paciente',
-            'region', 'departamento', 'altitud_msnm', 'nivel_educativo', 'acceso_agua_potable', 'tiene_servicio_salud',
-            'hemoglobina_dl1', 'en_seguimiento', 'consume_hierro', 'tipo_suplemento_hierro', 'frecuencia_suplemento',
-            'antecedentes_anemia', 'enfermedades_cronicas', 'riesgo', 'fecha_alerta', 'estado_alerta', 'sugerencias'
-        ])
+    with st.form("formulario_completo"):
+        # 1. Datos Personales
+        datos_personales = mostrar_seccion_datos_personales()
+        st.markdown("---")
         
-        # Métricas principales
-        col1, col2, col3, col4 = st.columns(4)
-        with col1:
-            st.metric("Total Pacientes", len(df))
-        with col2:
-            st.metric("Alto Riesgo", len(df[df['riesgo'].str.contains('ALTO')]))
-        with col3:
-            st.metric("En Seguimiento", len(df[df['en_seguimiento'] == True]))
-        with col4:
-            st.metric("Hemoglobina Promedio", f"{df['hemoglobina_dl1'].mean():.1f} g/dL")
+        # 2. Factores Demográficos
+        datos_demograficos = mostrar_seccion_demograficos()
+        st.markdown("---")
         
-        # Gráfico de riesgos
-        fig_riesgo = px.pie(df, names='riesgo', title='Distribución por Nivel de Riesgo')
-        st.plotly_chart(fig_riesgo, use_container_width=True)
+        # 3. Factores Socioeconómicos
+        datos_socioeconomicos = mostrar_seccion_socioeconomicos()
+        st.markdown("---")
         
-        # Gráfico de hemoglobina por edad
-        fig_hemo = px.scatter(df, x='edad_meses', y='hemoglobina_dl1', color='riesgo',
-                             title='Hemoglobina vs Edad', size='peso_kg', hover_data=['nombre_apellido'])
-        st.plotly_chart(fig_hemo, use_container_width=True)
+        # 4. Factores Clínicos
+        datos_clinicos = mostrar_seccion_clinicos()
         
-    except Exception as e:
-        st.error(f"Error al cargar datos: {e}")
-
-# Pestaña 2: Registrar Nuevo Paciente
-with tab2:
-    st.header("👥 Registrar Nuevo Paciente")
+        submitted = st.form_submit_button("🎯 ANALIZAR RIESGO Y GUARDAR", type="primary")
     
-    with st.form("registro_paciente"):
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.subheader("📋 Datos Personales")
-            dni = st.text_input("DNI*")
-            nombre_apellido = st.text_input("Nombre Completo*")
-            edad_meses = st.number_input("Edad (meses)*", min_value=0, max_value=120)
-            peso_kg = st.number_input("Peso (kg)", min_value=0.0, format="%.2f")
-            talla_cm = st.number_input("Talla (cm)", min_value=0.0, format="%.2f")
-            genero = st.selectbox("Género", ["M", "F", "Otro"])
-            telefono = st.text_input("Teléfono")
-            estado_paciente = st.selectbox("Estado del Paciente", ["Activo", "Inactivo", "Dado de alta"])
-        
-        with col2:
-            st.subheader("🌍 Factores Demográficos")
-            region = st.selectbox("Región*", ["LIMA", "AREQUIPA", "CUSCO", "PUNO", "JUNIN", "ANCASH", "LA LIBERTAD"])
-            departamento = st.text_input("Departamento")
-            altitud_msnm = st.number_input("Altitud (msnm)", min_value=0)
-            
-            st.subheader("💰 Factores Socioeconómicos")
-            nivel_educativo = st.selectbox("Nivel Educativo", ["Sin educación", "Primaria", "Secundaria", "Superior"])
-            acceso_agua_potable = st.checkbox("Acceso a agua potable")
-            tiene_servicio_salud = st.checkbox("Tiene servicio de salud")
-        
-        st.subheader("🏥 Factores Clínicos")
-        col3, col4 = st.columns(2)
-        
-        with col3:
-            hemoglobina_dl1 = st.number_input("Hemoglobina (g/dL)*", min_value=0.0, format="%.1f")
-            en_seguimiento = st.checkbox("En seguimiento")
-            consume_hierro = st.checkbox("Consume suplemento de hierro")
-            tipo_suplemento_hierro = st.text_input("Tipo de suplemento de hierro")
-        
-        with col4:
-            frecuencia_suplemento = st.selectbox("Frecuencia de suplemento", 
-                                               ["Diario", "3 veces por semana", "Semanal", "Otra"])
-            antecedentes_anemia = st.checkbox("Antecedentes de anemia")
-            enfermedades_cronicas = st.text_area("Enfermedades crónicas")
-            
-            # Calcular riesgo automáticamente
-            if hemoglobina_dl1 < 10:
-                riesgo = "ALTO RIESGO (Alerta Clínica - ALTA)"
-                estado_alerta = "URGENTE"
-                sugerencias = "Suplemento de hierro inmediato y control médico urgente"
-            elif hemoglobina_dl1 < 11.5:
-                riesgo = "ALTO RIESGO (Alerta Clínica - MODERADA)"
-                estado_alerta = "PRIORITARIO"
-                sugerencias = "Dieta rica en hierro y evaluación médica"
-            else:
-                riesgo = "RIESGO MODERADO"
-                estado_alerta = "EN SEGUIMIENTO"
-                sugerencias = "Seguimiento rutinario"
-        
-        # Mostrar sugerencias automáticas
-        st.info(f"**Riesgo calculado:** {riesgo} - {estado_alerta}")
-        st.warning(f"**Sugerencias:** {sugerencias}")
-        
-        submitted = st.form_submit_button("💾 Guardar Paciente")
-        if submitted:
-            if dni and nombre_apellido and edad_meses and hemoglobina_dl1 and region:
-                datos = (
-                    dni, nombre_apellido, edad_meses, peso_kg, talla_cm, genero, telefono, estado_paciente,
-                    region, departamento, altitud_msnm, nivel_educativo, acceso_agua_potable, tiene_servicio_salud,
-                    hemoglobina_dl1, en_seguimiento, consume_hierro, tipo_suplemento_hierro, frecuencia_suplemento,
-                    antecedentes_anemia, enfermedades_cronicas, riesgo, estado_alerta, sugerencias
-                )
-                insert_paciente(datos)
-                st.success("✅ Paciente registrado exitosamente!")
-                st.rerun()
-            else:
-                st.error("❌ Por favor complete todos los campos obligatorios (*)")
-
-# Pestaña 3: Casos en Seguimiento
-with tab3:
-    st.header("🔍 Casos en Seguimiento")
-    
-    try:
-        pacientes_seguimiento = run_query("SELECT * FROM alertas_hemoglobina WHERE en_seguimiento = true;")
-        df_seguimiento = pd.DataFrame(pacientes_seguimiento, columns=[
-            'dni', 'nombre_apellido', 'edad_meses', 'peso_kg', 'talla_cm', 'genero', 'telefono', 'estado_paciente',
-            'region', 'departamento', 'altitud_msnm', 'nivel_educativo', 'acceso_agua_potable', 'tiene_servicio_salud',
-            'hemoglobina_dl1', 'en_seguimiento', 'consume_hierro', 'tipo_suplemento_hierro', 'frecuencia_suplemento',
-            'antecedentes_anemia', 'enfermedades_cronicas', 'riesgo', 'fecha_alerta', 'estado_alerta', 'sugerencias'
-        ])
-        
-        if len(df_seguimiento) > 0:
-            st.metric("Pacientes en Seguimiento", len(df_seguimiento))
-            
-            # Mostrar tabla de seguimiento
-            st.dataframe(df_seguimiento[['nombre_apellido', 'edad_meses', 'hemoglobina_dl1', 'riesgo', 'consume_hierro', 'sugerencias']])
-            
-            # Gráfico de progreso
-            fig_progreso = px.line(df_seguimiento, x='nombre_apellido', y='hemoglobina_dl1', 
-                                 title='Niveles de Hemoglobina - Pacientes en Seguimiento')
-            st.plotly_chart(fig_progreso, use_container_width=True)
+    if submitted:
+        # Validar campos obligatorios
+        if not datos_personales['dni'] or not datos_personales['nombre_completo']:
+            st.error("❌ Complete DNI y nombre del paciente")
         else:
-            st.info("No hay pacientes en seguimiento actualmente.")
+            # Calcular riesgo
+            nivel_riesgo, puntaje, estado = calcular_riesgo_anemia(
+                datos_clinicos['hemoglobina_dl1'],
+                datos_personales['edad_meses'],
+                datos_clinicos['factores_clinicos'],
+                datos_socioeconomicos['factores_sociales'],
+                datos_clinicos['acceso_servicios'],
+                datos_demograficos['clima_info']['clima']
+            )
             
-    except Exception as e:
-        st.error(f"Error al cargar casos en seguimiento: {e}")
+            # Mostrar resultados
+            st.success(f"✅ Análisis completado: {nivel_riesgo}")
 
-# Pestaña 4: Estadísticas
+# Pestaña 2: CASOS EN SEGUIMIENTO
+with tab2:
+    st.header("🔍 Casos en Seguimiento")
+    # Aquí iría la lógica para mostrar pacientes en seguimiento
+
+# Pestaña 3: PARÁMETROS HEMATOLÓGICOS
+with tab3:
+    st.header("📊 Parámetros Hematológicos")
+    # Aquí irían análisis específicos de parámetros de sangre
+
+# Pestaña 4: ESTADÍSTICAS
 with tab4:
     st.header("📈 Estadísticas y Reportes")
     
-    try:
-        df = pd.DataFrame(get_pacientes(), columns=[
-            'dni', 'nombre_apellido', 'edad_meses', 'peso_kg', 'talla_cm', 'genero', 'telefono', 'estado_paciente',
-            'region', 'departamento', 'altitud_msnm', 'nivel_educativo', 'acceso_agua_potable', 'tiene_servicio_salud',
-            'hemoglobina_dl1', 'en_seguimiento', 'consume_hierro', 'tipo_suplemento_hierro', 'frecuencia_suplemento',
-            'antecedentes_anemia', 'enfermedades_cronicas', 'riesgo', 'fecha_alerta', 'estado_alerta', 'sugerencias'
-        ])
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            # Distribución por región
-            fig_region = px.bar(df['region'].value_counts(), title='Pacientes por Región')
-            st.plotly_chart(fig_region, use_container_width=True)
-            
-            # Consumo de hierro
-            fig_hierro = px.pie(df, names='consume_hierro', title='Distribución de Consumo de Hierro')
-            st.plotly_chart(fig_hierro, use_container_width=True)
-        
-        with col2:
-            # Hemoglobina por género
-            fig_genero = px.box(df, x='genero', y='hemoglobina_dl1', title='Hemoglobina por Género')
-            st.plotly_chart(fig_genero, use_container_width=True)
-            
-            # Acceso a servicios
-            fig_servicios = px.pie(df, names='tiene_servicio_salud', title='Acceso a Servicios de Salud')
-            st.plotly_chart(fig_servicios, use_container_width=True)
-        
-        # Reporte detallado
-        st.subheader("📋 Reporte Detallado")
-        st.dataframe(df.describe())
-        
-    except Exception as e:
-        st.error(f"Error al generar estadísticas: {e}")
-
-# Pestaña 5: Ver Todos los Pacientes
-with tab5:
-    st.header("👁️ Todos los Pacientes Registrados")
-    
-    try:
-        pacientes = get_pacientes()
-        df = pd.DataFrame(pacientes, columns=[
-            'dni', 'nombre_apellido', 'edad_meses', 'peso_kg', 'talla_cm', 'genero', 'telefono', 'estado_paciente',
-            'region', 'departamento', 'altitud_msnm', 'nivel_educativo', 'acceso_agua_potable', 'tiene_servicio_salud',
-            'hemoglobina_dl1', 'en_seguimiento', 'consume_hierro', 'tipo_suplemento_hierro', 'frecuencia_suplemento',
-            'antecedentes_anemia', 'enfermedades_cronicas', 'riesgo', 'fecha_alerta', 'estado_alerta', 'sugerencias'
-        ])
-        
-        # Filtros
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            filtro_riesgo = st.selectbox("Filtrar por riesgo", ["Todos"] + list(df['riesgo'].unique()))
-        with col2:
-            filtro_region = st.selectbox("Filtrar por región", ["Todos"] + list(df['region'].unique()))
-        with col3:
-            filtro_seguimiento = st.selectbox("Filtrar por seguimiento", ["Todos", "En seguimiento", "Sin seguimiento"])
-        
-        # Aplicar filtros
-        df_filtrado = df.copy()
-        if filtro_riesgo != "Todos":
-            df_filtrado = df_filtrado[df_filtrado['riesgo'] == filtro_riesgo]
-        if filtro_region != "Todos":
-            df_filtrado = df_filtrado[df_filtrado['region'] == filtro_region]
-        if filtro_seguimiento == "En seguimiento":
-            df_filtrado = df_filtrado[df_filtrado['en_seguimiento'] == True]
-        elif filtro_seguimiento == "Sin seguimiento":
-            df_filtrado = df_filtrado[df_filtrado['en_seguimiento'] == False]
-        
-        st.dataframe(df_filtrado, use_container_width=True)
-        
-        # Botón de exportación
-        csv = df_filtrado.to_csv(index=False)
-        st.download_button(
-            label="📥 Exportar a CSV",
-            data=csv,
-            file_name=f"pacientes_hemoglobina_{datetime.now().strftime('%Y%m%d')}.csv",
-            mime="text/csv"
-        )
-        
-    except Exception as e:
-        st.error(f"Error al cargar pacientes: {e}")
-
-# Footer
-st.markdown("---")
-st.markdown("**Sistema de Alertas de Hemoglobina** 🩺 | Desarrollado para el monitoreo de anemia infantil")
