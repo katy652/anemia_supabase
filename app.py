@@ -91,7 +91,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- CONFIGURACIÓN SUPABASE CORREGIDA ---
-TABLE_NAME = "alertas_hemoglobina"  # Cambiado a tu tabla real
+TABLE_NAME = "alertas_hemoglobina"
 MODEL_PATH = "modelo_columns.joblib"
 
 SUPABASE_URL = "https://kwsuszkblbejvliniggd.supabase.co"
@@ -236,13 +236,13 @@ def insertar_datos_supabase(datos):
         # Usar EXACTAMENTE los nombres de columnas que existen en tu tabla
         datos_limpios = {
             "dni": datos.get("dni", ""),
-            "nombre_apellido": datos.get("nombre_completo", ""),  # Cambiado a nombre_apellido
-            "edad_meses": datos.get("edad_meses", 0),  # Agregado
-            "hemoglobina_g_dL": datos.get("hemoglobina_g_dL", 0.0),  # Nombre correcto
+            "nombre_apellido": datos.get("nombre_completo", ""),
+            "edad_meses": datos.get("edad_meses", 0),
+            "hemoglobina_g_dL": datos.get("hemoglobina_g_dL", 0.0),
             "riesgo": datos.get("riesgo", ""),
             "fecha_alerta": datos.get("fecha_alerta", datetime.now().isoformat()),
-            "estado": datos.get("estado_recomendado", ""),  # Cambiado a estado
-            "sugerencias": datos.get("sugerencias_texto", ""),  # Cambiado a sugerencias
+            "estado": datos.get("estado_recomendado", ""),
+            "sugerencias": datos.get("sugerencias_texto", ""),
             "region": datos.get("region", "NO ESPECIFICADO")
         }
         
@@ -389,8 +389,8 @@ def generar_sugerencias(riesgo, puntaje, factores_clinicos, factores_sociales, a
     else:
         sugerencias.append("🍖 **DIETA ESPECÍFICA** - Carnes rojas, hígado, legumbres, vegetales verdes y cítricos")
     
-    # Seguimiento según riesgo
-    if "ALTO" en riesgo:
+    # Seguimiento según riesgo - CORREGIDO: "en" → "in"
+    if "ALTO" in riesgo:
         sugerencias.append("📊 **MONITOREO ESTRECHO** - Control semanal hasta mejoría")
     else:
         sugerencias.append("📊 **SEGUIMIENTO** - Control cada 15 días hasta normalización")
@@ -641,8 +641,8 @@ if submitted:
             record = {
                 "dni": dni,
                 "nombre_completo": nombre_completo,
-                "edad_meses": int(edad_meses),  # Agregado
-                "hemoglobina_g_dL": float(hemoglobina_g_dl),  # Nombre correcto
+                "edad_meses": int(edad_meses),
+                "hemoglobina_g_dL": float(hemoglobina_g_dl),
                 "riesgo": nivel_riesgo,
                 "fecha_alerta": datetime.now().isoformat(),
                 "estado_recomendado": estado_recomendado,
@@ -675,3 +675,66 @@ if st.button("🔄 Actualizar Dashboard Nixon desde Supabase", key="load_histori
             st.metric("Total Casos Nixon", total_casos)
         
         with col_stat2:
+            alto_riesgo = len(datos_reales[datos_reales['riesgo'].str.contains('ALTO', na=False)])
+            st.metric("Alertas Activas", alto_riesgo)
+        
+        with col_stat3:
+            avg_hemoglobina = datos_reales['hemoglobina'].mean()
+            st.metric("Hb Promedio", f"{avg_hemoglobina:.1f} g/dL")
+        
+        with col_stat4:
+            region_mas_casos = datos_reales['region'].mode()[0] if not datos_reales['region'].mode().empty else "N/A"
+            st.metric("Región Más Afectada", region_mas_casos)
+        
+        # Gráficos Nixon con datos reales
+        col_chart1, col_chart2 = st.columns(2)
+        
+        with col_chart1:
+            st.subheader("📊 Distribución de Riesgos Nixon")
+            fig_riesgos = px.pie(
+                datos_reales, 
+                names='riesgo',
+                title='Distribución de Niveles de Riesgo - Datos Reales',
+                color_discrete_sequence=['#ff5252', '#ff9800', '#4caf50', '#2196f3']
+            )
+            st.plotly_chart(fig_riesgos, use_container_width=True)
+        
+        with col_chart2:
+            st.subheader("📈 Tendencia por Región")
+            casos_por_region = datos_reales['region'].value_counts().head(10)
+            fig_barras = px.bar(
+                x=casos_por_region.index,
+                y=casos_por_region.values,
+                title='Top 10 Regiones con Más Casos',
+                labels={'x': 'Región', 'y': 'Número de Casos'}
+            )
+            st.plotly_chart(fig_barras, use_container_width=True)
+        
+        # Mapa de clima y casos
+        st.subheader("🌤️ Mapa Climático y Distribución de Casos")
+        col_map1, col_map2 = st.columns(2)
+        
+        with col_map1:
+            st.markdown("**Clima por Regiones:**")
+            for region_clima in list(CLIMA_POR_REGION.keys())[:6]:
+                info = CLIMA_POR_REGION[region_clima]
+                st.markdown(f"**{region_clima}**: {info['clima']} - {info['temp_promedio']}")
+        
+        with col_map2:
+            st.markdown("**Distribución Geográfica:**")
+            regiones_con_casos = datos_reales['region'].value_counts()
+            for region, count in regiones_con_casos.head(5).items():
+                clima_reg = obtener_clima_region(region)
+                st.markdown(f"**{region}**: {count} casos - {clima_reg['clima']}")
+        
+        # Tabla de casos recientes
+        st.subheader("🕐 Casos Recientes - Monitoring Nixon")
+        columnas_display = ['dni', 'nombre', 'hemoglobina', 'riesgo', 'region', 'fecha_alerta']
+        columnas_disponibles = [col for col in columnas_display if col in datos_reales.columns]
+        
+        if columnas_disponibles:
+            display_df = datos_reales[columnas_disponibles].head(15)
+            display_df['fecha_alerta'] = pd.to_datetime(display_df['fecha_alerta']).dt.strftime('%d/%m/%Y %H:%M')
+            st.dataframe(display_df, use_container_width=True)
+    else:
+        st.info("💡 Sistema Nixon listo. Comience ingresando el primer caso.")
