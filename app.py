@@ -151,18 +151,19 @@ AJUSTE_HEMOGLOBINA = [
     {"altitud_min": 4500, "altitud_max": 10000, "ajuste": -4.5}
 ]
 
-def obtener_ajuste_hemoglobina(altitud):
-    """Obtiene el ajuste de hemoglobina según la altitud"""
-    for ajuste in AJUSTE_HEMOGLOBINA:
-        if ajuste["altitud_min"] <= altitud <= ajuste["altitud_max"]:
-            return ajuste["ajuste"]
-    return 0.0
-
 def calcular_hemoglobina_ajustada(hemoglobina_medida, altitud):
     """Calcula la hemoglobina ajustada al nivel del mar - CORREGIDA"""
     ajuste = obtener_ajuste_hemoglobina(altitud)
-    # CORRECCIÓN: La hemoglobina ajustada es la medida MENOS el ajuste (que es negativo)
-    return hemoglobina_medida - ajuste  # Ej: 9.6 - (-1.9) = 11.5
+    # CORRECCIÓN: La hemoglobina ajustada es la medida MÁS el ajuste (que es negativo)
+    return hemoglobina_medida + ajuste  # Ej: 9.6 + (-0.8) = 8.8
+
+# Y en la interfaz cambiar la explicación:
+st.info(f"""
+**Cálculo CORREGIDO:**
+- Hb medida: {hemoglobina_medida:.1f} g/dL
+- Ajuste por {altitud_msnm} msnm: {ajuste_hb:+.1f} g/dL  
+- **Hb ajustada: {hemoglobina_ajustada:.1f} g/dL**
+""")
 
 # ==================================================
 # LISTAS DE OPCIONES - CORREGIDAS
