@@ -5,6 +5,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 import numpy as np
 import os
+import time
 from datetime import datetime, timedelta
 
 # ==================================================
@@ -150,7 +151,7 @@ def obtener_ajuste_hemoglobina(altitud):
 
 def calcular_hemoglobina_ajustada(hemoglobina_medida, altitud):
     ajuste = obtener_ajuste_hemoglobina(altitud)
-    return hemoglobina_medida + ajuste  # CORRECTO: 9.6 + (-0.8) = 8.8
+    return hemoglobina_medida + ajuste
 
 # ==================================================
 # LISTAS DE OPCIONES
@@ -253,6 +254,100 @@ def calcular_riesgo_anemia(hb_ajustada, edad_meses, factores_clinicos, factores_
         return "RIESGO MODERADO", puntaje, "EN SEGUIMIENTO"
     else:
         return "BAJO RIESGO", puntaje, "VIGILANCIA"
+
+# ==================================================
+# CREAR DATOS DE PRUEBA SI LA TABLA ESTÁ VACÍA
+# ==================================================
+
+if supabase:
+    try:
+        response = supabase.table(TABLE_NAME).select("*").limit(1).execute()
+        if not response.data:
+            st.info("🔄 Inicializando base de datos con datos de prueba...")
+            
+            datos_prueba = [
+                {
+                    "dni": "12345678",
+                    "nombre_apellido": "Ana García Pérez",
+                    "edad_meses": 24,
+                    "peso_kg": 12.5,
+                    "talla_cm": 85.0,
+                    "genero": "F",
+                    "region": "LIMA", 
+                    "altitud_msnm": 150,
+                    "hemoglobina_medida": 9.5,
+                    "hemoglobina_ajustada": 9.5,
+                    "ajuste_altitud": 0.0,
+                    "mch": 28.0,
+                    "mchc": 33.0,
+                    "mcv": 90.0,
+                    "en_seguimiento": True,
+                    "consume_hierro": True,
+                    "factores_clinicos": "Historial familiar de anemia",
+                    "factores_sociales": "Bajo nivel educativo de padres",
+                    "riesgo": "ALTO RIESGO (Alerta Clínica - ALTA)",
+                    "puntaje_riesgo": 35,
+                    "estado_alerta": "URGENTE",
+                    "fecha_alerta": datetime.now().isoformat()
+                },
+                {
+                    "dni": "87654321", 
+                    "nombre_apellido": "Luis Martínez",
+                    "edad_meses": 18,
+                    "peso_kg": 11.2,
+                    "talla_cm": 78.0,
+                    "genero": "M",
+                    "region": "CUSCO",
+                    "altitud_msnm": 3400,
+                    "hemoglobina_medida": 10.8,
+                    "hemoglobina_ajustada": 8.9,
+                    "ajuste_altitud": -1.9,
+                    "mch": 26.0,
+                    "mchc": 32.0,
+                    "mcv": 85.0,
+                    "en_seguimiento": True,
+                    "consume_hierro": False,
+                    "factores_clinicos": "Infecciones recurrentes",
+                    "factores_sociales": "Zona rural o alejada, Acceso limitado a agua potable",
+                    "riesgo": "ALTO RIESGO (Alerta Clínica - MODERADA)",
+                    "puntaje_riesgo": 28,
+                    "estado_alerta": "PRIORITARIO",
+                    "fecha_alerta": datetime.now().isoformat()
+                },
+                {
+                    "dni": "45678912",
+                    "nombre_apellido": "María López",
+                    "edad_meses": 36,
+                    "peso_kg": 14.0,
+                    "talla_cm": 95.0,
+                    "genero": "F",
+                    "region": "AREQUIPA",
+                    "altitud_msnm": 2500,
+                    "hemoglobina_medida": 11.5,
+                    "hemoglobina_ajustada": 10.2,
+                    "ajuste_altitud": -1.3,
+                    "mch": 29.0,
+                    "mchc": 34.0,
+                    "mcv": 92.0,
+                    "en_seguimiento": False,
+                    "consume_hierro": True,
+                    "factores_clinicos": "",
+                    "factores_sociales": "",
+                    "riesgo": "RIESGO MODERADO",
+                    "puntaje_riesgo": 12,
+                    "estado_alerta": "EN SEGUIMIENTO",
+                    "fecha_alerta": datetime.now().isoformat()
+                }
+            ]
+            
+            for dato in datos_prueba:
+                supabase.table(TABLE_NAME).insert(dato).execute()
+            
+            st.success("✅ Base de datos inicializada con 3 pacientes de prueba")
+            time.sleep(2)
+            st.rerun()
+    except Exception as e:
+        st.warning(f"⚠️ Error verificando datos: {e}")
 
 # ==================================================
 # INTERFAZ PRINCIPAL
