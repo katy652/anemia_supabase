@@ -104,31 +104,13 @@ supabase = init_supabase()
 # ==================================================
 
 ALTITUD_REGIONES = {
-    "AMAZONAS": {"altitud_min": 500, "altitud_max": 3500, "altitud_promedio": 2000},
-    "ANCASH": {"altitud_min": 2000, "altitud_max": 4000, "altitud_promedio": 3000},
-    "APURIMAC": {"altitud_min": 2500, "altitud_max": 4500, "altitud_promedio": 3500},
-    "AREQUIPA": {"altitud_min": 2000, "altitud_max": 3500, "altitud_promedio": 2500},
-    "AYACUCHO": {"altitud_min": 2500, "altitud_max": 4000, "altitud_promedio": 3200},
-    "CAJAMARCA": {"altitud_min": 1500, "altitud_max": 3500, "altitud_promedio": 2500},
-    "CALLAO": {"altitud_min": 0, "altitud_max": 100, "altitud_promedio": 50},
-    "CUSCO": {"altitud_min": 3000, "altitud_max": 4500, "altitud_promedio": 3400},
-    "HUANCAVELICA": {"altitud_min": 3000, "altitud_max": 4500, "altitud_promedio": 3700},
-    "HUANUCO": {"altitud_min": 1000, "altitud_max": 3500, "altitud_promedio": 2000},
-    "ICA": {"altitud_min": 0, "altitud_max": 1500, "altitud_promedio": 500},
-    "JUNIN": {"altitud_min": 3000, "altitud_max": 4200, "altitud_promedio": 3500},
-    "LA LIBERTAD": {"altitud_min": 0, "altitud_max": 3500, "altitud_promedio": 1800},
-    "LAMBAYEQUE": {"altitud_min": 0, "altitud_max": 2000, "altitud_promedio": 500},
     "LIMA": {"altitud_min": 0, "altitud_max": 500, "altitud_promedio": 150},
-    "LORETO": {"altitud_min": 50, "altitud_max": 300, "altitud_promedio": 150},
-    "MADRE DE DIOS": {"altitud_min": 100, "altitud_max": 500, "altitud_promedio": 250},
-    "MOQUEGUA": {"altitud_min": 1000, "altitud_max": 3500, "altitud_promedio": 2000},
-    "PASCO": {"altitud_min": 2500, "altitud_max": 4000, "altitud_promedio": 3200},
-    "PIURA": {"altitud_min": 0, "altitud_max": 2500, "altitud_promedio": 1000},
+    "AREQUIPA": {"altitud_min": 2000, "altitud_max": 3500, "altitud_promedio": 2500},
+    "CUSCO": {"altitud_min": 3000, "altitud_max": 4500, "altitud_promedio": 3400},
     "PUNO": {"altitud_min": 3800, "altitud_max": 4500, "altitud_promedio": 4100},
-    "SAN MARTIN": {"altitud_min": 200, "altitud_max": 2000, "altitud_promedio": 800},
-    "TACNA": {"altitud_min": 500, "altitud_max": 3000, "altitud_promedio": 1500},
-    "TUMBES": {"altitud_min": 0, "altitud_max": 200, "altitud_promedio": 50},
-    "UCAYALI": {"altitud_min": 100, "altitud_max": 400, "altitud_promedio": 200}
+    "JUNIN": {"altitud_min": 3000, "altitud_max": 4200, "altitud_promedio": 3500},
+    "ANCASH": {"altitud_min": 2000, "altitud_max": 4000, "altitud_promedio": 3000},
+    "LA LIBERTAD": {"altitud_min": 0, "altitud_max": 3500, "altitud_promedio": 1800}
 }
 
 AJUSTE_HEMOGLOBINA = [
@@ -157,15 +139,11 @@ def calcular_hemoglobina_ajustada(hemoglobina_medida, altitud):
 # LISTAS DE OPCIONES
 # ==================================================
 
-PERU_REGIONS = [
-    "AMAZONAS", "ANCASH", "APURIMAC", "AREQUIPA", "AYACUCHO", 
-    "CAJAMARCA", "CALLAO", "CUSCO", "HUANCAVELICA", "HUANUCO", 
-    "ICA", "JUNIN", "LA LIBERTAD", "LAMBAYEQUE", "LIMA", 
-    "LORETO", "MADRE DE DIOS", "MOQUEGUA", "PASCO", "PIURA", 
-    "PUNO", "SAN MARTIN", "TACNA", "TUMBES", "UCAYALI"
-]
-
+PERU_REGIONS = ["LIMA", "AREQUIPA", "CUSCO", "PUNO", "JUNIN", "ANCASH", "LA LIBERTAD"]
 GENEROS = ["F", "M"]
+NIVELES_EDUCATIVOS = ["Sin educación", "Primaria", "Secundaria", "Superior"]
+FRECUENCIAS_SUPLEMENTO = ["Diario", "3 veces por semana", "Semanal", "Otra"]
+ESTADOS_PACIENTE = ["Activo", "En seguimiento", "Dado de alta", "Inactivo"]
 
 FACTORES_CLINICOS = [
     "Historial familiar de anemia",
@@ -255,6 +233,16 @@ def calcular_riesgo_anemia(hb_ajustada, edad_meses, factores_clinicos, factores_
     else:
         return "BAJO RIESGO", puntaje, "VIGILANCIA"
 
+def generar_sugerencias(riesgo, hemoglobina_ajustada, edad_meses):
+    if "ALTO" in riesgo and "ALTA" in riesgo:
+        return "Suplemento de hierro y control mensual urgente"
+    elif "ALTO" in riesgo:
+        return "Dieta rica en hierro y evaluación médica prioritaria"
+    elif "MODERADO" in riesgo:
+        return "Seguimiento rutinario y refuerzo nutricional"
+    else:
+        return "Control preventivo y educación nutricional"
+
 # ==================================================
 # CREAR DATOS DE PRUEBA SI LA TABLA ESTÁ VACÍA
 # ==================================================
@@ -273,77 +261,57 @@ if supabase:
                     "peso_kg": 12.5,
                     "talla_cm": 85.0,
                     "genero": "F",
-                    "region": "LIMA", 
+                    "telefono": "987654321",
+                    "estado_paciente": "Activo",
+                    "region": "LIMA",
+                    "departamento": "Lima Metropolitana",
                     "altitud_msnm": 150,
-                    "hemoglobina_medida": 9.5,
-                    "hemoglobina_ajustada": 9.5,
-                    "ajuste_altitud": 0.0,
-                    "mch": 28.0,
-                    "mchc": 33.0,
-                    "mcv": 90.0,
+                    "nivel_educativo": "Secundaria",
+                    "acceso_agua_potable": True,
+                    "tiene_servicio_salud": True,
+                    "hemoglobina_dl1": 9.5,
                     "en_seguimiento": True,
                     "consume_hierro": True,
-                    "factores_clinicos": "Historial familiar de anemia",
-                    "factores_sociales": "Bajo nivel educativo de padres",
+                    "tipo_suplemento_hierro": "Sulfato ferroso",
+                    "frecuencia_suplemento": "Diario",
+                    "antecedentes_anemia": True,
+                    "enfermedades_cronicas": "Ninguna",
                     "riesgo": "ALTO RIESGO (Alerta Clínica - ALTA)",
-                    "puntaje_riesgo": 35,
                     "estado_alerta": "URGENTE",
-                    "fecha_alerta": datetime.now().isoformat()
+                    "sugerencias": "Suplemento de hierro y control mensual"
                 },
                 {
-                    "dni": "87654321", 
-                    "nombre_apellido": "Luis Martínez",
+                    "dni": "87654321",
+                    "nombre_apellido": "Luis Martínez", 
                     "edad_meses": 18,
                     "peso_kg": 11.2,
                     "talla_cm": 78.0,
                     "genero": "M",
-                    "region": "CUSCO",
-                    "altitud_msnm": 3400,
-                    "hemoglobina_medida": 10.8,
-                    "hemoglobina_ajustada": 8.9,
-                    "ajuste_altitud": -1.9,
-                    "mch": 26.0,
-                    "mchc": 32.0,
-                    "mcv": 85.0,
-                    "en_seguimiento": True,
-                    "consume_hierro": False,
-                    "factores_clinicos": "Infecciones recurrentes",
-                    "factores_sociales": "Zona rural o alejada, Acceso limitado a agua potable",
-                    "riesgo": "ALTO RIESGO (Alerta Clínica - MODERADA)",
-                    "puntaje_riesgo": 28,
-                    "estado_alerta": "PRIORITARIO",
-                    "fecha_alerta": datetime.now().isoformat()
-                },
-                {
-                    "dni": "45678912",
-                    "nombre_apellido": "María López",
-                    "edad_meses": 36,
-                    "peso_kg": 14.0,
-                    "talla_cm": 95.0,
-                    "genero": "F",
+                    "telefono": "987654322",
+                    "estado_paciente": "Activo",
                     "region": "AREQUIPA",
+                    "departamento": "Arequipa",
                     "altitud_msnm": 2500,
-                    "hemoglobina_medida": 11.5,
-                    "hemoglobina_ajustada": 10.2,
-                    "ajuste_altitud": -1.3,
-                    "mch": 29.0,
-                    "mchc": 34.0,
-                    "mcv": 92.0,
+                    "nivel_educativo": "Primaria",
+                    "acceso_agua_potable": True,
+                    "tiene_servicio_salud": False,
+                    "hemoglobina_dl1": 10.8,
                     "en_seguimiento": False,
-                    "consume_hierro": True,
-                    "factores_clinicos": "",
-                    "factores_sociales": "",
-                    "riesgo": "RIESGO MODERADO",
-                    "puntaje_riesgo": 12,
-                    "estado_alerta": "EN SEGUIMIENTO",
-                    "fecha_alerta": datetime.now().isoformat()
+                    "consume_hierro": False,
+                    "tipo_suplemento_hierro": None,
+                    "frecuencia_suplemento": None,
+                    "antecedentes_anemia": False,
+                    "enfermedades_cronicas": "Ninguna",
+                    "riesgo": "ALTO RIESGO (Alerta Clínica - MODERADA)",
+                    "estado_alerta": "PRIORITARIO", 
+                    "sugerencias": "Dieta rica en hierro y evaluación médica"
                 }
             ]
             
             for dato in datos_prueba:
                 supabase.table(TABLE_NAME).insert(dato).execute()
             
-            st.success("✅ Base de datos inicializada con 3 pacientes de prueba")
+            st.success("✅ Base de datos inicializada con 2 pacientes de prueba")
             time.sleep(2)
             st.rerun()
     except Exception as e:
@@ -380,10 +348,13 @@ with tab1:
             peso_kg = st.number_input("Peso (kg)", 0.0, 50.0, 12.5, 0.1)
             talla_cm = st.number_input("Talla (cm)", 0.0, 150.0, 85.0, 0.1)
             genero = st.selectbox("Género*", GENEROS)
+            telefono = st.text_input("Teléfono")
+            estado_paciente = st.selectbox("Estado del Paciente", ESTADOS_PACIENTE)
         
         with col2:
             st.subheader("🌍 Datos Geográficos")
             region = st.selectbox("Región*", PERU_REGIONS)
+            departamento = st.text_input("Departamento/Distrito")
             
             if region in ALTITUD_REGIONES:
                 altitud_info = ALTITUD_REGIONES[region]
@@ -401,22 +372,20 @@ with tab1:
             else:
                 altitud_msnm = st.number_input("Altitud (msnm)*", 0, 5000, 500)
             
-            ajuste_hb = obtener_ajuste_hemoglobina(altitud_msnm)
-            st.markdown(f"""
-            <div class="climate-card">
-                <h4>📊 Ajuste por Altitud</h4>
-                <p><strong>Corrección: {ajuste_hb:+.1f} g/dL</strong></p>
-                <p>Hb se ajusta automáticamente</p>
-            </div>
-            """, unsafe_allow_html=True)
+            st.subheader("💰 Factores Socioeconómicos")
+            nivel_educativo = st.selectbox("Nivel Educativo", NIVELES_EDUCATIVOS)
+            acceso_agua_potable = st.checkbox("Acceso a agua potable")
+            tiene_servicio_salud = st.checkbox("Tiene servicio de salud")
         
         st.markdown("---")
         col3, col4 = st.columns(2)
         
         with col3:
-            st.subheader("🩺 Parámetros Hematológicos")
+            st.subheader("🩺 Parámetros Clínicos")
             hemoglobina_medida = st.number_input("Hemoglobina medida (g/dL)*", 5.0, 20.0, 11.0, 0.1)
             
+            # Calcular hemoglobina ajustada
+            ajuste_hb = obtener_ajuste_hemoglobina(altitud_msnm)
             hemoglobina_ajustada = calcular_hemoglobina_ajustada(hemoglobina_medida, altitud_msnm)
             
             st.metric(
@@ -432,15 +401,15 @@ with tab1:
             - **Hb ajustada: {hemoglobina_ajustada:.1f} g/dL**
             """)
             
-            mch = st.number_input("MCH (pg)", 15.0, 40.0, 28.0, 0.1)
-            mchc = st.number_input("MCHC (g/dL)", 25.0, 40.0, 33.0, 0.1)
-            mcv = st.number_input("MCV (fL)", 60.0, 120.0, 90.0, 0.1)
-        
-        with col4:
-            st.subheader("📋 Estado y Factores")
             en_seguimiento = st.checkbox("Marcar para seguimiento activo", value=True)
             consume_hierro = st.checkbox("Consume suplemento de hierro")
-            
+            tipo_suplemento_hierro = st.text_input("Tipo de suplemento de hierro")
+            frecuencia_suplemento = st.selectbox("Frecuencia de suplemento", FRECUENCIAS_SUPLEMENTO)
+            antecedentes_anemia = st.checkbox("Antecedentes de anemia")
+            enfermedades_cronicas = st.text_area("Enfermedades crónicas")
+        
+        with col4:
+            st.subheader("📋 Factores de Riesgo")
             st.subheader("🏥 Factores Clínicos")
             factores_clinicos = st.multiselect("Seleccione factores clínicos:", FACTORES_CLINICOS)
             
@@ -453,6 +422,7 @@ with tab1:
         if not dni or not nombre_completo:
             st.error("❌ Complete DNI y nombre del paciente")
         else:
+            # Calcular riesgo usando hemoglobina AJUSTADA
             nivel_riesgo, puntaje, estado = calcular_riesgo_anemia(
                 hemoglobina_ajustada,
                 edad_meses,
@@ -460,6 +430,10 @@ with tab1:
                 factores_sociales
             )
             
+            # Generar sugerencias
+            sugerencias = generar_sugerencias(nivel_riesgo, hemoglobina_ajustada, edad_meses)
+            
+            # Mostrar resultados
             if "ALTO" in nivel_riesgo and "ALTA" in nivel_riesgo:
                 st.markdown('<div class="risk-high">', unsafe_allow_html=True)
             elif "ALTO" in nivel_riesgo:
@@ -470,8 +444,10 @@ with tab1:
             st.markdown(f"### **RIESGO: {nivel_riesgo}**")
             st.markdown(f"**Puntaje:** {puntaje}/60 puntos | **Estado:** {estado}")
             st.markdown(f"**Hemoglobina:** {hemoglobina_medida:.1f} g/dL (medida) → **{hemoglobina_ajustada:.1f} g/dL** (ajustada)")
+            st.markdown(f"**Sugerencias:** {sugerencias}")
             st.markdown('</div>', unsafe_allow_html=True)
             
+            # Guardar en Supabase
             if supabase:
                 record = {
                     "dni": dni,
@@ -480,21 +456,24 @@ with tab1:
                     "peso_kg": float(peso_kg),
                     "talla_cm": float(talla_cm),
                     "genero": genero,
+                    "telefono": telefono,
+                    "estado_paciente": estado_paciente,
                     "region": region,
+                    "departamento": departamento,
                     "altitud_msnm": int(altitud_msnm),
-                    "hemoglobina_medida": float(hemoglobina_medida),
-                    "hemoglobina_ajustada": float(hemoglobina_ajustada),
-                    "ajuste_altitud": float(ajuste_hb),
-                    "mch": float(mch),
-                    "mchc": float(mchc),
-                    "mcv": float(mcv),
+                    "nivel_educativo": nivel_educativo,
+                    "acceso_agua_potable": acceso_agua_potable,
+                    "tiene_servicio_salud": tiene_servicio_salud,
+                    "hemoglobina_dl1": float(hemoglobina_medida),
                     "en_seguimiento": en_seguimiento,
                     "consume_hierro": consume_hierro,
-                    "factores_clinicos": ", ".join(factores_clinicos),
-                    "factores_sociales": ", ".join(factores_sociales),
+                    "tipo_suplemento_hierro": tipo_suplemento_hierro,
+                    "frecuencia_suplemento": frecuencia_suplemento,
+                    "antecedentes_anemia": antecedentes_anemia,
+                    "enfermedades_cronicas": enfermedades_cronicas,
                     "riesgo": nivel_riesgo,
-                    "puntaje_riesgo": int(puntaje),
                     "estado_alerta": estado,
+                    "sugerencias": sugerencias,
                     "fecha_alerta": datetime.now().isoformat()
                 }
                 
@@ -515,7 +494,7 @@ with tab2:
         if not casos_seguimiento.empty:
             st.success(f"✅ {len(casos_seguimiento)} casos en seguimiento encontrados")
             
-            columnas_mostrar = ['nombre_apellido', 'edad_meses', 'hemoglobina_ajustada', 'riesgo', 'region', 'fecha_alerta']
+            columnas_mostrar = ['nombre_apellido', 'edad_meses', 'hemoglobina_dl1', 'riesgo', 'region', 'fecha_alerta']
             columnas_disponibles = [col for col in columnas_mostrar if col in casos_seguimiento.columns]
             
             if columnas_disponibles:
@@ -532,8 +511,9 @@ with tab2:
                     alto_riesgo = len(casos_seguimiento[casos_seguimiento['riesgo'].str.contains('ALTO', na=False)])
                     st.metric("Alto riesgo", alto_riesgo)
                 with col3:
-                    avg_hemoglobina = casos_seguimiento['hemoglobina_ajustada'].mean()
-                    st.metric("Hb promedio", f"{avg_hemoglobina:.1f} g/dL")
+                    if 'hemoglobina_dl1' in casos_seguimiento.columns:
+                        avg_hemoglobina = casos_seguimiento['hemoglobina_dl1'].mean()
+                        st.metric("Hb promedio", f"{avg_hemoglobina:.1f} g/dL")
         else:
             st.info("📝 No hay casos en seguimiento actualmente")
 
@@ -559,8 +539,9 @@ with tab3:
                 st.metric("En seguimiento", en_seguimiento)
             
             with col3:
-                avg_hemoglobina = datos_completos['hemoglobina_ajustada'].mean()
-                st.metric("Hb promedio ajustada", f"{avg_hemoglobina:.1f} g/dL")
+                if 'hemoglobina_dl1' in datos_completos.columns:
+                    avg_hemoglobina = datos_completos['hemoglobina_dl1'].mean()
+                    st.metric("Hb promedio", f"{avg_hemoglobina:.1f} g/dL")
             
             with col4:
                 if 'riesgo' in datos_completos.columns:
