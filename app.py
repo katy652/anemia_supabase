@@ -10,7 +10,7 @@ import time
 from datetime import datetime, timedelta
 
 # ==================================================
-# 1. CONFIGURACIÓN E INICIALIZACIÓN
+# CONFIGURACIÓN E INICIALIZACIÓN
 # ==================================================
 
 st.set_page_config(
@@ -29,17 +29,60 @@ st.markdown("""
         color: white;
         margin-bottom: 2rem;
     }
-    .risk-high { background-color: #ffebee; border-left: 5px solid #f44336; }
-    .risk-moderate { background-color: #fff3e0; border-left: 5px solid #ff9800; }
-    .risk-low { background-color: #e8f5e8; border-left: 5px solid #4caf50; }
-    .factor-card { background: white; padding: 1.5rem; border-radius: 10px; margin-bottom: 1rem; }
-    .metric-card { background: white; padding: 1rem; border-radius: 8px; text-align: center; }
-    .climate-card { background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%); color: white; }
+    .risk-high { 
+        background-color: #ffebee; 
+        border-left: 5px solid #f44336;
+        padding: 1rem;
+        border-radius: 5px;
+        margin: 1rem 0;
+    }
+    .risk-moderate { 
+        background-color: #fff3e0; 
+        border-left: 5px solid #ff9800;
+        padding: 1rem;
+        border-radius: 5px;
+        margin: 1rem 0;
+    }
+    .risk-low { 
+        background-color: #e8f5e8; 
+        border-left: 5px solid #4caf50;
+        padding: 1rem;
+        border-radius: 5px;
+        margin: 1rem 0;
+    }
+    .factor-card { 
+        background: white; 
+        padding: 1.5rem; 
+        border-radius: 10px; 
+        margin-bottom: 1rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .metric-card { 
+        background: white; 
+        padding: 1rem; 
+        border-radius: 8px; 
+        text-align: center;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .climate-card { 
+        background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%); 
+        color: white; 
+        padding: 1rem;
+        border-radius: 10px;
+        margin: 0.5rem 0;
+    }
+    .altitude-card {
+        background: linear-gradient(135deg, #a29bfe 0%, #6c5ce7 100%);
+        color: white;
+        padding: 1rem;
+        border-radius: 10px;
+        margin: 0.5rem 0;
+    }
 </style>
 """, unsafe_allow_html=True)
 
 # ==================================================
-# 2. CONFIGURACIÓN SUPABASE
+# CONFIGURACIÓN SUPABASE
 # ==================================================
 
 TABLE_NAME = "alertas_hemoglobina"
@@ -50,8 +93,11 @@ SUPABASE_KEY = st.secrets.get("SUPABASE_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXV
 def init_supabase():
     try:
         supabase_client = create_client(SUPABASE_URL, SUPABASE_KEY)
+        # Test de conexión
         test_response = supabase_client.table(TABLE_NAME).select("*").limit(1).execute()
-        st.success("✅ Conexión a Supabase establecida")
+        if hasattr(test_response, 'error') and test_response.error:
+            st.error(f"❌ Error en conexión: {test_response.error}")
+            return None
         return supabase_client
     except Exception as e:
         st.error(f"❌ Error conectando a Supabase: {str(e)}")
@@ -60,130 +106,50 @@ def init_supabase():
 supabase = init_supabase()
 
 # ==================================================
-# 3. DATOS PERSONALES
+# TABLA DE ALTITUD Y AJUSTES DE HEMOGLOBINA
 # ==================================================
 
-def mostrar_seccion_datos_personales():
-    st.header("👤 Datos Personales del Paciente")
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        dni = st.text_input("DNI*", key="dni_personal")
-        nombre_completo = st.text_input("Nombre Completo*", key="nombre_personal")
-        edad_meses = st.number_input("Edad (meses)*", 1, 240, 24, key="edad_personal")
-        peso_kg = st.number_input("Peso (kg)", 0.0, 50.0, 12.5, 0.1, key="peso_personal")
-        
-    with col2:
-        talla_cm = st.number_input("Talla (cm)", 0.0, 150.0, 85.0, 0.1, key="talla_personal")
-        genero = st.selectbox("Género*", ["M", "F", "Otro"], key="genero_personal")
-        telefono = st.text_input("Teléfono", key="telefono_personal")
-        estado_paciente = st.selectbox("Estado del Paciente*", 
-                                     ["Activo", "En seguimiento", "Dado de alta", "Inactivo"], 
-                                     key="estado_personal")
-    
-    return {
-        'dni': dni,
-        'nombre_completo': nombre_completo,
-        'edad_meses': edad_meses,
-        'peso_kg': peso_kg,
-        'talla_cm': talla_cm,
-        'genero': genero,
-        'telefono': telefono,
-        'estado_paciente': estado_paciente
-    }
-
-# ==================================================
-# 4. FACTORES DEMOGRÁFICOS
-# ==================================================
-
-PERU_REGIONS = [
-    "LIMA", "AREQUIPA", "CUSCO", "PUNO", "ICA", "LORETO", "SAN MARTÍN", 
-    "LA LIBERTAD", "ANCASH", "JUNÍN", "PIURA", "LAMBAYEQUE", "OTRO"
-]
-
-CLIMA_POR_REGION = {
-    "LIMA": {"clima": "Desértico subtropical", "temp_promedio": "21°C", "humedad": "85%"},
-    "AREQUIPA": {"clima": "Semiárido", "temp_promedio": "18°C", "humedad": "45%"},
-    "CUSCO": {"clima": "Templado subhúmedo", "temp_promedio": "14°C", "humedad": "65%"},
-    "PUNO": {"clima": "Frío de altura", "temp_promedio": "8°C", "humedad": "55%"},
-    "OTRO": {"clima": "No especificado", "temp_promedio": "N/A", "humedad": "N/A"}
+# Tabla de altitud por región (de tu base de datos)
+ALTITUD_REGIONES = {
+    "ANCASH": {"altitud_min": 2000, "altitud_max": 4000, "altitud_promedio": 3000},
+    "AREQUIPA": {"altitud_min": 2000, "altitud_max": 3500, "altitud_promedio": 2500},
+    "CUSCO": {"altitud_min": 3000, "altitud_max": 4500, "altitud_promedio": 3400},
+    "JUNIN": {"altitud_min": 3000, "altitud_max": 4200, "altitud_promedio": 3500},
+    "LA LIBERTAD": {"altitud_min": 0, "altitud_max": 3500, "altitud_promedio": 1800},
+    "LIMA": {"altitud_min": 0, "altitud_max": 500, "altitud_promedio": 150},
+    "PUNO": {"altitud_min": 3800, "altitud_max": 4500, "altitud_promedio": 4100}
 }
 
-def mostrar_seccion_demograficos():
-    st.header("🌍 Factores Demográficos")
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        region = st.selectbox("Región*", PERU_REGIONS, key="region_demo")
-        departamento = st.text_input("Departamento/Distrito", key="depto_demo")
-        altitud_msnm = st.number_input("Altitud (msnm)", 0, 5000, 150, key="altitud_demo")
-        
-    with col2:
-        # Mostrar información climática
-        clima_info = CLIMA_POR_REGION.get(region, CLIMA_POR_REGION["OTRO"])
-        st.markdown(f"""
-        <div class="climate-card" style="padding: 1rem; border-radius: 10px; margin: 0.5rem 0;">
-            <h4>🌤️ Clima {region}</h4>
-            <p><strong>{clima_info['clima']}</strong></p>
-            <p>🌡️ Temp: {clima_info['temp_promedio']} | 💧 Humedad: {clima_info['humedad']}</p>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    return {
-        'region': region,
-        'departamento': departamento,
-        'altitud_msnm': altitud_msnm,
-        'clima_info': clima_info
-    }
-
-# ==================================================
-# 5. FACTORES SOCIOECONÓMICOS
-# ==================================================
-
-FACTORES_SOCIOECONOMICOS = [
-    "Bajo nivel educativo de padres",
-    "Ingresos familiares reducidos",
-    "Hacinamiento en vivienda",
-    "Acceso limitado a agua potable",
-    "Zona rural o alejada",
-    "Trabajo informal o precario",
-    "Desnutrición familiar",
-    "Falta de saneamiento básico"
+# Tabla de ajuste de hemoglobina por altitud (de tu imagen)
+AJUSTE_HEMOGLOBINA = [
+    {"altitud_min": 0, "altitud_max": 999, "ajuste": 0.0},
+    {"altitud_min": 1000, "altitud_max": 1499, "ajuste": -0.2},
+    {"altitud_min": 1500, "altitud_max": 1999, "ajuste": -0.5},
+    {"altitud_min": 2000, "altitud_max": 2499, "ajuste": -0.8},
+    {"altitud_min": 2500, "altitud_max": 2999, "ajuste": -1.3},
+    {"altitud_min": 3000, "altitud_max": 3499, "ajuste": -1.9},
+    {"altitud_min": 3500, "altitud_max": 3999, "ajuste": -2.7},
+    {"altitud_min": 4000, "altitud_max": 4499, "ajuste": -3.5},
+    {"altitud_min": 4500, "altitud_max": 10000, "ajuste": -4.5}
 ]
 
-def mostrar_seccion_socioeconomicos():
-    st.header("💰 Factores Socioeconómicos")
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        nivel_educativo = st.selectbox("Nivel Educativo Familiar", 
-                                     ["Sin educación", "Primaria", "Secundaria", "Superior"], 
-                                     key="educacion_socio")
-        acceso_agua_potable = st.checkbox("Acceso a agua potable", key="agua_socio")
-        tiene_servicio_salud = st.checkbox("Tiene servicio de salud", key="salud_socio")
-        
-    with col2:
-        st.subheader("Factores de Riesgo Social")
-        factores_sociales = st.multiselect(
-            "Seleccione factores presentes:",
-            FACTORES_SOCIOECONOMICOS,
-            help="Condiciones sociales que afectan la salud",
-            key="factores_socio"
-        )
-    
-    return {
-        'nivel_educativo': nivel_educativo,
-        'acceso_agua_potable': acceso_agua_potable,
-        'tiene_servicio_salud': tiene_servicio_salud,
-        'factores_sociales': factores_sociales
-    }
+def obtener_ajuste_hemoglobina(altitud):
+    """Obtiene el ajuste de hemoglobina según la altitud"""
+    for ajuste in AJUSTE_HEMOGLOBINA:
+        if ajuste["altitud_min"] <= altitud <= ajuste["altitud_max"]:
+            return ajuste["ajuste"]
+    return 0.0
+
+def calcular_hemoglobina_ajustada(hemoglobina_medida, altitud):
+    """Calcula la hemoglobina ajustada al nivel del mar"""
+    ajuste = obtener_ajuste_hemoglobina(altitud)
+    return hemoglobina_medida - ajuste
 
 # ==================================================
-# 6. FACTORES CLÍNICOS
+# LISTAS DE OPCIONES
 # ==================================================
+
+PERU_REGIONS = list(ALTITUD_REGIONES.keys()) + ["OTRA REGIÓN"]
 
 FACTORES_CLINICOS = [
     "Historial familiar de anemia",
@@ -192,101 +158,90 @@ FACTORES_CLINICOS = [
     "Infecciones recurrentes",
     "Parasitosis intestinal",
     "Enfermedades crónicas",
-    "Problemas gastrointestinales",
-    "Medicamentos que afectan absorción"
+    "Problemas gastrointestinales"
 ]
 
-ACCESO_SERVICIOS = [
-    "Control prenatal irregular",
-    "Limitado acceso a suplementos",
-    "Barreras geográficas a centros de salud",
-    "Falta de información nutricional",
-    "Cobertura insuficiente de seguros"
+FACTORES_SOCIOECONOMICOS = [
+    "Bajo nivel educativo de padres",
+    "Ingresos familiares reducidos",
+    "Hacinamiento en vivienda",
+    "Acceso limitado a agua potable",
+    "Zona rural o alejada",
+    "Trabajo informal o precario"
 ]
 
-def mostrar_seccion_clinicos():
-    st.header("🏥 Factores Clínicos")
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.subheader("Parámetros Hematológicos")
-        hemoglobina_dl1 = st.number_input("Hemoglobina (g/dL)*", 5.0, 20.0, 9.7, 0.1, key="hemo_clinico")
-        mch = st.number_input("MCH (pg)", 15.0, 40.0, 28.0, 0.1, key="mch_clinico")
-        mchc = st.number_input("MCHC (g/dL)", 25.0, 40.0, 33.0, 0.1, key="mchc_clinico")
-        mcv = st.number_input("MCV (fL)", 60.0, 120.0, 90.0, 0.1, key="mcv_clinico")
-        
-    with col2:
-        st.subheader("Estado y Seguimiento")
-        en_seguimiento = st.checkbox("En seguimiento activo", key="seguimiento_clinico")
-        consume_hierro = st.checkbox("Consume suplemento de hierro", key="hierro_clinico")
-        tipo_suplemento = st.text_input("Tipo de suplemento", key="tipo_clinico")
-        frecuencia_suplemento = st.selectbox("Frecuencia", 
-                                           ["Diario", "3 veces/semana", "Semanal", "Otra"], 
-                                           key="frecuencia_clinico")
-    
-    st.subheader("Factores Clínicos de Riesgo")
-    col3, col4 = st.columns(2)
-    
-    with col3:
-        factores_clinicos = st.multiselect(
-            "Factores Clínicos:",
-            FACTORES_CLINICOS,
-            key="factores_clinicos"
-        )
-        antecedentes_anemia = st.checkbox("Antecedentes de anemia", key="antecedentes_clinico")
-        enfermedades_cronicas = st.text_area("Enfermedades crónicas", key="cronicas_clinico")
-    
-    with col4:
-        acceso_servicios = st.multiselect(
-            "Barreras de Acceso:",
-            ACCESO_SERVICIOS,
-            key="acceso_clinico"
-        )
-    
-    return {
-        'hemoglobina_dl1': hemoglobina_dl1,
-        'mch': mch,
-        'mchc': mchc,
-        'mcv': mcv,
-        'en_seguimiento': en_seguimiento,
-        'consume_hierro': consume_hierro,
-        'tipo_suplemento': tipo_suplemento,
-        'frecuencia_suplemento': frecuencia_suplemento,
-        'factores_clinicos': factores_clinicos,
-        'antecedentes_anemia': antecedentes_anemia,
-        'enfermedades_cronicas': enfermedades_cronicas,
-        'acceso_servicios': acceso_servicios
-    }
-
 # ==================================================
-# 7. CÁLCULO DE RIESGO
+# FUNCIONES DE BASE DE DATOS
 # ==================================================
 
-def calcular_riesgo_anemia(hb, edad_meses, factores_clinicos, factores_sociales, acceso_servicios, clima_region):
+def obtener_datos_supabase():
+    """Obtiene todos los datos de Supabase"""
+    try:
+        if supabase:
+            response = supabase.table(TABLE_NAME).select("*").execute()
+            if hasattr(response, 'error') and response.error:
+                st.error(f"Error en consulta: {response.error}")
+                return pd.DataFrame()
+            return pd.DataFrame(response.data) if response.data else pd.DataFrame()
+        return pd.DataFrame()
+    except Exception as e:
+        st.error(f"Error obteniendo datos: {e}")
+        return pd.DataFrame()
+
+def obtener_casos_seguimiento():
+    """Obtiene solo los casos en seguimiento"""
+    try:
+        if supabase:
+            response = supabase.table(TABLE_NAME).select("*").eq("en_seguimiento", True).execute()
+            if hasattr(response, 'error') and response.error:
+                return pd.DataFrame()
+            return pd.DataFrame(response.data) if response.data else pd.DataFrame()
+        return pd.DataFrame()
+    except Exception as e:
+        st.error(f"Error obteniendo casos seguimiento: {e}")
+        return pd.DataFrame()
+
+def insertar_datos_supabase(datos):
+    """Inserta datos en Supabase"""
+    try:
+        if supabase:
+            response = supabase.table(TABLE_NAME).insert(datos).execute()
+            if hasattr(response, 'error') and response.error:
+                st.error(f"Error insertando datos: {response.error}")
+                return None
+            return response.data[0] if response.data else None
+        return None
+    except Exception as e:
+        st.error(f"Error insertando datos: {e}")
+        return None
+
+# ==================================================
+# FUNCIONES DE CÁLCULO DE RIESGO
+# ==================================================
+
+def calcular_riesgo_anemia(hb_ajustada, edad_meses, factores_clinicos, factores_sociales):
+    """Calcula el nivel de riesgo basado en hemoglobina ajustada y factores"""
     puntaje = 0
     
-    # Base por hemoglobina según edad
-    if edad_meses < 12:
-        if hb < 9.0: puntaje += 30
-        elif hb < 10.0: puntaje += 20
-        elif hb < 11.0: puntaje += 10
-    elif edad_meses < 60:
-        if hb < 9.5: puntaje += 30
-        elif hb < 10.5: puntaje += 20
-        elif hb < 11.5: puntaje += 10
-    else:
-        if hb < 10.0: puntaje += 30
-        elif hb < 11.0: puntaje += 20
-        elif hb < 12.0: puntaje += 10
+    # Base por hemoglobina ajustada según edad
+    if edad_meses < 12:  # Lactantes
+        if hb_ajustada < 9.0: puntaje += 30
+        elif hb_ajustada < 10.0: puntaje += 20
+        elif hb_ajustada < 11.0: puntaje += 10
+    elif edad_meses < 60:  # Preescolares
+        if hb_ajustada < 9.5: puntaje += 30
+        elif hb_ajustada < 10.5: puntaje += 20
+        elif hb_ajustada < 11.5: puntaje += 10
+    else:  # Escolares y adolescentes
+        if hb_ajustada < 10.0: puntaje += 30
+        elif hb_ajustada < 11.0: puntaje += 20
+        elif hb_ajustada < 12.0: puntaje += 10
     
+    # Factores adicionales
     puntaje += len(factores_clinicos) * 4
     puntaje += len(factores_sociales) * 3
-    puntaje += len(acceso_servicios) * 2
     
-    if "tropical" in clima_region.lower() or "húmedo" in clima_region.lower():
-        puntaje += 5
-    
+    # Determinar nivel de riesgo
     if puntaje >= 35:
         return "ALTO RIESGO (Alerta Clínica - ALTA)", puntaje, "URGENTE"
     elif puntaje >= 25:
@@ -297,73 +252,278 @@ def calcular_riesgo_anemia(hb, edad_meses, factores_clinicos, factores_sociales,
         return "BAJO RIESGO", puntaje, "VIGILANCIA"
 
 # ==================================================
-# 8. INTERFAZ PRINCIPAL CON PESTAÑAS
+# INTERFAZ PRINCIPAL
 # ==================================================
 
 st.markdown('<div class="main-header">', unsafe_allow_html=True)
 st.title("🏥 SISTEMA NIXON - Control de Anemia")
-st.markdown("**Sistema integrado de monitoreo y alertas tempranas**")
+st.markdown("**Sistema integrado con ajuste por altitud**")
 st.markdown('</div>', unsafe_allow_html=True)
 
+# Estado de conexión
+if supabase:
+    st.success("🟢 CONECTADO A SUPABASE - Sistema operativo")
+else:
+    st.error("🔴 SIN CONEXIÓN A SUPABASE - Modo demostración")
+
 # Crear pestañas
-tab1, tab2, tab3, tab4 = st.tabs([
+tab1, tab2, tab3 = st.tabs([
     "📝 Registro Completo", 
     "🔍 Casos en Seguimiento", 
-    "📊 Parámetros Hematológicos", 
     "📈 Estadísticas"
 ])
 
-# Pestaña 1: REGISTRO COMPLETO
+# ==================================================
+# PESTAÑA 1: REGISTRO COMPLETO
+# ==================================================
+
 with tab1:
     st.header("📝 Registro Completo de Paciente")
     
     with st.form("formulario_completo"):
-        # 1. Datos Personales
-        datos_personales = mostrar_seccion_datos_personales()
-        st.markdown("---")
+        col1, col2 = st.columns(2)
         
-        # 2. Factores Demográficos
-        datos_demograficos = mostrar_seccion_demograficos()
-        st.markdown("---")
+        with col1:
+            st.subheader("👤 Datos Personales")
+            dni = st.text_input("DNI*")
+            nombre_completo = st.text_input("Nombre Completo*")
+            edad_meses = st.number_input("Edad (meses)*", 1, 240, 24)
+            peso_kg = st.number_input("Peso (kg)", 0.0, 50.0, 12.5, 0.1)
+            talla_cm = st.number_input("Talla (cm)", 0.0, 150.0, 85.0, 0.1)
+            genero = st.selectbox("Género*", ["M", "F", "Otro"])
         
-        # 3. Factores Socioeconómicos
-        datos_socioeconomicos = mostrar_seccion_socioeconomicos()
-        st.markdown("---")
+        with col2:
+            st.subheader("🌍 Datos Geográficos")
+            region = st.selectbox("Región*", PERU_REGIONS)
+            
+            # Mostrar información de altitud según región seleccionada
+            if region in ALTITUD_REGIONES:
+                altitud_info = ALTITUD_REGIONES[region]
+                altitud_auto = altitud_info["altitud_promedio"]
+                
+                st.markdown(f"""
+                <div class="altitude-card">
+                    <h4>🏔️ Altitud {region}</h4>
+                    <p><strong>Rango: {altitud_info['altitud_min']} - {altitud_info['altitud_max']} msnm</strong></p>
+                    <p>📊 Promedio: {altitud_info['altitud_promedio']} msnm</p>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                altitud_msnm = st.number_input("Altitud (msnm)*", 0, 5000, altitud_auto)
+            else:
+                altitud_msnm = st.number_input("Altitud (msnm)*", 0, 5000, 500)
+            
+            # Mostrar ajuste de hemoglobina
+            ajuste_hb = obtener_ajuste_hemoglobina(altitud_msnm)
+            st.markdown(f"""
+            <div class="climate-card">
+                <h4>📊 Ajuste por Altitud</h4>
+                <p><strong>Corrección: {ajuste_hb:+.1f} g/dL</strong></p>
+                <p>Hb se ajusta automáticamente al nivel del mar</p>
+            </div>
+            """, unsafe_allow_html=True)
         
-        # 4. Factores Clínicos
-        datos_clinicos = mostrar_seccion_clinicos()
+        st.markdown("---")
+        col3, col4 = st.columns(2)
+        
+        with col3:
+            st.subheader("🩺 Parámetros Hematológicos")
+            hemoglobina_medida = st.number_input("Hemoglobina medida (g/dL)*", 5.0, 20.0, 11.0, 0.1)
+            
+            # Calcular y mostrar hemoglobina ajustada
+            hemoglobina_ajustada = calcular_hemoglobina_ajustada(hemoglobina_medida, altitud_msnm)
+            
+            st.metric(
+                "Hemoglobina ajustada al nivel del mar",
+                f"{hemoglobina_ajustada:.1f} g/dL",
+                f"{ajuste_hb:+.1f} g/dL"
+            )
+            
+            mch = st.number_input("MCH (pg)", 15.0, 40.0, 28.0, 0.1)
+            mchc = st.number_input("MCHC (g/dL)", 25.0, 40.0, 33.0, 0.1)
+            mcv = st.number_input("MCV (fL)", 60.0, 120.0, 90.0, 0.1)
+        
+        with col4:
+            st.subheader("📋 Estado y Factores")
+            en_seguimiento = st.checkbox("Marcar para seguimiento activo", value=True)
+            consume_hierro = st.checkbox("Consume suplemento de hierro")
+            
+            st.subheader("🏥 Factores Clínicos")
+            factores_clinicos = st.multiselect("Seleccione factores clínicos:", FACTORES_CLINICOS)
+            
+            st.subheader("💰 Factores Socioeconómicos")
+            factores_sociales = st.multiselect("Seleccione factores sociales:", FACTORES_SOCIOECONOMICOS)
         
         submitted = st.form_submit_button("🎯 ANALIZAR RIESGO Y GUARDAR", type="primary")
     
     if submitted:
-        # Validar campos obligatorios
-        if not datos_personales['dni'] or not datos_personales['nombre_completo']:
+        if not dni or not nombre_completo:
             st.error("❌ Complete DNI y nombre del paciente")
         else:
-            # Calcular riesgo
+            # Calcular riesgo usando hemoglobina AJUSTADA
             nivel_riesgo, puntaje, estado = calcular_riesgo_anemia(
-                datos_clinicos['hemoglobina_dl1'],
-                datos_personales['edad_meses'],
-                datos_clinicos['factores_clinicos'],
-                datos_socioeconomicos['factores_sociales'],
-                datos_clinicos['acceso_servicios'],
-                datos_demograficos['clima_info']['clima']
+                hemoglobina_ajustada,
+                edad_meses,
+                factores_clinicos,
+                factores_sociales
             )
             
             # Mostrar resultados
-            st.success(f"✅ Análisis completado: {nivel_riesgo}")
+            if "ALTO" in nivel_riesgo and "ALTA" in nivel_riesgo:
+                st.markdown('<div class="risk-high">', unsafe_allow_html=True)
+            elif "ALTO" in nivel_riesgo:
+                st.markdown('<div class="risk-moderate">', unsafe_allow_html=True)
+            else:
+                st.markdown('<div class="risk-low">', unsafe_allow_html=True)
+            
+            st.markdown(f"### **RIESGO: {nivel_riesgo}**")
+            st.markdown(f"**Puntaje:** {puntaje}/60 puntos | **Estado:** {estado}")
+            st.markdown(f"**Hemoglobina:** {hemoglobina_medida:.1f} g/dL (medida) → {hemoglobina_ajustada:.1f} g/dL (ajustada)")
+            st.markdown('</div>', unsafe_allow_html=True)
+            
+            # Guardar en Supabase
+            if supabase:
+                record = {
+                    "dni": dni,
+                    "nombre_apellido": nombre_completo,
+                    "edad_meses": int(edad_meses),
+                    "peso_kg": float(peso_kg),
+                    "talla_cm": float(talla_cm),
+                    "genero": genero,
+                    "region": region,
+                    "altitud_msnm": int(altitud_msnm),
+                    "hemoglobina_medida": float(hemoglobina_medida),
+                    "hemoglobina_ajustada": float(hemoglobina_ajustada),
+                    "ajuste_altitud": float(ajuste_hb),
+                    "mch": float(mch),
+                    "mchc": float(mchc),
+                    "mcv": float(mcv),
+                    "en_seguimiento": en_seguimiento,
+                    "consume_hierro": consume_hierro,
+                    "factores_clinicos": ", ".join(factores_clinicos),
+                    "factores_sociales": ", ".join(factores_sociales),
+                    "riesgo": nivel_riesgo,
+                    "puntaje_riesgo": int(puntaje),
+                    "estado_alerta": estado,
+                    "fecha_alerta": datetime.now().isoformat()
+                }
+                
+                resultado = insertar_datos_supabase(record)
+                if resultado:
+                    st.success("✅ Datos guardados en Supabase correctamente")
+                else:
+                    st.error("❌ Error al guardar en Supabase")
 
-# Pestaña 2: CASOS EN SEGUIMIENTO
+# ==================================================
+# PESTAÑA 2: CASOS EN SEGUIMIENTO (CORREGIDA)
+# ==================================================
+
 with tab2:
-    st.header("🔍 Casos en Seguimiento")
-    # Aquí iría la lógica para mostrar pacientes en seguimiento
-
-# Pestaña 3: PARÁMETROS HEMATOLÓGICOS
-with tab3:
-    st.header("📊 Parámetros Hematológicos")
-    # Aquí irían análisis específicos de parámetros de sangre
-
-# Pestaña 4: ESTADÍSTICAS
-with tab4:
-    st.header("📈 Estadísticas y Reportes")
+    st.header("🔍 Casos en Seguimiento Activo")
     
+    if st.button("🔄 Actualizar lista de seguimiento"):
+        with st.spinner("Cargando casos en seguimiento..."):
+            casos_seguimiento = obtener_casos_seguimiento()
+        
+        if not casos_seguimiento.empty:
+            st.success(f"✅ {len(casos_seguimiento)} casos en seguimiento encontrados")
+            
+            # Mostrar tabla de casos en seguimiento
+            columnas_mostrar = ['nombre_apellido', 'edad_meses', 'hemoglobina_ajustada', 'riesgo', 'region', 'fecha_alerta']
+            columnas_disponibles = [col for col in columnas_mostrar if col in casos_seguimiento.columns]
+            
+            if columnas_disponibles:
+                st.dataframe(
+                    casos_seguimiento[columnas_disponibles],
+                    use_container_width=True,
+                    height=400
+                )
+                
+                # Métricas de seguimiento
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("Total en seguimiento", len(casos_seguimiento))
+                with col2:
+                    alto_riesgo = len(casos_seguimiento[casos_seguimiento['riesgo'].str.contains('ALTO', na=False)])
+                    st.metric("Alto riesgo", alto_riesgo)
+                with col3:
+                    avg_hemoglobina = casos_seguimiento['hemoglobina_ajustada'].mean()
+                    st.metric("Hb promedio", f"{avg_hemoglobina:.1f} g/dL")
+            else:
+                st.warning("ℹ️ No hay columnas disponibles para mostrar")
+        else:
+            st.info("📝 No hay casos en seguimiento actualmente")
+
+# ==================================================
+# PESTAÑA 3: ESTADÍSTICAS
+# ==================================================
+
+with tab3:
+    st.header("📈 Estadísticas del Sistema")
+    
+    if st.button("📊 Cargar estadísticas actuales"):
+        with st.spinner("Calculando estadísticas..."):
+            datos_completos = obtener_datos_supabase()
+        
+        if not datos_completos.empty:
+            st.success(f"✅ {len(datos_completos)} registros analizados")
+            
+            # Métricas principales
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                total_casos = len(datos_completos)
+                st.metric("Total de casos", total_casos)
+            
+            with col2:
+                en_seguimiento = len(datos_completos[datos_completos['en_seguimiento'] == True])
+                st.metric("En seguimiento", en_seguimiento)
+            
+            with col3:
+                avg_hemoglobina = datos_completos['hemoglobina_ajustada'].mean()
+                st.metric("Hb promedio ajustada", f"{avg_hemoglobina:.1f} g/dL")
+            
+            with col4:
+                if 'riesgo' in datos_completos.columns:
+                    alto_riesgo = len(datos_completos[datos_completos['riesgo'].str.contains('ALTO', na=False)])
+                    st.metric("Casos alto riesgo", alto_riesgo)
+            
+            # Distribución por región
+            st.subheader("📋 Distribución por Región")
+            if 'region' in datos_completos.columns:
+                distribucion_region = datos_completos['region'].value_counts()
+                st.bar_chart(distribucion_region)
+            
+            # Tabla de datos completa
+            st.subheader("📄 Datos Completos")
+            st.dataframe(datos_completos, use_container_width=True, height=300)
+            
+        else:
+            st.info("📝 No hay datos disponibles para mostrar estadísticas")
+
+# ==================================================
+# TABLA DE AJUSTES DE HEMOGLOBINA EN SIDEBAR
+# ==================================================
+
+with st.sidebar:
+    st.header("📋 Tabla de Ajustes por Altitud")
+    st.markdown("**Ajuste de hemoglobina al nivel del mar:**")
+    
+    ajustes_df = pd.DataFrame(AJUSTE_HEMOGLOBINA)
+    st.dataframe(
+        ajustes_df.style.format({
+            'altitud_min': '{:.0f}',
+            'altitud_max': '{:.0f}', 
+            'ajuste': '{:+.1f}'
+        }),
+        use_container_width=True,
+        height=400
+    )
+    
+    st.markdown("---")
+    st.info("""
+    **💡 Información:**
+    - La hemoglobina se ajusta automáticamente
+    - Se usa la altitud promedio de cada región
+    - Los cálculos son según estándares OMS
+    """)
