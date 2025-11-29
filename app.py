@@ -77,6 +77,13 @@ st.markdown("""
         border-radius: 10px;
         margin: 0.5rem 0;
     }
+    .nutrition-card {
+        background: linear-gradient(135deg, #00b894 0%, #00a085 100%);
+        color: white;
+        padding: 1rem;
+        border-radius: 10px;
+        margin: 0.5rem 0;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -85,6 +92,9 @@ st.markdown("""
 # ==================================================
 
 TABLE_NAME = "alertas_hemoglobina"
+ALTITUD_TABLE = "altitud_regiones"
+CRECIMIENTO_TABLE = "referencia_crecimiento"
+
 SUPABASE_URL = st.secrets.get("SUPABASE_URL", "https://kwsuszkblbejvliniggd.supabase.co")
 SUPABASE_KEY = st.secrets.get("SUPABASE_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3c3VzemtibGJlanZsaW5pZ2dkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE2ODE0NTUsImV4cCI6MjA3NzI1NzQ1NX0.DQpt-rSNprcUrbOLTgUEEn_0jFIuSX5b0AVuVirk0vw")
 
@@ -100,18 +110,58 @@ def init_supabase():
 supabase = init_supabase()
 
 # ==================================================
-# TABLA DE ALTITUD Y AJUSTES DE HEMOGLOBINA
+# FUNCIONES DE BASE DE DATOS MEJORADAS
 # ==================================================
 
-ALTITUD_REGIONES = {
-    "LIMA": {"altitud_min": 0, "altitud_max": 500, "altitud_promedio": 150},
-    "AREQUIPA": {"altitud_min": 2000, "altitud_max": 3500, "altitud_promedio": 2500},
-    "CUSCO": {"altitud_min": 3000, "altitud_max": 4500, "altitud_promedio": 3400},
-    "PUNO": {"altitud_min": 3800, "altitud_max": 4500, "altitud_promedio": 4100},
-    "JUNIN": {"altitud_min": 3000, "altitud_max": 4200, "altitud_promedio": 3500},
-    "ANCASH": {"altitud_min": 2000, "altitud_max": 4000, "altitud_promedio": 3000},
-    "LA LIBERTAD": {"altitud_min": 0, "altitud_max": 3500, "altitud_promedio": 1800}
-}
+def obtener_datos_supabase(tabla=TABLE_NAME):
+    try:
+        if supabase:
+            response = supabase.table(tabla).select("*").execute()
+            if hasattr(response, 'error') and response.error:
+                return pd.DataFrame()
+            return pd.DataFrame(response.data) if response.data else pd.DataFrame()
+        return pd.DataFrame()
+    except Exception as e:
+        return pd.DataFrame()
+
+def obtener_casos_seguimiento():
+    try:
+        if supabase:
+            response = supabase.table(TABLE_NAME).select("*").eq("en_seguimiento", True).execute()
+            if hasattr(response, 'error') and response.error:
+                return pd.DataFrame()
+            return pd.DataFrame(response.data) if response.data else pd.DataFrame()
+        return pd.DataFrame()
+    except Exception as e:
+        return pd.DataFrame()
+
+def insertar_datos_supabase(datos, tabla=TABLE_NAME):
+    try:
+        if supabase:
+            response = supabase.table(tabla).insert(datos).execute()
+            if hasattr(response, 'error') and response.error:
+                return None
+            return response.data[0] if response.data else None
+        return None
+    except Exception as e:
+        return None
+
+# ==================================================
+# TABLAS DE REFERENCIA COMPLETAS
+# ==================================================
+
+# Obtener datos de altitud desde Supabase
+def obtener_altitud_regiones():
+    try:
+        if supabase:
+            response = supabase.table(ALTITUD_TABLE).select("*").execute()
+            if response.data:
+                return {row['region']: row for row in response.data}
+        return {}
+    except:
+        return {}
+
+ALTITUD_REGIONES = obtener_altitud_regiones()
 
 AJUSTE_HEMOGLOBINA = [
     {"altitud_min": 0, "altitud_max": 999, "ajuste": 0.0},
@@ -136,10 +186,167 @@ def calcular_hemoglobina_ajustada(hemoglobina_medida, altitud):
     return hemoglobina_medida + ajuste
 
 # ==================================================
-# LISTAS DE OPCIONES
+# FUNCIONES DE EVALUACIÓN NUTRICIONAL
 # ==================================================
 
-PERU_REGIONS = ["LIMA", "AREQUIPA", "CUSCO", "PUNO", "JUNIN", "ANCASH", "LA LIBERTAD"]
+def obtener_referencia_crecimiento():
+    """Obtiene la tabla de referencia de crecimiento desde Supabase"""
+    try:
+        if supabase:
+            response = supabase.table(CRECIMIENTO_TABLE).select("*").execute()
+            if response.data:
+                return pd.DataFrame(response.data)
+        return pd.DataFrame()
+    except:
+        return pd.DataFrame()
+
+def evaluar_estado_nutricional(edad_meses, peso_kg, talla_cm, genero):
+    """Evalúa el estado nutricional basado en tablas de referencia OMS"""
+    referencia_df = obtener_referencia_crecimiento()
+    
+    if referencia_df.empty:
+        return "Sin datos referencia", "Sin datos referencia", "NUTRICIÓN NO EVALUADA", "RIESGO NO EVALUADO"
+    
+    # Encontrar referencia para la edad
+    referencia_edad = referencia_df[referencia_df['edad_meses'] == edad_meses]
+    
+    if referencia_edad.empty:
+        return "Edad sin referencia", "Edad sin referencia", "NO EVALUABLE", "NO EVALUABLE"
+    
+    ref = referencia_edad.iloc[0]
+    
+    # Determinar valores según género
+    if genero == 'F':
+        peso_min = ref['peso_min_ninas']
+        peso_promedio = ref['peso_promedio_ninas']
+        peso_max = ref['peso_max_ninas']
+        talla_min = ref['talla_min_ninas']
+        talla_promedio = ref['talla_promedio_ninas']
+        talla_max = ref['talla_max_ninas']
+    else:
+        peso_min = ref['peso_min_ninos']
+        peso_promedio = ref['peso_promedio_ninos']
+        peso_max = ref['peso_max_ninos']
+        talla_min = ref['talla_min_ninos']
+        talla_promedio = ref['talla_promedio_ninos']
+        talla_max = ref['talla_max_ninos']
+    
+    # Evaluar estado de peso
+    if peso_kg < peso_min:
+        estado_peso = "BAJO PESO"
+    elif peso_kg > peso_max:
+        estado_peso = "SOBREPESO"
+    else:
+        estado_peso = "PESO NORMAL"
+    
+    # Evaluar estado de talla
+    if talla_cm < talla_min:
+        estado_talla = "TALLA BAJA"
+    elif talla_cm > talla_max:
+        estado_talla = "TALLA ALTA"
+    else:
+        estado_talla = "TALLA NORMAL"
+    
+    # Evaluar estado nutricional general
+    if estado_peso == "BAJO PESO" and estado_talla == "TALLA BAJA":
+        estado_nutricional = "DESNUTRICIÓN CRÓNICA"
+    elif estado_peso == "BAJO PESO":
+        estado_nutricional = "DESNUTRICIÓN AGUDA"
+    elif estado_peso == "SOBREPESO":
+        estado_nutricional = "SOBREPESO"
+    else:
+        estado_nutricional = "NUTRICIÓN ADECUADA"
+    
+    return estado_peso, estado_talla, estado_nutricional, "EVALUADO"
+
+def calcular_riesgo_combinado(hemoglobina_ajustada, estado_nutricional, edad_meses):
+    """Calcula riesgo combinado de anemia y estado nutricional"""
+    
+    # Umbrales de hemoglobina por edad
+    if edad_meses < 12:
+        umbral_anemia = 11.0
+        umbral_severa = 9.5
+    elif edad_meses < 60:
+        umbral_anemia = 11.0
+        umbral_severa = 9.5
+    else:
+        umbral_anemia = 11.5
+        umbral_severa = 10.0
+    
+    # Puntaje por hemoglobina
+    if hemoglobina_ajustada < umbral_severa:
+        puntaje_hb = 30
+    elif hemoglobina_ajustada < umbral_anemia:
+        puntaje_hb = 20
+    elif hemoglobina_ajustada < umbral_anemia + 1.0:
+        puntaje_hb = 10
+    else:
+        puntaje_hb = 0
+    
+    # Puntaje por estado nutricional
+    if estado_nutricional == "DESNUTRICIÓN CRÓNICA":
+        puntaje_nut = 25
+    elif estado_nutricional == "DESNUTRICIÓN AGUDA":
+        puntaje_nut = 20
+    elif estado_nutricional == "SOBREPESO":
+        puntaje_nut = 5
+    else:
+        puntaje_nut = 0
+    
+    puntaje_total = puntaje_hb + puntaje_nut
+    
+    # Determinar riesgo combinado
+    if puntaje_total >= 45:
+        return "RIESGO MUY ALTO", puntaje_total
+    elif puntaje_total >= 30:
+        return "RIESGO ALTO", puntaje_total
+    elif puntaje_total >= 15:
+        return "RIESGO MODERADO", puntaje_total
+    else:
+        return "RIESGO BAJO", puntaje_total
+
+def generar_sugerencias_combinadas(riesgo_combinado, estado_nutricional, hemoglobina_ajustada):
+    """Genera sugerencias integradas para anemia y nutrición"""
+    
+    if riesgo_combinado == "RIESGO MUY ALTO":
+        return (
+            "🚨 INTERVENCIÓN URGENTE REQUERIDA:\n"
+            "• Suplementación con hierro inmediata\n"
+            "• Soporte nutricional intensivo\n"
+            "• Evaluación médica URGENTE\n"
+            "• Control semanal de hemoglobina\n"
+            "• Referencia a especialista"
+        )
+    elif riesgo_combinado == "RIESGO ALTO":
+        return (
+            "⚠️ ACCIÓN PRIORITARIA:\n"
+            "• Suplementación con hierro\n"
+            "• Plan alimentario hipercalórico\n"
+            "• Evaluación médica en 7 días\n"
+            "• Control quincenal\n"
+            "• Educación nutricional"
+        )
+    elif riesgo_combinado == "RIESGO MODERADO":
+        return (
+            "📋 SEGUIMIENTO RUTINARIO:\n"
+            "• Suplementación preventiva\n"
+            "• Educación en alimentación\n"
+            "• Control mensual\n"
+            "• Monitoreo de crecimiento"
+        )
+    else:
+        return (
+            "✅ MANTENIMIENTO:\n"
+            "• Alimentación balanceada\n"
+            "• Control trimestral\n"
+            "• Prevención mediante dieta"
+        )
+
+# ==================================================
+# LISTAS DE OPCIONES ACTUALIZADAS
+# ==================================================
+
+PERU_REGIONS = list(ALTITUD_REGIONES.keys()) if ALTITUD_REGIONES else ["LIMA", "AREQUIPA", "CUSCO", "PUNO", "JUNIN", "ANCASH", "LA LIBERTAD"]
 GENEROS = ["F", "M"]
 NIVELES_EDUCATIVOS = ["Sin educación", "Primaria", "Secundaria", "Superior"]
 FRECUENCIAS_SUPLEMENTO = ["Diario", "3 veces por semana", "Semanal", "Otra"]
@@ -165,44 +372,7 @@ FACTORES_SOCIOECONOMICOS = [
 ]
 
 # ==================================================
-# FUNCIONES DE BASE DE DATOS
-# ==================================================
-
-def obtener_datos_supabase():
-    try:
-        if supabase:
-            response = supabase.table(TABLE_NAME).select("*").execute()
-            if hasattr(response, 'error') and response.error:
-                return pd.DataFrame()
-            return pd.DataFrame(response.data) if response.data else pd.DataFrame()
-        return pd.DataFrame()
-    except Exception as e:
-        return pd.DataFrame()
-
-def obtener_casos_seguimiento():
-    try:
-        if supabase:
-            response = supabase.table(TABLE_NAME).select("*").eq("en_seguimiento", True).execute()
-            if hasattr(response, 'error') and response.error:
-                return pd.DataFrame()
-            return pd.DataFrame(response.data) if response.data else pd.DataFrame()
-        return pd.DataFrame()
-    except Exception as e:
-        return pd.DataFrame()
-
-def insertar_datos_supabase(datos):
-    try:
-        if supabase:
-            response = supabase.table(TABLE_NAME).insert(datos).execute()
-            if hasattr(response, 'error') and response.error:
-                return None
-            return response.data[0] if response.data else None
-        return None
-    except Exception as e:
-        return None
-
-# ==================================================
-# FUNCIONES DE CÁLCULO DE RIESGO
+# FUNCIONES DE CÁLCULO DE RIESGO ACTUALIZADAS
 # ==================================================
 
 def calcular_riesgo_anemia(hb_ajustada, edad_meses, factores_clinicos, factores_sociales):
@@ -244,86 +414,12 @@ def generar_sugerencias(riesgo, hemoglobina_ajustada, edad_meses):
         return "Control preventivo y educación nutricional"
 
 # ==================================================
-# CREAR DATOS DE PRUEBA SI LA TABLA ESTÁ VACÍA
-# ==================================================
-
-if supabase:
-    try:
-        response = supabase.table(TABLE_NAME).select("*").limit(1).execute()
-        if not response.data:
-            st.info("🔄 Inicializando base de datos con datos de prueba...")
-            
-            datos_prueba = [
-                {
-                    "dni": "12345678",
-                    "nombre_apellido": "Ana García Pérez",
-                    "edad_meses": 24,
-                    "peso_kg": 12.5,
-                    "talla_cm": 85.0,
-                    "genero": "F",
-                    "telefono": "987654321",
-                    "estado_paciente": "Activo",
-                    "region": "LIMA",
-                    "departamento": "Lima Metropolitana",
-                    "altitud_msnm": 150,
-                    "nivel_educativo": "Secundaria",
-                    "acceso_agua_potable": True,
-                    "tiene_servicio_salud": True,
-                    "hemoglobina_dl1": 9.5,
-                    "en_seguimiento": True,
-                    "consume_hierro": True,
-                    "tipo_suplemento_hierro": "Sulfato ferroso",
-                    "frecuencia_suplemento": "Diario",
-                    "antecedentes_anemia": True,
-                    "enfermedades_cronicas": "Ninguna",
-                    "riesgo": "ALTO RIESGO (Alerta Clínica - ALTA)",
-                    "estado_alerta": "URGENTE",
-                    "sugerencias": "Suplemento de hierro y control mensual"
-                },
-                {
-                    "dni": "87654321",
-                    "nombre_apellido": "Luis Martínez", 
-                    "edad_meses": 18,
-                    "peso_kg": 11.2,
-                    "talla_cm": 78.0,
-                    "genero": "M",
-                    "telefono": "987654322",
-                    "estado_paciente": "Activo",
-                    "region": "AREQUIPA",
-                    "departamento": "Arequipa",
-                    "altitud_msnm": 2500,
-                    "nivel_educativo": "Primaria",
-                    "acceso_agua_potable": True,
-                    "tiene_servicio_salud": False,
-                    "hemoglobina_dl1": 10.8,
-                    "en_seguimiento": False,
-                    "consume_hierro": False,
-                    "tipo_suplemento_hierro": None,
-                    "frecuencia_suplemento": None,
-                    "antecedentes_anemia": False,
-                    "enfermedades_cronicas": "Ninguna",
-                    "riesgo": "ALTO RIESGO (Alerta Clínica - MODERADA)",
-                    "estado_alerta": "PRIORITARIO", 
-                    "sugerencias": "Dieta rica en hierro y evaluación médica"
-                }
-            ]
-            
-            for dato in datos_prueba:
-                supabase.table(TABLE_NAME).insert(dato).execute()
-            
-            st.success("✅ Base de datos inicializada con 2 pacientes de prueba")
-            time.sleep(2)
-            st.rerun()
-    except Exception as e:
-        st.warning(f"⚠️ Error verificando datos: {e}")
-
-# ==================================================
-# INTERFAZ PRINCIPAL
+# INTERFAZ PRINCIPAL ACTUALIZADA
 # ==================================================
 
 st.markdown('<div class="main-header">', unsafe_allow_html=True)
-st.title("🏥 SISTEMA NIXON - Control de Anemia")
-st.markdown("**Sistema integrado con ajuste por altitud**")
+st.title("🏥 SISTEMA NIXON - Control de Anemia y Nutrición")
+st.markdown("**Sistema integrado con ajuste por altitud y evaluación nutricional**")
 st.markdown('</div>', unsafe_allow_html=True)
 
 if supabase:
@@ -331,9 +427,16 @@ if supabase:
 else:
     st.error("🔴 SIN CONEXIÓN A SUPABASE")
 
-tab1, tab2, tab3 = st.tabs(["📝 Registro Completo", "🔍 Casos en Seguimiento", "📈 Estadísticas"])
+# PESTAÑAS ACTUALIZADAS CON NUEVAS FUNCIONALIDADES
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    "📝 Registro Completo", 
+    "🔍 Casos en Seguimiento", 
+    "📈 Estadísticas",
+    "🍎 Evaluación Nutricional",
+    "📊 Dashboard Nacional"
+])
 
-# PESTAÑA 1: REGISTRO COMPLETO
+# PESTAÑA 1: REGISTRO COMPLETO (ACTUALIZADA)
 with tab1:
     st.header("📝 Registro Completo de Paciente")
     
@@ -345,8 +448,8 @@ with tab1:
             dni = st.text_input("DNI*")
             nombre_completo = st.text_input("Nombre Completo*")
             edad_meses = st.number_input("Edad (meses)*", 1, 240, 24)
-            peso_kg = st.number_input("Peso (kg)", 0.0, 50.0, 12.5, 0.1)
-            talla_cm = st.number_input("Talla (cm)", 0.0, 150.0, 85.0, 0.1)
+            peso_kg = st.number_input("Peso (kg)*", 0.0, 50.0, 12.5, 0.1)
+            talla_cm = st.number_input("Talla (cm)*", 0.0, 150.0, 85.0, 0.1)
             genero = st.selectbox("Género*", GENEROS)
             telefono = st.text_input("Teléfono")
             estado_paciente = st.selectbox("Estado del Paciente", ESTADOS_PACIENTE)
@@ -422,30 +525,56 @@ with tab1:
         if not dni or not nombre_completo:
             st.error("❌ Complete DNI y nombre del paciente")
         else:
-            # Calcular riesgo usando hemoglobina AJUSTADA
-            nivel_riesgo, puntaje, estado = calcular_riesgo_anemia(
-                hemoglobina_ajustada,
-                edad_meses,
-                factores_clinicos,
-                factores_sociales
+            # EVALUACIÓN NUTRICIONAL
+            estado_peso, estado_talla, estado_nutricional, _ = evaluar_estado_nutricional(
+                edad_meses, peso_kg, talla_cm, genero
             )
             
-            # Generar sugerencias
-            sugerencias = generar_sugerencias(nivel_riesgo, hemoglobina_ajustada, edad_meses)
+            # CALCULAR RIESGO COMBINADO
+            riesgo_combinado, puntaje_combinado = calcular_riesgo_combinado(
+                hemoglobina_ajustada, estado_nutricional, edad_meses
+            )
+            
+            # GENERAR SUGERENCIAS COMBINADAS
+            sugerencias_combinadas = generar_sugerencias_combinadas(
+                riesgo_combinado, estado_nutricional, hemoglobina_ajustada
+            )
             
             # Mostrar resultados
-            if "ALTO" in nivel_riesgo and "ALTA" in nivel_riesgo:
-                st.markdown('<div class="risk-high">', unsafe_allow_html=True)
-            elif "ALTO" in nivel_riesgo:
-                st.markdown('<div class="risk-moderate">', unsafe_allow_html=True)
-            else:
-                st.markdown('<div class="risk-low">', unsafe_allow_html=True)
+            st.markdown("---")
+            st.subheader("📊 EVALUACIÓN INTEGRAL DEL PACIENTE")
             
-            st.markdown(f"### **RIESGO: {nivel_riesgo}**")
-            st.markdown(f"**Puntaje:** {puntaje}/60 puntos | **Estado:** {estado}")
-            st.markdown(f"**Hemoglobina:** {hemoglobina_medida:.1f} g/dL (medida) → **{hemoglobina_ajustada:.1f} g/dL** (ajustada)")
-            st.markdown(f"**Sugerencias:** {sugerencias}")
-            st.markdown('</div>', unsafe_allow_html=True)
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.markdown("### 🩺 Estado de Anemia")
+                nivel_riesgo_anemia, puntaje_anemia, estado_alerta = calcular_riesgo_anemia(
+                    hemoglobina_ajustada, edad_meses, factores_clinicos, factores_sociales
+                )
+                
+                if "ALTO" in nivel_riesgo_anemia and "ALTA" in nivel_riesgo_anemia:
+                    st.markdown('<div class="risk-high">', unsafe_allow_html=True)
+                elif "ALTO" in nivel_riesgo_anemia:
+                    st.markdown('<div class="risk-moderate">', unsafe_allow_html=True)
+                else:
+                    st.markdown('<div class="risk-low">', unsafe_allow_html=True)
+                
+                st.markdown(f"**RIESGO ANEMIA:** {nivel_riesgo_anemia}")
+                st.markdown(f"**Puntaje:** {puntaje_anemia}/60 puntos")
+                st.markdown(f"**Alerta:** {estado_alerta}")
+                st.markdown('</div>', unsafe_allow_html=True)
+            
+            with col2:
+                st.markdown("### 🍎 Estado Nutricional")
+                st.markdown(f"**Peso:** {estado_peso}")
+                st.markdown(f"**Talla:** {estado_talla}")
+                st.markdown(f"**Estado Nutricional:** {estado_nutricional}")
+                st.markdown(f"**Riesgo Combinado:** {riesgo_combinado}")
+                st.markdown(f"**Puntaje Combinado:** {puntaje_combinado}")
+            
+            # SUGERENCIAS INTEGRADAS
+            st.markdown("### 💡 Plan de Acción Integrado")
+            st.info(sugerencias_combinadas)
             
             # Guardar en Supabase
             if supabase:
@@ -471,9 +600,9 @@ with tab1:
                     "frecuencia_suplemento": frecuencia_suplemento,
                     "antecedentes_anemia": antecedentes_anemia,
                     "enfermedades_cronicas": enfermedades_cronicas,
-                    "riesgo": nivel_riesgo,
-                    "estado_alerta": estado,
-                    "sugerencias": sugerencias,
+                    "riesgo": nivel_riesgo_anemia,
+                    "estado_alerta": estado_alerta,
+                    "sugerencias": sugerencias_combinadas,
                     "fecha_alerta": datetime.now().isoformat()
                 }
                 
@@ -483,7 +612,7 @@ with tab1:
                 else:
                     st.error("❌ Error al guardar en Supabase")
 
-# PESTAÑA 2: CASOS EN SEGUIMIENTO
+# PESTAÑA 2: CASOS EN SEGUIMIENTO (MANTENIDA)
 with tab2:
     st.header("🔍 Casos en Seguimiento Activo")
     
@@ -517,7 +646,7 @@ with tab2:
         else:
             st.info("📝 No hay casos en seguimiento actualmente")
 
-# PESTAÑA 3: ESTADÍSTICAS
+# PESTAÑA 3: ESTADÍSTICAS (MANTENIDA)
 with tab3:
     st.header("📈 Estadísticas del Sistema")
     
@@ -559,26 +688,224 @@ with tab3:
         else:
             st.info("📝 No hay datos disponibles para mostrar estadísticas")
 
-# SIDEBAR CON TABLA DE AJUSTES
-with st.sidebar:
-    st.header("📋 Tabla de Ajustes por Altitud")
-    st.markdown("**Ajuste de hemoglobina:**")
+# PESTAÑA 4: EVALUACIÓN NUTRICIONAL (NUEVA)
+with tab4:
+    st.header("🍎 Evaluación Nutricional Individual")
     
-    ajustes_df = pd.DataFrame(AJUSTE_HEMOGLOBINA)
-    st.dataframe(
-        ajustes_df.style.format({
-            'altitud_min': '{:.0f}',
-            'altitud_max': '{:.0f}', 
-            'ajuste': '{:+.1f}'
-        }),
-        use_container_width=True,
-        height=400
-    )
+    with st.form("evaluacion_nutricional"):
+        st.subheader("Datos del Paciente para Evaluación")
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            edad_eval = st.number_input("Edad (meses)", 1, 240, 24, key="eval_edad")
+            peso_eval = st.number_input("Peso (kg)", 0.0, 50.0, 12.5, 0.1, key="eval_peso")
+            talla_eval = st.number_input("Talla (cm)", 0.0, 150.0, 85.0, 0.1, key="eval_talla")
+            genero_eval = st.selectbox("Género", GENEROS, key="eval_genero")
+        
+        with col2:
+            hemoglobina_eval = st.number_input("Hemoglobina (g/dL)", 5.0, 20.0, 11.0, 0.1, key="eval_hb")
+            altitud_eval = st.number_input("Altitud (msnm)", 0, 5000, 150, key="eval_altitud")
+        
+        submitted_eval = st.form_submit_button("📊 EVALUAR ESTADO NUTRICIONAL")
+    
+    if submitted_eval:
+        # Calcular hemoglobina ajustada
+        ajuste_hb_eval = obtener_ajuste_hemoglobina(altitud_eval)
+        hb_ajustada_eval = hemoglobina_eval + ajuste_hb_eval
+        
+        # Evaluación nutricional
+        estado_peso, estado_talla, estado_nutricional, _ = evaluar_estado_nutricional(
+            edad_eval, peso_eval, talla_eval, genero_eval
+        )
+        
+        # Riesgo combinado
+        riesgo_combinado, puntaje_combinado = calcular_riesgo_combinado(
+            hb_ajustada_eval, estado_nutricional, edad_eval
+        )
+        
+        # Mostrar resultados
+        st.markdown("---")
+        st.subheader("📋 Resultados de la Evaluación")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("### 🩺 Parámetros Hematológicos")
+            st.metric("Hemoglobina medida", f"{hemoglobina_eval:.1f} g/dL")
+            st.metric("Ajuste por altitud", f"{ajuste_hb_eval:+.1f} g/dL")
+            st.metric("Hemoglobina ajustada", f"{hb_ajustada_eval:.1f} g/dL", delta=f"{ajuste_hb_eval:+.1f}")
+        
+        with col2:
+            st.markdown("### 🍎 Parámetros Nutricionales")
+            st.metric("Estado de Peso", estado_peso)
+            st.metric("Estado de Talla", estado_talla)
+            st.metric("Estado Nutricional", estado_nutricional)
+            st.metric("Riesgo Combinado", riesgo_combinado)
+        
+        # Tabla de referencia
+        st.subheader("📊 Tablas de Referencia OMS")
+        referencia_df = obtener_referencia_crecimiento()
+        if not referencia_df.empty:
+            st.dataframe(referencia_df, use_container_width=True, height=300)
+        else:
+            st.info("No se pudieron cargar las tablas de referencia")
+
+# PESTAÑA 5: DASHBOARD NACIONAL (NUEVA)
+with tab5:
+    st.header("📊 Dashboard Nacional de Anemia y Nutrición")
+    
+    if st.button("🔄 Actualizar Dashboard Nacional"):
+        with st.spinner("Cargando datos nacionales..."):
+            datos_nacionales = obtener_datos_supabase()
+            datos_altitud = obtener_datos_supabase(ALTITUD_TABLE)
+        
+        if not datos_nacionales.empty:
+            st.success(f"✅ Dashboard actualizado con {len(datos_nacionales)} registros")
+            
+            # Métricas principales
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                total_pacientes = len(datos_nacionales)
+                st.metric("Total Pacientes", total_pacientes)
+            
+            with col2:
+                alto_riesgo = len(datos_nacionales[datos_nacionales['riesgo'].str.contains('ALTO', na=False)])
+                st.metric("Alto Riesgo", alto_riesgo)
+            
+            with col3:
+                avg_hemoglobina = datos_nacionales['hemoglobina_dl1'].mean()
+                st.metric("Hemoglobina Promedio", f"{avg_hemoglobina:.1f} g/dL")
+            
+            with col4:
+                regiones_activas = datos_nacionales['region'].nunique()
+                st.metric("Regiones Activas", regiones_activas)
+            
+            # Gráficos
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                # Distribución por riesgo
+                fig_riesgo = px.pie(
+                    datos_nacionales, 
+                    names='riesgo',
+                    title='Distribución por Nivel de Riesgo',
+                    color_discrete_sequence=px.colors.sequential.RdBu
+                )
+                st.plotly_chart(fig_riesgo, use_container_width=True)
+            
+            with col2:
+                # Hemoglobina por región
+                fig_hemo = px.box(
+                    datos_nacionales,
+                    x='region',
+                    y='hemoglobina_dl1',
+                    title='Hemoglobina por Región'
+                )
+                st.plotly_chart(fig_hemo, use_container_width=True)
+            
+            # Mapa de regiones
+            st.subheader("🗺️ Mapa de Distribución por Región")
+            if not datos_altitud.empty:
+                # Crear datos para el mapa
+                mapa_data = datos_nacionales.groupby('region').agg({
+                    'hemoglobina_dl1': 'mean',
+                    'dni': 'count'
+                }).rename(columns={'dni': 'pacientes'}).reset_index()
+                
+                # Unir con datos de altitud
+                mapa_data = mapa_data.merge(
+                    datos_altitud[['region', 'altitud_promedio']], 
+                    on='region', 
+                    how='left'
+                )
+                
+                st.dataframe(mapa_data, use_container_width=True)
+            
+        else:
+            st.info("📝 No hay datos suficientes para el dashboard nacional")
+
+# SIDEBAR ACTUALIZADO
+with st.sidebar:
+    st.header("📋 Sistema de Referencia")
+    
+    tab_sidebar1, tab_sidebar2 = st.tabs(["🎯 Ajustes Altitud", "📊 Tablas Crecimiento"])
+    
+    with tab_sidebar1:
+        st.markdown("**Tabla de Ajustes por Altitud:**")
+        ajustes_df = pd.DataFrame(AJUSTE_HEMOGLOBINA)
+        st.dataframe(
+            ajustes_df.style.format({
+                'altitud_min': '{:.0f}',
+                'altitud_max': '{:.0f}', 
+                'ajuste': '{:+.1f}'
+            }),
+            use_container_width=True,
+            height=300
+        )
+    
+    with tab_sidebar2:
+        st.markdown("**Tablas de Crecimiento OMS:**")
+        referencia_df = obtener_referencia_crecimiento()
+        if not referencia_df.empty:
+            st.dataframe(referencia_df, use_container_width=True, height=300)
+        else:
+            st.info("Cargando tablas de referencia...")
     
     st.markdown("---")
     st.info("""
-    **💡 Información:**
-    - La hemoglobina se ajusta automáticamente
-    - Se usa la altitud promedio de cada región
-    - Los cálculos son según estándares OMS
+    **💡 Sistema Integrado:**
+    - ✅ Ajuste automático por altitud
+    - ✅ Evaluación nutricional OMS
+    - ✅ Riesgo combinado anemia-nutrición
+    - ✅ Dashboard nacional
+    - ✅ Seguimiento activo
     """)
+
+# ==================================================
+# INICIALIZACIÓN DE DATOS DE PRUEBA
+# ==================================================
+
+if supabase:
+    try:
+        response = supabase.table(TABLE_NAME).select("*").limit(1).execute()
+        if not response.data:
+            st.info("🔄 Inicializando base de datos con datos de prueba...")
+            
+            datos_prueba = [
+                {
+                    "dni": "12345678",
+                    "nombre_apellido": "Ana García Pérez",
+                    "edad_meses": 24,
+                    "peso_kg": 12.5,
+                    "talla_cm": 85.0,
+                    "genero": "F",
+                    "telefono": "987654321",
+                    "estado_paciente": "Activo",
+                    "region": "LIMA",
+                    "departamento": "Lima Metropolitana",
+                    "altitud_msnm": 150,
+                    "nivel_educativo": "Secundaria",
+                    "acceso_agua_potable": True,
+                    "tiene_servicio_salud": True,
+                    "hemoglobina_dl1": 9.5,
+                    "en_seguimiento": True,
+                    "consume_hierro": True,
+                    "tipo_suplemento_hierro": "Sulfato ferroso",
+                    "frecuencia_suplemento": "Diario",
+                    "antecedentes_anemia": True,
+                    "enfermedades_cronicas": "Ninguna",
+                    "riesgo": "ALTO RIESGO (Alerta Clínica - ALTA)",
+                    "estado_alerta": "URGENTE",
+                    "sugerencias": "Suplemento de hierro y control mensual"
+                }
+            ]
+            
+            for dato in datos_prueba:
+                supabase.table(TABLE_NAME).insert(dato).execute()
+            
+            st.success("✅ Base de datos inicializada con paciente de prueba")
+            time.sleep(2)
+            st.rerun()
+    except Exception as e:
+        st.warning(f"⚠️ Error verificando datos: {e}")
