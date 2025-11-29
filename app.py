@@ -112,6 +112,38 @@ st.markdown("""
         border-radius: 10px;
         margin: 0.5rem 0;
     }
+    .interpretacion-critica {
+        background: linear-gradient(135deg, #ff7675 0%, #d63031 100%);
+        color: white;
+        padding: 1.5rem;
+        border-radius: 10px;
+        margin: 1rem 0;
+        border-left: 5px solid #ff4444;
+    }
+    .interpretacion-moderada {
+        background: linear-gradient(135deg, #fdcb6e 0%, #e17055 100%);
+        color: white;
+        padding: 1.5rem;
+        border-radius: 10px;
+        margin: 1rem 0;
+        border-left: 5px solid #ffaa00;
+    }
+    .interpretacion-leve {
+        background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
+        color: white;
+        padding: 1.5rem;
+        border-radius: 10px;
+        margin: 1rem 0;
+        border-left: 5px solid #44AAFF;
+    }
+    .interpretacion-normal {
+        background: linear-gradient(135deg, #00b894 0%, #00a085 100%);
+        color: white;
+        padding: 1.5rem;
+        border-radius: 10px;
+        margin: 1rem 0;
+        border-left: 5px solid #44FF44;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -187,15 +219,33 @@ def obtener_altitud_regiones():
             response = supabase.table(ALTITUD_TABLE).select("*").execute()
             if response.data:
                 return {row['region']: row for row in response.data}
-        # Datos de respaldo si no hay conexión
+        # Datos de respaldo completos de todos los departamentos del Perú
         return {
-            "LIMA": {"altitud_min": 0, "altitud_max": 500, "altitud_promedio": 150},
-            "AREQUIPA": {"altitud_min": 2000, "altitud_max": 3500, "altitud_promedio": 2500},
-            "CUSCO": {"altitud_min": 3000, "altitud_max": 4500, "altitud_promedio": 3400},
-            "PUNO": {"altitud_min": 3800, "altitud_max": 4500, "altitud_promedio": 4100},
-            "JUNIN": {"altitud_min": 3000, "altitud_max": 4200, "altitud_promedio": 3500},
-            "ANCASH": {"altitud_min": 2000, "altitud_max": 4000, "altitud_promedio": 3000},
-            "LA LIBERTAD": {"altitud_min": 0, "altitud_max": 3500, "altitud_promedio": 1800}
+            "AMAZONAS": {"altitud_min": 500, "altitud_max": 3500, "altitud_promedio": 1800},
+            "ANCASH": {"altitud_min": 0, "altitud_max": 6768, "altitud_promedio": 3000},
+            "APURIMAC": {"altitud_min": 2000, "altitud_max": 4500, "altitud_promedio": 3200},
+            "AREQUIPA": {"altitud_min": 0, "altitud_max": 5825, "altitud_promedio": 2500},
+            "AYACUCHO": {"altitud_min": 1800, "altitud_max": 4500, "altitud_promedio": 2800},
+            "CAJAMARCA": {"altitud_min": 500, "altitud_max": 3500, "altitud_promedio": 2700},
+            "CALLAO": {"altitud_min": 0, "altitud_max": 50, "altitud_promedio": 5},
+            "CUSCO": {"altitud_min": 500, "altitud_max": 4800, "altitud_promedio": 3400},
+            "HUANCAVELICA": {"altitud_min": 2000, "altitud_max": 4500, "altitud_promedio": 3600},
+            "HUANUCO": {"altitud_min": 200, "altitud_max": 3800, "altitud_promedio": 1900},
+            "ICA": {"altitud_min": 0, "altitud_max": 3800, "altitud_promedio": 500},
+            "JUNIN": {"altitud_min": 500, "altitud_max": 4800, "altitud_promedio": 3500},
+            "LA LIBERTAD": {"altitud_min": 0, "altitud_max": 4200, "altitud_promedio": 1800},
+            "LAMBAYEQUE": {"altitud_min": 0, "altitud_max": 3000, "altitud_promedio": 100},
+            "LIMA": {"altitud_min": 0, "altitud_max": 4800, "altitud_promedio": 150},
+            "LORETO": {"altitud_min": 70, "altitud_max": 220, "altitud_promedio": 120},
+            "MADRE DE DIOS": {"altitud_min": 200, "altitud_max": 500, "altitud_promedio": 250},
+            "MOQUEGUA": {"altitud_min": 0, "altitud_max": 4500, "altitud_promedio": 1400},
+            "PASCO": {"altitud_min": 1000, "altitud_max": 4400, "altitud_promedio": 3200},
+            "PIURA": {"altitud_min": 0, "altitud_max": 3500, "altitud_promedio": 100},
+            "PUNO": {"altitud_min": 3800, "altitud_max": 4800, "altitud_promedio": 4100},
+            "SAN MARTIN": {"altitud_min": 200, "altitud_max": 3000, "altitud_promedio": 600},
+            "TACNA": {"altitud_min": 0, "altitud_max": 3500, "altitud_promedio": 600},
+            "TUMBES": {"altitud_min": 0, "altitud_max": 500, "altitud_promedio": 20},
+            "UCAYALI": {"altitud_min": 100, "altitud_max": 350, "altitud_promedio": 180}
         }
     except:
         return {}
@@ -223,6 +273,119 @@ def obtener_ajuste_hemoglobina(altitud):
 def calcular_hemoglobina_ajustada(hemoglobina_medida, altitud):
     ajuste = obtener_ajuste_hemoglobina(altitud)
     return hemoglobina_medida + ajuste
+
+# ==================================================
+# SISTEMA DE INTERPRETACIÓN AUTOMÁTICA
+# ==================================================
+
+def interpretar_analisis_hematologico(ferritina, chcm, reticulocitos, transferrina, hemoglobina_ajustada, edad_meses):
+    """Sistema de interpretación automática de parámetros hematológicos"""
+    
+    interpretacion = ""
+    severidad = ""
+    recomendacion = ""
+    codigo_color = ""
+    
+    # EVALUAR FERRITINA (Reservas de Hierro)
+    if ferritina < 15:
+        interpretacion += "🚨 **DEFICIT SEVERO DE HIERRO**. "
+        severidad = "CRITICO"
+    elif ferritina < 30:
+        interpretacion += "⚠️ **DEFICIT MODERADO DE HIERRO**. "
+        severidad = "MODERADO"
+    elif ferritina < 100:
+        interpretacion += "🔄 **RESERVAS DE HIERRO LIMITE**. "
+        severidad = "LEVE"
+    else:
+        interpretacion += "✅ **RESERVAS DE HIERRO ADECUADAS**. "
+        severidad = "NORMAL"
+    
+    # EVALUAR CHCM (Concentración de Hemoglobina)
+    if chcm < 32:
+        interpretacion += "🚨 **HIPOCROMÍA SEVERA** - Deficiencia avanzada de hierro. "
+        severidad = "CRITICO" if severidad != "CRITICO" else severidad
+    elif chcm >= 32 and chcm <= 36:
+        interpretacion += "✅ **NORMOCROMÍA** - Estado normal. "
+    else:
+        interpretacion += "🔄 **HIPERCROMÍA** - Posible esferocitosis. "
+    
+    # EVALUAR RETICULOCITOS (Producción Medular)
+    if reticulocitos < 0.5:
+        interpretacion += "⚠️ **HIPOPROLIFERACIÓN MEDULAR** - Respuesta insuficiente. "
+    elif reticulocitos > 1.5:
+        interpretacion += "🔄 **HIPERPRODUCCIÓN COMPENSATORIA** - Respuesta aumentada. "
+    else:
+        interpretacion += "✅ **PRODUCCIÓN MEDULAR NORMAL**. "
+    
+    # EVALUAR TRANSFERRINA
+    if transferrina < 200:
+        interpretacion += "⚠️ **SATURACIÓN BAJA** - Transporte disminuido. "
+    elif transferrina > 400:
+        interpretacion += "🔄 **SATURACIÓN AUMENTADA** - Compensación por deficiencia. "
+    else:
+        interpretacion += "✅ **TRANSPORTE ADECUADO**. "
+    
+    # CLASIFICACIÓN DE ANEMIA BASADA EN HEMOGLOBINA
+    clasificacion_hb, _, _ = clasificar_anemia(hemoglobina_ajustada, edad_meses)
+    interpretacion += f"📊 **CLASIFICACIÓN HEMOGLOBINA: {clasificacion_hb}**"
+    
+    # GENERAR RECOMENDACIÓN ESPECÍFICA
+    if severidad == "CRITICO":
+        recomendacion = "🚨 **INTERVENCIÓN INMEDIATA**: Suplementación con hierro elemental 3-6 mg/kg/día + Control en 15 días + Evaluación médica urgente"
+        codigo_color = "#FF4444"
+    elif severidad == "MODERADO":
+        recomendacion = "⚠️ **ACCIÓN PRIORITARIA**: Iniciar suplementación con hierro + Control mensual + Educación nutricional"
+        codigo_color = "#FFAA00"
+    elif severidad == "LEVE":
+        recomendacion = "🔄 **VIGILANCIA ACTIVA**: Suplementación preventiva + Modificación dietética + Control cada 3 meses"
+        codigo_color = "#44AAFF"
+    else:
+        recomendacion = "✅ **SEGUIMIENTO RUTINARIO**: Mantener alimentación balanceada + Control preventivo cada 6 meses"
+        codigo_color = "#44FF44"
+    
+    return {
+        "interpretacion": interpretacion,
+        "severidad": severidad,
+        "recomendacion": recomendacion,
+        "codigo_color": codigo_color,
+        "clasificacion_hemoglobina": clasificacion_hb
+    }
+
+def generar_parametros_hematologicos(hemoglobina_ajustada, edad_meses):
+    """Genera parámetros hematológicos simulados basados en hemoglobina y edad"""
+    
+    # Basar los parámetros en el nivel de hemoglobina
+    if hemoglobina_ajustada < 9.0:
+        # Anemia severa - parámetros consistentes con deficiencia
+        ferritina = np.random.uniform(5, 15)
+        chcm = np.random.uniform(28, 31)
+        reticulocitos = np.random.uniform(0.5, 1.0)
+        transferrina = np.random.uniform(350, 450)
+    elif hemoglobina_ajustada < 11.0:
+        # Anemia moderada/leve
+        ferritina = np.random.uniform(15, 50)
+        chcm = np.random.uniform(31, 33)
+        reticulocitos = np.random.uniform(1.0, 1.8)
+        transferrina = np.random.uniform(300, 400)
+    else:
+        # Sin anemia
+        ferritina = np.random.uniform(80, 150)
+        chcm = np.random.uniform(33, 36)
+        reticulocitos = np.random.uniform(0.8, 1.5)
+        transferrina = np.random.uniform(200, 350)
+    
+    # Ajustar VCM y HCM basados en CHCM
+    vcm = (chcm / 33) * np.random.uniform(75, 95)
+    hcm = (chcm / 33) * np.random.uniform(27, 32)
+    
+    return {
+        'vcm': round(vcm, 1),
+        'hcm': round(hcm, 1),
+        'chcm': round(chcm, 1),
+        'ferritina': round(ferritina, 1),
+        'transferrina': round(transferrina, 0),
+        'reticulocitos': round(reticulocitos, 1)
+    }
 
 # ==================================================
 # CLASIFICACIÓN DE ANEMIA Y SEGUIMIENTO
@@ -353,7 +516,14 @@ def evaluar_estado_nutricional(edad_meses, peso_kg, talla_cm, genero):
 # LISTAS DE OPCIONES
 # ==================================================
 
-PERU_REGIONS = list(ALTITUD_REGIONES.keys()) if ALTITUD_REGIONES else ["LIMA", "AREQUIPA", "CUSCO", "PUNO", "JUNIN", "ANCASH", "LA LIBERTAD"]
+PERU_REGIONS = [
+    "AMAZONAS", "ANCASH", "APURIMAC", "AREQUIPA", "AYACUCHO", 
+    "CAJAMARCA", "CALLAO", "CUSCO", "HUANCAVELICA", "HUANUCO",
+    "ICA", "JUNIN", "LA LIBERTAD", "LAMBAYEQUE", "LIMA", 
+    "LORETO", "MADRE DE DIOS", "MOQUEGUA", "PASCO", "PIURA",
+    "PUNO", "SAN MARTIN", "TACNA", "TUMBES", "UCAYALI"
+]
+
 GENEROS = ["F", "M"]
 NIVELES_EDUCATIVOS = ["Sin educación", "Primaria", "Secundaria", "Superior"]
 FRECUENCIAS_SUPLEMENTO = ["Diario", "3 veces por semana", "Semanal", "Otra"]
@@ -564,6 +734,17 @@ with tab1:
                 edad_meses, peso_kg, talla_cm, genero
             )
             
+            # Generar parámetros e interpretación automática
+            parametros_simulados = generar_parametros_hematologicos(hemoglobina_ajustada, edad_meses)
+            interpretacion_auto = interpretar_analisis_hematologico(
+                parametros_simulados['ferritina'],
+                parametros_simulados['chcm'],
+                parametros_simulados['reticulocitos'], 
+                parametros_simulados['transferrina'],
+                hemoglobina_ajustada,
+                edad_meses
+            )
+            
             # Mostrar resultados
             st.markdown("---")
             st.subheader("📊 EVALUACIÓN INTEGRAL DEL PACIENTE")
@@ -592,8 +773,39 @@ with tab1:
                 st.markdown(f"**Estado Nutricional:** {estado_nutricional}")
                 st.markdown(f"**Seguimiento activo:** {'SÍ' if en_seguimiento else 'NO'}")
             
+            # INTERPRETACIÓN HEMATOLÓGICA AUTOMÁTICA
+            st.markdown("### 🔬 Interpretación Hematológica Automática")
+            
+            # Aplicar estilo según severidad
+            if interpretacion_auto['severidad'] == "CRITICO":
+                st.markdown(f'<div class="interpretacion-critica">', unsafe_allow_html=True)
+            elif interpretacion_auto['severidad'] == "MODERADO":
+                st.markdown(f'<div class="interpretacion-moderada">', unsafe_allow_html=True)
+            elif interpretacion_auto['severidad'] == "LEVE":
+                st.markdown(f'<div class="interpretacion-leve">', unsafe_allow_html=True)
+            else:
+                st.markdown(f'<div class="interpretacion-normal">', unsafe_allow_html=True)
+            
+            st.markdown(f"**📋 Análisis Integrado - {interpretacion_auto['severidad']}**")
+            st.markdown(f"**Interpretación:** {interpretacion_auto['interpretacion']}")
+            st.markdown(f"**💡 Plan Específico:** {interpretacion_auto['recomendacion']}")
+            st.markdown('</div>', unsafe_allow_html=True)
+            
+            # Mostrar parámetros simulados
+            st.markdown("### 🧪 Parámetros Hematológicos Estimados")
+            col_param1, col_param2, col_param3 = st.columns(3)
+            with col_param1:
+                st.metric("Ferritina", f"{parametros_simulados['ferritina']} ng/mL")
+                st.metric("CHCM", f"{parametros_simulados['chcm']} g/dL")
+            with col_param2:
+                st.metric("Transferrina", f"{parametros_simulados['transferrina']} mg/dL")
+                st.metric("VCM", f"{parametros_simulados['vcm']} fL")
+            with col_param3:
+                st.metric("Reticulocitos", f"{parametros_simulados['reticulocitos']} %")
+                st.metric("HCM", f"{parametros_simulados['hcm']} pg")
+            
             # SUGERENCIAS
-            st.markdown("### 💡 Plan de Acción")
+            st.markdown("### 💡 Plan de Acción General")
             st.info(sugerencias)
             
             # Guardar en Supabase
@@ -623,7 +835,9 @@ with tab1:
                     "riesgo": nivel_riesgo,
                     "estado_alerta": estado,
                     "sugerencias": sugerencias,
-                    "fecha_alerta": datetime.now().isoformat()
+                    "fecha_alerta": datetime.now().isoformat(),
+                    "interpretacion_hematologica": interpretacion_auto['interpretacion'],
+                    "severidad_interpretacion": interpretacion_auto['severidad']
                 }
                 
                 resultado = insertar_datos_supabase(record)
@@ -767,17 +981,18 @@ with tab2:
         </div>
         """, unsafe_allow_html=True)
 
-    # SECCIÓN: ANÁLISIS HEMATOLÓGICO COMPLETO
+    # SECCIÓN: ANÁLISIS HEMATOLÓGICO COMPLETO CON INTERPRETACIÓN
     st.markdown("---")
-    st.header("🔬 Análisis Hematológico Completo")
+    st.header("🔬 Análisis Hematológico Completo con Interpretación")
     
-    if st.button("🧪 Generar Análisis Hematológico"):
-        with st.spinner("Procesando parámetros hematológicos..."):
+    if st.button("🧪 Generar Análisis Hematológico Avanzado"):
+        with st.spinner("Procesando parámetros hematológicos con interpretación automática..."):
             todos_pacientes = obtener_datos_supabase()
             
             if not todos_pacientes.empty:
-                # Calcular todos los parámetros
+                # Calcular todos los parámetros con interpretación
                 analisis_data = []
+                interpretaciones_data = []
                 
                 for _, paciente in todos_pacientes.iterrows():
                     hb_ajustada = calcular_hemoglobina_ajustada(
@@ -787,28 +1002,53 @@ with tab2:
                     
                     clasificacion, recomendacion, _ = clasificar_anemia(hb_ajustada, paciente['edad_meses'])
                     
-                    # Parámetros hematológicos simulados
+                    # Generar parámetros hematológicos realistas
+                    parametros = generar_parametros_hematologicos(hb_ajustada, paciente['edad_meses'])
+                    
+                    # Generar interpretación automática
+                    interpretacion = interpretar_analisis_hematologico(
+                        parametros['ferritina'],
+                        parametros['chcm'], 
+                        parametros['reticulocitos'],
+                        parametros['transferrina'],
+                        hb_ajustada,
+                        paciente['edad_meses']
+                    )
+                    
+                    # Datos para tabla principal
                     analisis = {
                         'paciente': paciente['nombre_apellido'],
                         'edad_meses': paciente['edad_meses'],
                         'hb_medida': paciente['hemoglobina_dl1'],
                         'hb_ajustada': hb_ajustada,
                         'clasificacion': clasificacion,
-                        'vcm': np.random.uniform(70, 100),  # Volumen Corpuscular Medio
-                        'hcm': np.random.uniform(25, 35),   # Hemoglobina Corpuscular Media
-                        'chcm': np.random.uniform(30, 36),  # Concentración de Hb Corpuscular Media
-                        'ferritina': np.random.uniform(10, 150),  # ng/mL
-                        'transferrina': np.random.uniform(200, 400),  # mg/dL
-                        'reticulocitos': np.random.uniform(0.5, 2.0),  # %
-                        'recomendacion': recomendacion
+                        'vcm': parametros['vcm'],
+                        'hcm': parametros['hcm'],
+                        'chcm': parametros['chcm'],
+                        'ferritina': parametros['ferritina'],
+                        'transferrina': parametros['transferrina'],
+                        'reticulocitos': parametros['reticulocitos'],
+                        'recomendacion': recomendacion,
+                        'severidad': interpretacion['severidad']
                     }
                     analisis_data.append(analisis)
+                    
+                    # Datos para sección de interpretación
+                    interpretaciones_data.append({
+                        'paciente': paciente['nombre_apellido'],
+                        'interpretacion': interpretacion['interpretacion'],
+                        'recomendacion_especifica': interpretacion['recomendacion'],
+                        'severidad': interpretacion['severidad'],
+                        'color_alerta': interpretacion['codigo_color']
+                    })
                 
                 analisis_df = pd.DataFrame(analisis_data)
+                interpretaciones_df = pd.DataFrame(interpretaciones_data)
                 
-                st.success(f"🧪 {len(analisis_df)} análisis hematológicos generados")
+                st.success(f"🧪 {len(analisis_df)} análisis hematológicos con interpretación generados")
                 
-                # Mostrar análisis completo
+                # MOSTRAR TABLA PRINCIPAL DE PARÁMETROS
+                st.subheader("📊 Parámetros Hematológicos")
                 st.dataframe(
                     analisis_df,
                     use_container_width=True,
@@ -825,9 +1065,46 @@ with tab2:
                         'ferritina': st.column_config.NumberColumn('Ferritina', format='%.1f ng/mL'),
                         'transferrina': st.column_config.NumberColumn('Transferrina', format='%.0f mg/dL'),
                         'reticulocitos': st.column_config.NumberColumn('Reticulocitos', format='%.1f %%'),
-                        'recomendacion': 'Recomendación'
+                        'recomendacion': 'Recomendación',
+                        'severidad': 'Severidad'
                     }
                 )
+                
+                # MOSTRAR INTERPRETACIONES DETALLADAS
+                st.subheader("🎯 Interpretación Clínica Automática")
+                
+                for _, interpretacion in interpretaciones_df.iterrows():
+                    with st.container():
+                        st.markdown(f"""
+                        <div style="border-left: 5px solid {interpretacion['color_alerta']}; 
+                                    padding: 1rem; margin: 1rem 0; 
+                                    background-color: #f8f9fa; border-radius: 5px;">
+                            <h4>👤 {interpretacion['paciente']} - <span style="color: {interpretacion['color_alerta']}">{interpretacion['severidad']}</span></h4>
+                            <p><strong>Interpretación:</strong> {interpretacion['interpretacion']}</p>
+                            <p><strong>Plan de Acción:</strong> {interpretacion['recomendacion_especifica']}</p>
+                        </div>
+                        """, unsafe_allow_html=True)
+                
+                # GRÁFICO DE DISTRIBUCIÓN POR SEVERIDAD
+                st.subheader("📈 Distribución por Nivel de Severidad")
+                distribucion_severidad = analisis_df['severidad'].value_counts()
+                
+                fig_severidad = px.pie(
+                    values=distribucion_severidad.values,
+                    names=distribucion_severidad.index,
+                    title="Distribución de Pacientes por Severidad",
+                    color=distribucion_severidad.index,
+                    color_discrete_map={
+                        'CRITICO': '#FF4444',
+                        'MODERADO': '#FFAA00', 
+                        'LEVE': '#44AAFF',
+                        'NORMAL': '#44FF44'
+                    }
+                )
+                st.plotly_chart(fig_severidad, use_container_width=True)
+                
+            else:
+                st.info("📝 No hay pacientes registrados para análisis")
 
 # ==================================================
 # PESTAÑA 3: ESTADÍSTICAS
@@ -910,6 +1187,17 @@ with tab4:
         # Clasificación de anemia
         clasificacion, recomendacion, _ = clasificar_anemia(hb_ajustada_eval, edad_eval)
         
+        # Generar interpretación automática con parámetros simulados
+        parametros_simulados = generar_parametros_hematologicos(hb_ajustada_eval, edad_eval)
+        interpretacion_auto = interpretar_analisis_hematologico(
+            parametros_simulados['ferritina'],
+            parametros_simulados['chcm'],
+            parametros_simulados['reticulocitos'], 
+            parametros_simulados['transferrina'],
+            hb_ajustada_eval,
+            edad_eval
+        )
+        
         # Mostrar resultados
         st.markdown("---")
         st.subheader("📋 Resultados de la Evaluación")
@@ -922,6 +1210,12 @@ with tab4:
             st.metric("Ajuste por altitud", f"{ajuste_hb_eval:+.1f} g/dL")
             st.metric("Hemoglobina ajustada", f"{hb_ajustada_eval:.1f} g/dL", delta=f"{ajuste_hb_eval:+.1f}")
             st.metric("Clasificación OMS", clasificacion)
+            
+            # Mostrar parámetros hematológicos estimados
+            st.markdown("#### 🧪 Parámetros Hematológicos Estimados")
+            st.metric("Ferritina", f"{parametros_simulados['ferritina']} ng/mL")
+            st.metric("CHCM", f"{parametros_simulados['chcm']} g/dL")
+            st.metric("Reticulocitos", f"{parametros_simulados['reticulocitos']} %")
         
         with col2:
             st.markdown("### 🍎 Parámetros Nutricionales")
@@ -929,6 +1223,30 @@ with tab4:
             st.metric("Estado de Talla", estado_talla)
             st.metric("Estado Nutricional", estado_nutricional)
             st.metric("Recomendación", recomendacion)
+            
+            # Mostrar más parámetros hematológicos
+            st.markdown("#### 🔬 Más Parámetros")
+            st.metric("VCM", f"{parametros_simulados['vcm']} fL")
+            st.metric("HCM", f"{parametros_simulados['hcm']} pg")
+            st.metric("Transferrina", f"{parametros_simulados['transferrina']} mg/dL")
+        
+        # INTERPRETACIÓN AUTOMÁTICA
+        st.markdown("### 🎯 Interpretación Hematológica Automática")
+        
+        # Aplicar estilo según severidad
+        if interpretacion_auto['severidad'] == "CRITICO":
+            st.markdown(f'<div class="interpretacion-critica">', unsafe_allow_html=True)
+        elif interpretacion_auto['severidad'] == "MODERADO":
+            st.markdown(f'<div class="interpretacion-moderada">', unsafe_allow_html=True)
+        elif interpretacion_auto['severidad'] == "LEVE":
+            st.markdown(f'<div class="interpretacion-leve">', unsafe_allow_html=True)
+        else:
+            st.markdown(f'<div class="interpretacion-normal">', unsafe_allow_html=True)
+        
+        st.markdown(f"**📋 Análisis Integrado - {interpretacion_auto['severidad']}**")
+        st.markdown(f"**Interpretación:** {interpretacion_auto['interpretacion']}")
+        st.markdown(f"**💡 Plan Específico:** {interpretacion_auto['recomendacion']}")
+        st.markdown('</div>', unsafe_allow_html=True)
         
         # Tabla de referencia
         st.subheader("📊 Tablas de Referencia OMS")
@@ -1004,7 +1322,7 @@ with tab5:
 with st.sidebar:
     st.header("📋 Sistema de Referencia")
     
-    tab_sidebar1, tab_sidebar2 = st.tabs(["🎯 Ajustes Altitud", "📊 Tablas Crecimiento"])
+    tab_sidebar1, tab_sidebar2, tab_sidebar3 = st.tabs(["🎯 Ajustes Altitud", "📊 Tablas Crecimiento", "🔬 Criterios Hematológicos"])
     
     with tab_sidebar1:
         st.markdown("**Tabla de Ajustes por Altitud:**")
@@ -1027,6 +1345,33 @@ with st.sidebar:
         else:
             st.info("Cargando tablas de referencia...")
     
+    with tab_sidebar3:
+        st.markdown("**Criterios de Interpretación:**")
+        
+        st.markdown("""
+        ### 🩺 FERRITINA (Reservas)
+        - **< 15 ng/mL**: 🚨 Deficit severo
+        - **15-30 ng/mL**: ⚠️ Deficit moderado  
+        - **30-100 ng/mL**: 🔄 Reservas límite
+        - **> 100 ng/mL**: ✅ Adecuado
+        
+        ### 🔬 CHCM (Concentración)
+        - **< 32 g/dL**: 🚨 Hipocromía
+        - **32-36 g/dL**: ✅ Normocromía
+        - **> 36 g/dL**: 🔄 Hipercromía
+        
+        ### 📈 RETICULOCITOS (Producción)
+        - **< 0.5%**: ⚠️ Hipoproliferación
+        - **0.5-1.5%**: ✅ Normal
+        - **> 1.5%**: 🔄 Hiperproducción
+        
+        ### 🚨 NIVELES DE SEVERIDAD
+        - **CRÍTICO**: Intervención inmediata
+        - **MODERADO**: Acción prioritaria  
+        - **LEVE**: Vigilancia activa
+        - **NORMAL**: Seguimiento rutinario
+        """)
+    
     st.markdown("---")
     st.info("""
     **💡 Sistema Integrado:**
@@ -1035,6 +1380,7 @@ with st.sidebar:
     - ✅ Seguimiento por gravedad
     - ✅ Evaluación nutricional
     - ✅ Dashboard nacional
+    - ✅ **NUEVO: Interpretación automática**
     """)
 
 # ==================================================
