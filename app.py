@@ -170,7 +170,7 @@ def init_supabase():
 supabase = init_supabase()
 
 # ==================================================
-# FUNCIONES DE BASE DE DATOS
+# FUNCIONES DE BASE DE DATOS (CORREGIDAS)
 # ==================================================
 
 def obtener_datos_supabase(tabla=TABLE_NAME):
@@ -197,8 +197,38 @@ def obtener_casos_seguimiento():
     except Exception as e:
         return pd.DataFrame()
 
-def insertar_datos_supabase(datos, tabla=TABLE_NAME):
+def verificar_duplicado(dni):
+    """Verifica si un DNI ya existe en la base de datos"""
     try:
+        if supabase:
+            response = supabase.table(TABLE_NAME)\
+                .select("dni")\
+                .eq("dni", dni)\
+                .execute()
+            
+            if response.data and len(response.data) > 0:
+                return True
+            return False
+        return False
+    except Exception as e:
+        st.error(f"Error verificando duplicado: {e}")
+        return False
+
+def insertar_datos_supabase(datos, tabla=TABLE_NAME):
+    """Inserta datos en Supabase verificando duplicados"""
+    try:
+        dni = datos.get("dni")
+        
+        if not dni:
+            st.error("❌ El registro no tiene DNI")
+            return None
+        
+        # Verificar si ya existe
+        if verificar_duplicado(dni):
+            st.error(f"❌ El DNI {dni} ya existe en la base de datos")
+            return {"status": "duplicado", "dni": dni}
+        
+        # Insertar si no existe
         if supabase:
             response = supabase.table(tabla).insert(datos).execute()
             if hasattr(response, 'error') and response.error:
@@ -212,18 +242,35 @@ def insertar_datos_supabase(datos, tabla=TABLE_NAME):
         st.write("Datos que causaron error:", datos)
         return None
 
+def upsert_datos_supabase(datos, tabla=TABLE_NAME):
+    """Inserta o actualiza datos si ya existen (basado en DNI)"""
+    try:
+        if supabase:
+            response = supabase.table(tabla)\
+                .upsert(datos, on_conflict='dni')\
+                .execute()
+            
+            if hasattr(response, 'error') and response.error:
+                st.error(f"❌ Error Supabase al hacer upsert: {response.error}")
+                return None
+            return response.data[0] if response.data else None
+        return None
+    except Exception as e:
+        st.error(f"Error haciendo upsert: {e}")
+        return None
+
 # ==================================================
 # TABLAS DE REFERENCIA Y FUNCIONES DE CÁLCULO
 # ==================================================
 
-# Obtener datos de altitud desde Supabase
 def obtener_altitud_regiones():
+    """Obtiene datos de altitud de regiones desde Supabase"""
     try:
         if supabase:
             response = supabase.table(ALTITUD_TABLE).select("*").execute()
             if response.data:
                 return {row['region']: row for row in response.data}
-        # Datos de respaldo completos de todos los departamentos del Perú
+        # Datos de respaldo
         return {
             "AMAZONAS": {"altitud_min": 500, "altitud_max": 3500, "altitud_promedio": 1800},
             "ANCASH": {"altitud_min": 0, "altitud_max": 6768, "altitud_promedio": 3000},
@@ -620,7 +667,7 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
 ])
 
 # ==================================================
-# PESTAÑA 1: REGISTRO COMPLETO (CORREGIDO)
+# PESTAÑA 1: REGISTRO COMPLETO
 # ==================================================
 
 with tab1:
@@ -813,55 +860,58 @@ with tab1:
             st.info(sugerencias)
             
             # ============================================
-            # SECCIÓN CORREGIDA PARA GUARDAR EN SUPABASE
+            # GUARDAR EN SUPABASE CON VERIFICACIÓN DE DUPLICADOS
             # ============================================
             if supabase:
-                # Crear el registro con los nombres CORRECTOS de columnas
-                record = {
-                    "dni": dni,
-                    "nombre_apellido": nombre_completo,
-                    "edad_meses": int(edad_meses),
-                    "peso_kg": float(peso_kg),
-                    "talla_cm": float(talla_cm),
-                    "genero": genero,
-                    "telefono": telefono,
-                    "estado_paciente": estado_paciente,
-                    "region": region,
-                    "departamento": departamento,
-                    "altitud_msnm": int(altitud_msnm),
-                    "nivel_educativo": nivel_educativo,
-                    "acceso_agua_potable": acceso_agua_potable,
-                    "tiene_servicio_salud": tiene_servicio_salud,
-                    "hemoglobina_dl1": float(hemoglobina_medida),
-                    "en_seguimiento": en_seguimiento,
-                    # CORREGIDO: "consume_hierro" → "consumir_hierro"
-                    "consumir_hierro": consume_hierro,
-                    "tipo_suplemento_hierro": tipo_suplemento_hierro if consume_hierro else None,
-                    "frecuencia_suplemento": frecuencia_suplemento if consume_hierro else None,
-                    "antecedentes_anemia": antecedentes_anemia,
-                    "enfermedades_cronicas": enfermedades_cronicas,
-                    # AGREGADOS: Campos que faltaban
-                    "interpretacion_hematologica": interpretacion_auto['interpretacion'],
-                    "politicas_de_ris": region,  # O puedes poner "OTRO / NO ESPECIFICADO"
-                    "riesgo": nivel_riesgo,
-                    # CORREGIDO: Formato de fecha YYYY-MM-DD
-                    "fecha_alerta": datetime.now().strftime("%Y-%m-%d"),
-                    "estado_alerta": estado,
-                    "sugerencias": sugerencias,
-                    "severidad_interpretacion": interpretacion_auto['severidad']
-                }
-                
-                st.write("📤 Intentando guardar en Supabase...")
-                resultado = insertar_datos_supabase(record)
-                
-                if resultado:
-                    st.success("✅ Datos guardados en Supabase correctamente")
-                    time.sleep(2)
-                    st.rerun()
-                else:
-                    st.error("❌ Error al guardar en Supabase. Revisa la consola para más detalles.")
-                    st.write("Registro que se intentó guardar:")
-                    st.json(record)
+                with st.spinner("Verificando y guardando datos..."):
+                    # Crear el registro completo
+                    record = {
+                        "dni": dni.strip(),
+                        "nombre_apellido": nombre_completo.strip(),
+                        "edad_meses": int(edad_meses),
+                        "peso_kg": float(peso_kg),
+                        "talla_cm": float(talla_cm),
+                        "genero": genero,
+                        "telefono": telefono.strip() if telefono else None,
+                        "estado_paciente": estado_paciente,
+                        "region": region,
+                        "departamento": departamento.strip() if departamento else None,
+                        "altitud_msnm": int(altitud_msnm),
+                        "nivel_educativo": nivel_educativo,
+                        "acceso_agua_potable": acceso_agua_potable,
+                        "tiene_servicio_salud": tiene_servicio_salud,
+                        "hemoglobina_dl1": float(hemoglobina_medida),
+                        "en_seguimiento": en_seguimiento,
+                        "consumir_hierro": consume_hierro,
+                        "tipo_suplemento_hierro": tipo_suplemento_hierro.strip() if consume_hierro and tipo_suplemento_hierro else None,
+                        "frecuencia_suplemento": frecuencia_suplemento if consume_hierro else None,
+                        "antecedentes_anemia": antecedentes_anemia,
+                        "enfermedades_cronicas": enfermedades_cronicas.strip() if enfermedades_cronicas else None,
+                        "interpretacion_hematologica": interpretacion_auto['interpretacion'],
+                        "politicas_de_ris": region,
+                        "riesgo": nivel_riesgo,
+                        "fecha_alerta": datetime.now().strftime("%Y-%m-%d"),
+                        "estado_alerta": estado,
+                        "sugerencias": sugerencias,
+                        "severidad_interpretacion": interpretacion_auto['severidad']
+                    }
+                    
+                    # Insertar usando la función que verifica duplicados
+                    resultado = insertar_datos_supabase(record)
+                    
+                    if resultado:
+                        if isinstance(resultado, dict) and resultado.get("status") == "duplicado":
+                            st.error(f"❌ El DNI {dni} ya existe en la base de datos")
+                            st.info("Por favor, use un DNI diferente o edite el registro existente")
+                        else:
+                            st.success("✅ Datos guardados en Supabase correctamente")
+                            st.balloons()
+                            time.sleep(2)
+                            st.rerun()
+                    else:
+                        st.error("❌ Error al guardar en Supabase")
+            else:
+                st.error("🔴 No hay conexión a Supabase")
 
 # ==================================================
 # PESTAÑA 2: SEGUIMIENTO CLÍNICO
@@ -887,16 +937,16 @@ with tab2:
                     analisis_data = []
                     for _, paciente in pacientes_analizados.iterrows():
                         hb_ajustada = calcular_hemoglobina_ajustada(
-                            paciente['hemoglobina_dl1'], 
+                            paciente.get('hemoglobina_dl1', 0), 
                             paciente.get('altitud_msnm', 0)
                         )
                         
-                        clasificacion, recomendacion, _ = clasificar_anemia(hb_ajustada, paciente['edad_meses'])
+                        clasificacion, recomendacion, _ = clasificar_anemia(hb_ajustada, paciente.get('edad_meses', 0))
                         
                         analisis = {
-                            'nombre_apellido': paciente['nombre_apellido'],
-                            'edad_meses': paciente['edad_meses'],
-                            'hemoglobina_dl1': paciente['hemoglobina_dl1'],
+                            'nombre_apellido': paciente.get('nombre_apellido', 'N/A'),
+                            'edad_meses': paciente.get('edad_meses', 0),
+                            'hemoglobina_dl1': paciente.get('hemoglobina_dl1', 0),
                             'hb_ajustada': hb_ajustada,
                             'clasificacion_anemia': clasificacion,
                             'recomendacion_seguimiento': recomendacion,
@@ -1011,14 +1061,14 @@ with tab2:
                 
                 for _, paciente in todos_pacientes.iterrows():
                     hb_ajustada = calcular_hemoglobina_ajustada(
-                        paciente['hemoglobina_dl1'], 
+                        paciente.get('hemoglobina_dl1', 0), 
                         paciente.get('altitud_msnm', 0)
                     )
                     
-                    clasificacion, recomendacion, _ = clasificar_anemia(hb_ajustada, paciente['edad_meses'])
+                    clasificacion, recomendacion, _ = clasificar_anemia(hb_ajustada, paciente.get('edad_meses', 0))
                     
                     # Generar parámetros hematológicos realistas
-                    parametros = generar_parametros_hematologicos(hb_ajustada, paciente['edad_meses'])
+                    parametros = generar_parametros_hematologicos(hb_ajustada, paciente.get('edad_meses', 0))
                     
                     # Generar interpretación automática
                     interpretacion = interpretar_analisis_hematologico(
@@ -1027,14 +1077,14 @@ with tab2:
                         parametros['reticulocitos'],
                         parametros['transferrina'],
                         hb_ajustada,
-                        paciente['edad_meses']
+                        paciente.get('edad_meses', 0)
                     )
                     
                     # Datos para tabla principal
                     analisis = {
-                        'paciente': paciente['nombre_apellido'],
-                        'edad_meses': paciente['edad_meses'],
-                        'hb_medida': paciente['hemoglobina_dl1'],
+                        'paciente': paciente.get('nombre_apellido', 'N/A'),
+                        'edad_meses': paciente.get('edad_meses', 0),
+                        'hb_medida': paciente.get('hemoglobina_dl1', 0),
                         'hb_ajustada': hb_ajustada,
                         'clasificacion': clasificacion,
                         'vcm': parametros['vcm'],
@@ -1050,7 +1100,7 @@ with tab2:
                     
                     # Datos para sección de interpretación
                     interpretaciones_data.append({
-                        'paciente': paciente['nombre_apellido'],
+                        'paciente': paciente.get('nombre_apellido', 'N/A'),
                         'interpretacion': interpretacion['interpretacion'],
                         'recomendacion_especifica': interpretacion['recomendacion'],
                         'severidad': interpretacion['severidad'],
@@ -1297,10 +1347,10 @@ with tab5:
                 casos_seguimiento = 0
                 for _, paciente in datos_nacionales.iterrows():
                     hb_ajustada = calcular_hemoglobina_ajustada(
-                        paciente['hemoglobina_dl1'], 
+                        paciente.get('hemoglobina_dl1', 0), 
                         paciente.get('altitud_msnm', 0)
                     )
-                    if necesita_seguimiento_automatico(hb_ajustada, paciente['edad_meses']):
+                    if necesita_seguimiento_automatico(hb_ajustada, paciente.get('edad_meses', 0)):
                         casos_seguimiento += 1
                 st.metric("Necesitan Seguimiento", casos_seguimiento)
             
@@ -1396,60 +1446,72 @@ with st.sidebar:
     - ✅ Evaluación nutricional
     - ✅ Dashboard nacional
     - ✅ **NUEVO: Interpretación automática**
+    - ✅ **CORREGIDO: Manejo de duplicados**
     """)
 
 # ==================================================
-# INICIALIZACIÓN DE DATOS DE PRUEBA (CORREGIDO)
+# INICIALIZACIÓN DE DATOS DE PRUEBA (OPCIONAL)
 # ==================================================
 
 if supabase:
     try:
         response = supabase.table(TABLE_NAME).select("*").limit(1).execute()
         if not response.data:
-            st.info("🔄 Inicializando base de datos...")
+            st.sidebar.info("🔄 Base de datos vacía. Puede ingresar pacientes desde la pestaña 'Registro Completo'")
             
-            # Datos de prueba CORREGIDOS
-            datos_prueba = [
-                {
-                    "dni": "12345678",
-                    "nombre_apellido": "Ana García Pérez",
-                    "edad_meses": 24,
-                    "peso_kg": 12.5,
-                    "talla_cm": 85.0,
-                    "genero": "F",
-                    "telefono": "987654321",
-                    "estado_paciente": "Activo",
-                    "region": "LIMA",
-                    "departamento": "Lima Metropolitana",
-                    "altitud_msnm": 150,
-                    "nivel_educativo": "Secundaria",
-                    "acceso_agua_potable": True,
-                    "tiene_servicio_salud": True,
-                    "hemoglobina_dl1": 9.5,
-                    "en_seguimiento": True,
-                    "consumir_hierro": True,  # CORREGIDO
-                    "tipo_suplemento_hierro": "Sulfato ferroso",
-                    "frecuencia_suplemento": "Diario",
-                    "antecedentes_anemia": True,
-                    "enfermedades_cronicas": "Ninguna",
-                    "interpretacion_hematologica": "Anemia ferropénica moderada",  # AGREGADO
-                    "politicas_de_ris": "LIMA",  # AGREGADO
-                    "riesgo": "ALTO RIESGO",
-                    "fecha_alerta": datetime.now().strftime("%Y-%m-%d"),  # CORREGIDO
-                    "estado_alerta": "URGENTE",
-                    "sugerencias": "Suplemento inmediato y control médico",
-                    "severidad_interpretacion": "MODERADA"  # AGREGADO
-                }
-            ]
-            
-            for dato in datos_prueba:
-                resultado = insertar_datos_supabase(dato)
-                if resultado:
-                    st.success("✅ Datos de prueba insertados correctamente")
-                else:
-                    st.error("❌ Error al insertar datos de prueba")
-            
-            time.sleep(2)
-            st.rerun()
+            # Opcional: Insertar un paciente de prueba automáticamente
+            if st.sidebar.button("➕ Insertar paciente de prueba"):
+                with st.sidebar.spinner("Insertando..."):
+                    paciente_prueba = {
+                        "dni": "87654321",
+                        "nombre_apellido": "Carlos López Díaz",
+                        "edad_meses": 36,
+                        "peso_kg": 14.5,
+                        "talla_cm": 95.0,
+                        "genero": "M",
+                        "telefono": "987123456",
+                        "estado_paciente": "Activo",
+                        "region": "LIMA",
+                        "departamento": "Lima Centro",
+                        "altitud_msnm": 150,
+                        "nivel_educativo": "Secundaria",
+                        "acceso_agua_potable": True,
+                        "tiene_servicio_salud": True,
+                        "hemoglobina_dl1": 10.5,
+                        "en_seguimiento": True,
+                        "consumir_hierro": True,
+                        "tipo_suplemento_hierro": "Sulfato ferroso",
+                        "frecuencia_suplemento": "Diario",
+                        "antecedentes_anemia": False,
+                        "enfermedades_cronicas": "Ninguna",
+                        "interpretacion_hematologica": "Anemia leve por deficiencia de hierro",
+                        "politicas_de_ris": "LIMA",
+                        "riesgo": "RIESGO MODERADO",
+                        "fecha_alerta": datetime.now().strftime("%Y-%m-%d"),
+                        "estado_alerta": "EN SEGUIMIENTO",
+                        "sugerencias": "Suplementación con hierro y control mensual",
+                        "severidad_interpretacion": "LEVE"
+                    }
+                    
+                    resultado = insertar_datos_supabase(paciente_prueba)
+                    if resultado:
+                        st.sidebar.success("✅ Paciente de prueba insertado")
+                        time.sleep(2)
+                        st.rerun()
+                    else:
+                        st.sidebar.error("❌ Error al insertar paciente de prueba")
     except Exception as e:
-        st.warning(f"⚠️ Error verificando datos: {e}")
+        st.sidebar.warning(f"⚠️ Error verificando datos: {e}")
+
+# ==================================================
+# PIE DE PÁGINA
+# ==================================================
+
+st.markdown("---")
+st.markdown("""
+<div style="text-align: center; padding: 2rem; color: #666;">
+    <p>🏥 <strong>Sistema Nixon</strong> - Control de Anemia y Nutrición Infantil</p>
+    <p>📅 Versión 2.0 | Última actualización: """ + datetime.now().strftime("%d/%m/%Y") + """</p>
+    <p>⚠️ <em>Para uso médico profesional. Consulte siempre con especialistas.</em></p>
+</div>
+""", unsafe_allow_html=True)
