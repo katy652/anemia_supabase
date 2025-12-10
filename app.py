@@ -1185,6 +1185,8 @@ with tab3:
         if not datos_completos.empty:
             st.success(f"✅ {len(datos_completos)} registros analizados")
             
+            # ========== MÉTRICAS PRINCIPALES ==========
+            st.subheader("📊 Métricas Principales")
             col1, col2, col3, col4 = st.columns(4)
             
             with col1:
@@ -1193,28 +1195,220 @@ with tab3:
             
             with col2:
                 en_seguimiento = len(datos_completos[datos_completos['en_seguimiento'] == True])
-                st.metric("En seguimiento", en_seguimiento)
+                porcentaje_seguimiento = (en_seguimiento / total_casos * 100) if total_casos > 0 else 0
+                st.metric("En seguimiento", en_seguimiento, f"{porcentaje_seguimiento:.1f}%")
             
             with col3:
                 if 'hemoglobina_dl1' in datos_completos.columns:
                     avg_hemoglobina = datos_completos['hemoglobina_dl1'].mean()
-                    st.metric("Hb promedio", f"{avg_hemoglobina:.1f} g/dL")
+                    min_hb = datos_completos['hemoglobina_dl1'].min()
+                    max_hb = datos_completos['hemoglobina_dl1'].max()
+                    st.metric("Hb promedio", f"{avg_hemoglobina:.1f} g/dL", 
+                              f"Rango: {min_hb:.1f}-{max_hb:.1f}")
             
             with col4:
                 if 'riesgo' in datos_completos.columns:
                     alto_riesgo = len(datos_completos[datos_completos['riesgo'].str.contains('ALTO', na=False)])
-                    st.metric("Casos alto riesgo", alto_riesgo)
+                    medio_riesgo = len(datos_completos[datos_completos['riesgo'].str.contains('MEDIO|MODERADO', na=False, case=False)])
+                    st.metric("Casos alto riesgo", alto_riesgo, 
+                              f"Medio: {medio_riesgo}")
             
-            st.subheader("📋 Distribución por Región")
-            if 'region' in datos_completos.columns:
-                distribucion_region = datos_completos['region'].value_counts()
-                st.bar_chart(distribucion_region)
+            # ========== MÉTRICAS SECUNDARIAS ==========
+            st.subheader("📈 Estadísticas Detalladas")
+            col5, col6, col7, col8 = st.columns(4)
             
-            st.subheader("📄 Datos Completos")
+            with col5:
+                if 'edad' in datos_completos.columns:
+                    avg_edad = datos_completos['edad'].mean()
+                    st.metric("Edad promedio", f"{avg_edad:.1f} años")
+            
+            with col6:
+                if 'fecha_registro' in datos_completos.columns:
+                    # Casos últimos 30 días
+                    try:
+                        datos_completos['fecha_registro'] = pd.to_datetime(datos_completos['fecha_registro'])
+                        fecha_limite = pd.Timestamp.now() - pd.Timedelta(days=30)
+                        casos_recientes = len(datos_completos[datos_completos['fecha_registro'] >= fecha_limite])
+                        st.metric("Últimos 30 días", casos_recientes)
+                    except:
+                        st.metric("Registros", total_casos)
+            
+            with col7:
+                if 'genero' in datos_completos.columns:
+                    mujeres = len(datos_completos[datos_completos['genero'].str.contains('F|Mujer', na=False, case=False)])
+                    porcentaje_mujeres = (mujeres / total_casos * 100) if total_casos > 0 else 0
+                    st.metric("Mujeres", mujeres, f"{porcentaje_mujeres:.1f}%")
+            
+            with col8:
+                # Complejidad de datos
+                columnas_con_datos = datos_completos.count()
+                completitud = (columnas_con_datos.sum() / (len(datos_completos) * len(datos_completos.columns)) * 100)
+                st.metric("Completitud", f"{completitud:.1f}%")
+            
+            # ========== DISTRIBUCIONES ==========
+            st.subheader("📋 Distribuciones")
+            
+            col_dist1, col_dist2 = st.columns(2)
+            
+            with col_dist1:
+                if 'region' in datos_completos.columns:
+                    st.write("**Por Región**")
+                    distribucion_region = datos_completos['region'].value_counts()
+                    # Gráfico con colores
+                    fig1, ax1 = plt.subplots(figsize=(8, 4))
+                    colors = plt.cm.Set3(np.linspace(0, 1, len(distribucion_region)))
+                    bars = ax1.bar(distribucion_region.index, distribucion_region.values, color=colors)
+                    ax1.set_ylabel('Número de Casos')
+                    ax1.set_title('Distribución por Región')
+                    
+                    # Añadir valores en las barras
+                    for bar in bars:
+                        height = bar.get_height()
+                        ax1.text(bar.get_x() + bar.get_width()/2., height + 0.5,
+                                f'{int(height)}', ha='center', va='bottom')
+                    
+                    plt.xticks(rotation=45, ha='right')
+                    plt.tight_layout()
+                    st.pyplot(fig1)
+            
+            with col_dist2:
+                if 'riesgo' in datos_completos.columns:
+                    st.write("**Por Nivel de Riesgo**")
+                    distribucion_riesgo = datos_completos['riesgo'].value_counts()
+                    # Gráfico de pastel con colores según riesgo
+                    colors_riesgo = ['#FF6B6B' if 'ALTO' in str(x).upper() else 
+                                    '#FFD166' if 'MEDIO' in str(x).upper() else 
+                                    '#06D6A0' for x in distribucion_riesgo.index]
+                    
+                    fig2, ax2 = plt.subplots(figsize=(8, 4))
+                    wedges, texts, autotexts = ax2.pie(distribucion_riesgo.values, 
+                                                      labels=distribucion_riesgo.index,
+                                                      autopct='%1.1f%%',
+                                                      colors=colors_riesgo,
+                                                      startangle=90)
+                    
+                    # Mejorar estilo
+                    for autotext in autotexts:
+                        autotext.set_color('black')
+                        autotext.set_fontweight('bold')
+                    
+                    ax2.set_title('Distribución por Nivel de Riesgo')
+                    st.pyplot(fig2)
+            
+            # ========== ESTADÍSTICAS DE HEMOGLOBINA ==========
+            if 'hemoglobina_dl1' in datos_completos.columns:
+                st.subheader("📊 Estadísticas de Hemoglobina")
+                
+                col_hb1, col_hb2, col_hb3, col_hb4 = st.columns(4)
+                
+                with col_hb1:
+                    media_hb = datos_completos['hemoglobina_dl1'].mean()
+                    st.metric("Media", f"{media_hb:.2f} g/dL")
+                
+                with col_hb2:
+                    mediana_hb = datos_completos['hemoglobina_dl1'].median()
+                    st.metric("Mediana", f"{mediana_hb:.2f} g/dL")
+                
+                with col_hb3:
+                    std_hb = datos_completos['hemoglobina_dl1'].std()
+                    st.metric("Desv. Estándar", f"{std_hb:.2f} g/dL")
+                
+                with col_hb4:
+                    bajo_umbral = len(datos_completos[datos_completos['hemoglobina_dl1'] < 1.2])
+                    porcentaje_bajo = (bajo_umbral / total_casos * 100) if total_casos > 0 else 0
+                    st.metric("< 1.2 g/dL", bajo_umbral, f"{porcentaje_bajo:.1f}%")
+                
+                # Histograma de hemoglobina
+                st.write("**Distribución de Hemoglobina**")
+                fig3, ax3 = plt.subplots(figsize=(10, 4))
+                
+                # Histograma con línea de referencia
+                ax3.hist(datos_completos['hemoglobina_dl1'].dropna(), bins=15, 
+                        color='skyblue', edgecolor='black', alpha=0.7)
+                
+                # Líneas de referencia
+                ax3.axvline(x=1.2, color='red', linestyle='--', linewidth=2, label='Umbral (1.2 g/dL)')
+                ax3.axvline(x=media_hb, color='green', linestyle='-', linewidth=2, label=f'Media: {media_hb:.2f}')
+                
+                ax3.set_xlabel('Hemoglobina (g/dL)')
+                ax3.set_ylabel('Frecuencia')
+                ax3.set_title('Distribución de Valores de Hemoglobina')
+                ax3.legend()
+                ax3.grid(alpha=0.3)
+                
+                st.pyplot(fig3)
+            
+            # ========== TABLA RESUMEN ==========
+            st.subheader("📄 Resumen Estadístico")
+            
+            if 'hemoglobina_dl1' in datos_completos.columns and 'edad' in datos_completos.columns:
+                # Crear tabla de resumen
+                resumen_data = {
+                    'Estadístico': ['Media', 'Mediana', 'Desv. Estándar', 'Mínimo', 'Máximo', 'Percentil 25', 'Percentil 75'],
+                    'Hemoglobina (g/dL)': [
+                        f"{datos_completos['hemoglobina_dl1'].mean():.2f}",
+                        f"{datos_completos['hemoglobina_dl1'].median():.2f}",
+                        f"{datos_completos['hemoglobina_dl1'].std():.2f}",
+                        f"{datos_completos['hemoglobina_dl1'].min():.2f}",
+                        f"{datos_completos['hemoglobina_dl1'].max():.2f}",
+                        f"{datos_completos['hemoglobina_dl1'].quantile(0.25):.2f}",
+                        f"{datos_completos['hemoglobina_dl1'].quantile(0.75):.2f}"
+                    ]
+                }
+                
+                if 'edad' in datos_completos.columns:
+                    resumen_data['Edad (años)'] = [
+                        f"{datos_completos['edad'].mean():.1f}",
+                        f"{datos_completos['edad'].median():.1f}",
+                        f"{datos_completos['edad'].std():.1f}",
+                        f"{datos_completos['edad'].min():.0f}",
+                        f"{datos_completos['edad'].max():.0f}",
+                        f"{datos_completos['edad'].quantile(0.25):.1f}",
+                        f"{datos_completos['edad'].quantile(0.75):.1f}"
+                    ]
+                
+                resumen_df = pd.DataFrame(resumen_data)
+                st.dataframe(resumen_df, use_container_width=True)
+            
+            # ========== DATOS COMPLETOS ==========
+            st.subheader("📋 Datos Completos")
+            
+            # Opción para descargar
+            csv = datos_completos.to_csv(index=False).encode('utf-8')
+            st.download_button(
+                label="📥 Descargar datos completos (CSV)",
+                data=csv,
+                file_name="datos_estadisticas.csv",
+                mime="text/csv"
+            )
+            
             st.dataframe(datos_completos, use_container_width=True, height=300)
             
         else:
             st.info("📝 No hay datos disponibles para mostrar estadísticas")
+            
+    # ========== ESTADÍSTICAS RÁPIDAS SIN CARGAR ==========
+    else:
+        st.info("👆 Presiona el botón 'Cargar estadísticas actuales' para ver el análisis completo")
+        
+        # Mostrar estadísticas básicas del sistema
+        st.subheader("📌 Estadísticas Rápidas")
+        
+        col_info1, col_info2 = st.columns(2)
+        
+        with col_info1:
+            st.write("**Métricas disponibles cuando cargues datos:**")
+            st.write("• Total de casos y seguimiento")
+            st.write("• Hemoglobina promedio y distribución")
+            st.write("• Niveles de riesgo (Alto/Medio/Bajo)")
+            st.write("• Distribución por región y género")
+            
+        with col_info2:
+            st.write("**Análisis incluidos:**")
+            st.write("• Estadísticos descriptivos completos")
+            st.write("• Histogramas y gráficos de distribución")
+            st.write("• Porcentajes y tasas clave")
+            st.write("• Datos exportables en CSV")
 
 # ==================================================
 # PESTAÑA 4: EVALUACIÓN NUTRICIONAL
