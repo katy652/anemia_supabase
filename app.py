@@ -1172,139 +1172,544 @@ with tab2:
                 st.info("📝 No hay pacientes registrados para análisis")
 
 # ==================================================
-# PESTAÑA 3: ESTADÍSTICAS (VERSIÓN SIMPLIFICADA)
+# PESTAÑA 3: ESTADÍSTICAS AVANZADAS CON PLOTLY
 # ==================================================
 
 with tab3:
-    st.header("📈 Estadísticas del Sistema")
+    st.header("📊 Dashboard Estadístico Avanzado")
     
-    if st.button("📊 Cargar estadísticas actuales"):
-        with st.spinner("Calculando estadísticas..."):
+    # Toggle para mostrar explicaciones
+    mostrar_explicaciones = st.checkbox("ℹ️ Mostrar explicaciones de métricas", value=True)
+    
+    if st.button("🚀 Cargar análisis estadístico completo", type="primary"):
+        with st.spinner("🔍 Analizando datos y generando visualizaciones..."):
             datos_completos = obtener_datos_supabase()
         
         if not datos_completos.empty:
             st.success(f"✅ {len(datos_completos)} registros analizados")
             
-            # ========== MÉTRICAS PRINCIPALES ==========
-            st.subheader("📊 Métricas Principales")
-            col1, col2, col3, col4 = st.columns(4)
+            # ========== KPI PRINCIPALES CON TARJETAS COLORES ==========
+            st.subheader("🎯 KPIs Principales")
             
-            with col1:
+            # Fila 1 de KPIs
+            kpi1, kpi2, kpi3, kpi4 = st.columns(4)
+            
+            with kpi1:
                 total_casos = len(datos_completos)
-                st.metric("Total de casos", total_casos)
+                st.metric(
+                    label="Total de Casos",
+                    value=f"{total_casos:,}",
+                    delta=None,
+                    delta_color="normal",
+                    help="Número total de pacientes registrados"
+                )
+                if mostrar_explicaciones:
+                    st.caption("👥 Total de registros en la base de datos")
             
-            with col2:
-                en_seguimiento = len(datos_completos[datos_completos['en_seguimiento'] == True])
-                porcentaje_seguimiento = (en_seguimiento / total_casos * 100) if total_casos > 0 else 0
-                st.metric("En seguimiento", en_seguimiento, f"{porcentaje_seguimiento:.1f}%")
+            with kpi2:
+                if 'en_seguimiento' in datos_completos.columns:
+                    en_seguimiento = len(datos_completos[datos_completos['en_seguimiento'] == True])
+                    porcentaje_seguimiento = (en_seguimiento / total_casos * 100) if total_casos > 0 else 0
+                    
+                    # Determinar color del delta
+                    delta_color = "normal"
+                    if porcentaje_seguimiento < 30:
+                        delta_color = "inverse"
+                    elif porcentaje_seguimiento > 70:
+                        delta_color = "normal"
+                    
+                    st.metric(
+                        label="En Seguimiento",
+                        value=en_seguimiento,
+                        delta=f"{porcentaje_seguimiento:.1f}%",
+                        delta_color=delta_color
+                    )
+                    if mostrar_explicaciones:
+                        st.caption(f"📋 {porcentaje_seguimiento:.1f}% del total")
             
-            with col3:
+            with kpi3:
                 if 'hemoglobina_dl1' in datos_completos.columns:
                     avg_hemoglobina = datos_completos['hemoglobina_dl1'].mean()
-                    min_hb = datos_completos['hemoglobina_dl1'].min()
-                    max_hb = datos_completos['hemoglobina_dl1'].max()
-                    st.metric("Hb promedio", f"{avg_hemoglobina:.1f} g/dL", 
-                              f"Rango: {min_hb:.1f}-{max_hb:.1f}")
+                    
+                    # Determinar estado
+                    if avg_hemoglobina < 1.2:
+                        delta_color = "inverse"
+                        estado = "🔴 Crítico"
+                    elif avg_hemoglobina < 1.5:
+                        delta_color = "off"
+                        estado = "🟡 Atención"
+                    else:
+                        delta_color = "normal"
+                        estado = "🟢 Normal"
+                    
+                    st.metric(
+                        label="Hb Promedio",
+                        value=f"{avg_hemoglobina:.1f} g/dL",
+                        delta=estado,
+                        delta_color=delta_color
+                    )
+                    if mostrar_explicaciones:
+                        st.caption("📊 Media de hemoglobina en todos los pacientes")
             
-            with col4:
+            with kpi4:
                 if 'riesgo' in datos_completos.columns:
                     alto_riesgo = len(datos_completos[datos_completos['riesgo'].str.contains('ALTO', na=False)])
-                    medio_riesgo = len(datos_completos[datos_completos['riesgo'].str.contains('MEDIO|MODERADO', na=False, case=False)])
-                    st.metric("Casos alto riesgo", alto_riesgo, 
-                              f"Medio: {medio_riesgo}")
-            
-            # ========== DISTRIBUCIONES ==========
-            st.subheader("📋 Distribuciones")
-            
-            col_dist1, col_dist2 = st.columns(2)
-            
-            with col_dist1:
-                if 'region' in datos_completos.columns:
-                    st.write("**Distribución por Región**")
-                    distribucion_region = datos_completos['region'].value_counts()
                     
-                    # Mostrar tabla y gráfico simple
-                    if not distribucion_region.empty:
-                        st.dataframe(distribucion_region, width=300)
-                        st.bar_chart(distribucion_region)
+                    st.metric(
+                        label="Alto Riesgo",
+                        value=alto_riesgo,
+                        delta=f"{(alto_riesgo/total_casos*100):.1f}%",
+                        delta_color="inverse" if (alto_riesgo/total_casos*100) > 20 else "normal"
+                    )
+                    if mostrar_explicaciones:
+                        st.caption("⚠️ Pacientes que requieren atención prioritaria")
             
-            with col_dist2:
-                if 'riesgo' in datos_completos.columns:
-                    st.write("**Distribución por Nivel de Riesgo**")
-                    distribucion_riesgo = datos_completos['riesgo'].value_counts()
-                    
-                    if not distribucion_riesgo.empty:
-                        st.dataframe(distribucion_riesgo, width=300)
-                        st.bar_chart(distribucion_riesgo)
+            # Fila 2 de KPIs
+            kpi5, kpi6, kpi7, kpi8 = st.columns(4)
             
-            # ========== ESTADÍSTICAS DE HEMOGLOBINA ==========
+            with kpi5:
+                if 'edad' in datos_completos.columns:
+                    avg_edad = datos_completos['edad'].mean()
+                    st.metric("Edad Promedio", f"{avg_edad:.1f} años")
+                    if mostrar_explicaciones:
+                        st.caption("👵👶 Distribución etaria promedio")
+            
+            with kpi6:
+                if 'genero' in datos_completos.columns:
+                    mujeres = len(datos_completos[datos_completos['genero'].str.contains('F|Mujer', na=False, case=False)])
+                    porcentaje_mujeres = (mujeres / total_casos * 100) if total_casos > 0 else 0
+                    st.metric("Mujeres", mujeres, f"{porcentaje_mujeres:.1f}%")
+                    if mostrar_explicaciones:
+                        st.caption("👩 Distribución por género")
+            
+            with kpi7:
+                # Tasa de anemia (Hb < 1.2)
+                if 'hemoglobina_dl1' in datos_completos.columns:
+                    tasa_anemia = len(datos_completos[datos_completos['hemoglobina_dl1'] < 1.2]) / total_casos * 100
+                    st.metric("Tasa Anemia", f"{tasa_anemia:.1f}%")
+                    if mostrar_explicaciones:
+                        st.caption("🩸 Porcentaje con Hb < 1.2 g/dL")
+            
+            with kpi8:
+                # Completitud de datos
+                completitud = datos_completos.notna().mean().mean() * 100
+                st.metric("Calidad Datos", f"{completitud:.1f}%")
+                if mostrar_explicaciones:
+                    st.caption("📈 Porcentaje de campos completados")
+            
+            # ========== VISUALIZACIONES CON PLOTLY ==========
+            st.subheader("📊 Visualizaciones Avanzadas")
+            
+            # --- GRÁFICO 1: DISTRIBUCIÓN POR REGIÓN CON PLOTLY ---
+            if 'region' in datos_completos.columns:
+                distribucion_region = datos_completos['region'].value_counts().reset_index()
+                distribucion_region.columns = ['Region', 'Casos']
+                
+                # Ordenar por cantidad
+                distribucion_region = distribucion_region.sort_values('Casos', ascending=True)
+                
+                import plotly.express as px
+                
+                fig1 = px.bar(
+                    distribucion_region,
+                    x='Casos',
+                    y='Region',
+                    orientation='h',
+                    title='<b>📌 Distribución de Casos por Región</b>',
+                    color='Casos',
+                    color_continuous_scale=px.colors.sequential.Viridis,
+                    text='Casos',
+                    height=400
+                )
+                
+                fig1.update_layout(
+                    plot_bgcolor='rgba(0,0,0,0)',
+                    paper_bgcolor='rgba(0,0,0,0)',
+                    font=dict(size=12),
+                    xaxis_title="Número de Casos",
+                    yaxis_title="Región",
+                    showlegend=False
+                )
+                
+                fig1.update_traces(
+                    texttemplate='%{text} casos',
+                    textposition='outside',
+                    marker_line_color='black',
+                    marker_line_width=1
+                )
+                
+                st.plotly_chart(fig1, use_container_width=True)
+            
+            # --- GRÁFICO 2: DISTRIBUCIÓN DE RIESGO CON DONUT CHART ---
+            if 'riesgo' in datos_completos.columns:
+                distribucion_riesgo = datos_completos['riesgo'].value_counts().reset_index()
+                distribucion_riesgo.columns = ['Nivel_Riesgo', 'Cantidad']
+                
+                # Mapear colores según riesgo
+                color_map = {
+                    'ALTO': '#FF6B6B',
+                    'MEDIO': '#FFD166',
+                    'MODERADO': '#FFD166',
+                    'BAJO': '#06D6A0'
+                }
+                
+                distribucion_riesgo['Color'] = distribucion_riesgo['Nivel_Riesgo'].apply(
+                    lambda x: color_map.get(str(x).upper().split()[0] if isinstance(x, str) else 'OTRO', '#8E8E8E')
+                )
+                
+                fig2 = px.pie(
+                    distribucion_riesgo,
+                    values='Cantidad',
+                    names='Nivel_Riesgo',
+                    title='<b>⚠️ Distribución por Nivel de Riesgo</b>',
+                    color='Nivel_Riesgo',
+                    color_discrete_map={
+                        k: v for k, v in color_map.items() 
+                        if k in distribucion_riesgo['Nivel_Riesgo'].astype(str).str.upper().values
+                    },
+                    hole=0.4,  # Donut chart
+                    height=400
+                )
+                
+                fig2.update_traces(
+                    textposition='inside',
+                    textinfo='percent+label',
+                    marker=dict(line=dict(color='white', width=2))
+                )
+                
+                fig2.update_layout(
+                    plot_bgcolor='rgba(0,0,0,0)',
+                    paper_bgcolor='rgba(0,0,0,0)',
+                    showlegend=True,
+                    legend=dict(
+                        orientation="h",
+                        yanchor="bottom",
+                        y=-0.2,
+                        xanchor="center",
+                        x=0.5
+                    )
+                )
+                
+                st.plotly_chart(fig2, use_container_width=True)
+            
+            # --- GRÁFICO 3: HISTOGRAMA DE HEMOGLOBINA CON KDE ---
             if 'hemoglobina_dl1' in datos_completos.columns:
-                st.subheader("📊 Estadísticas de Hemoglobina")
-                
-                col_hb1, col_hb2, col_hb3, col_hb4 = st.columns(4)
-                
-                with col_hb1:
-                    media_hb = datos_completos['hemoglobina_dl1'].mean()
-                    st.metric("Media", f"{media_hb:.2f} g/dL")
-                
-                with col_hb2:
-                    mediana_hb = datos_completos['hemoglobina_dl1'].median()
-                    st.metric("Mediana", f"{mediana_hb:.2f} g/dL")
-                
-                with col_hb3:
-                    std_hb = datos_completos['hemoglobina_dl1'].std()
-                    st.metric("Desv. Estándar", f"{std_hb:.2f} g/dL")
-                
-                with col_hb4:
-                    bajo_umbral = len(datos_completos[datos_completos['hemoglobina_dl1'] < 1.2])
-                    porcentaje_bajo = (bajo_umbral / total_casos * 100) if total_casos > 0 else 0
-                    st.metric("< 1.2 g/dL", bajo_umbral, f"{porcentaje_bajo:.1f}%")
-                
-                # Histograma simple con Streamlit
-                st.write("**Distribución de Hemoglobina**")
                 hb_data = datos_completos['hemoglobina_dl1'].dropna()
+                
                 if len(hb_data) > 0:
-                    st.line_chart(pd.DataFrame({'Hemoglobina': hb_data}))
+                    fig3 = px.histogram(
+                        hb_data,
+                        x=hb_data,
+                        nbins=20,
+                        title='<b>🩸 Distribución de Hemoglobina</b>',
+                        labels={'x': 'Hemoglobina (g/dL)', 'y': 'Frecuencia'},
+                        color_discrete_sequence=['#36A2EB'],
+                        opacity=0.8,
+                        marginal="box",  # Box plot arriba
+                        height=500
+                    )
+                    
+                    # Añadir líneas de referencia
+                    fig3.add_vline(
+                        x=1.2, 
+                        line_dash="dash", 
+                        line_color="red",
+                        annotation_text="Umbral Anemia (1.2 g/dL)",
+                        annotation_position="top right"
+                    )
+                    
+                    fig3.add_vline(
+                        x=hb_data.mean(), 
+                        line_dash="dot", 
+                        line_color="green",
+                        annotation_text=f"Media: {hb_data.mean():.2f} g/dL",
+                        annotation_position="top left"
+                    )
+                    
+                    fig3.update_layout(
+                        plot_bgcolor='rgba(0,0,0,0)',
+                        paper_bgcolor='rgba(0,0,0,0)',
+                        xaxis=dict(gridcolor='lightgray'),
+                        yaxis=dict(gridcolor='lightgray'),
+                        bargap=0.1
+                    )
+                    
+                    st.plotly_chart(fig3, use_container_width=True)
             
-            # ========== TABLA RESUMEN ==========
-            st.subheader("📄 Resumen Estadístico")
+            # --- GRÁFICO 4: CORRELACIÓN EDAD vs HEMOGLOBINA ---
+            if 'edad' in datos_completos.columns and 'hemoglobina_dl1' in datos_completos.columns:
+                # Filtrar datos completos
+                scatter_data = datos_completos[['edad', 'hemoglobina_dl1']].dropna()
+                
+                if len(scatter_data) > 10:  # Solo si hay suficientes datos
+                    fig4 = px.scatter(
+                        scatter_data,
+                        x='edad',
+                        y='hemoglobina_dl1',
+                        title='<b>📈 Correlación: Edad vs Hemoglobina</b>',
+                        labels={'edad': 'Edad (años)', 'hemoglobina_dl1': 'Hemoglobina (g/dL)'},
+                        trendline="lowess",
+                        trendline_color_override="red",
+                        color_discrete_sequence=['#FF6384'],
+                        height=500
+                    )
+                    
+                    # Añadir línea horizontal de referencia
+                    fig4.add_hline(
+                        y=1.2,
+                        line_dash="dash",
+                        line_color="orange",
+                        annotation_text="Límite Anemia"
+                    )
+                    
+                    fig4.update_layout(
+                        plot_bgcolor='rgba(0,0,0,0)',
+                        paper_bgcolor='rgba(0,0,0,0)',
+                        xaxis=dict(gridcolor='lightgray'),
+                        yaxis=dict(gridcolor='lightgray')
+                    )
+                    
+                    st.plotly_chart(fig4, use_container_width=True)
+                    
+                    # Calcular y mostrar correlación
+                    correlacion = scatter_data['edad'].corr(scatter_data['hemoglobina_dl1'])
+                    st.metric("Correlación Edad-Hb", f"{correlacion:.3f}")
             
-            # Crear tabla de resumen simple
-            resumen_lista = []
+            # --- GRÁFICO 5: EVOLUCIÓN TEMPORAL (si hay fecha) ---
+            if 'fecha_registro' in datos_completos.columns:
+                try:
+                    datos_completos['fecha'] = pd.to_datetime(datos_completos['fecha_registro']).dt.date
+                    evolucion = datos_completos.groupby('fecha').size().reset_index()
+                    evolucion.columns = ['Fecha', 'Casos']
+                    evolucion = evolucion.sort_values('Fecha')
+                    
+                    if len(evolucion) > 1:
+                        fig5 = px.line(
+                            evolucion,
+                            x='Fecha',
+                            y='Casos',
+                            title='<b>📅 Evolución Temporal de Casos</b>',
+                            markers=True,
+                            line_shape='spline',
+                            color_discrete_sequence=['#9966FF'],
+                            height=400
+                        )
+                        
+                        # Añadir área sombreada
+                        fig5.add_scatter(
+                            x=evolucion['Fecha'],
+                            y=evolucion['Casos'],
+                            fill='tozeroy',
+                            fillcolor='rgba(153, 102, 255, 0.2)',
+                            line=dict(color='rgba(255,255,255,0)'),
+                            showlegend=False
+                        )
+                        
+                        fig5.update_layout(
+                            plot_bgcolor='rgba(0,0,0,0)',
+                            paper_bgcolor='rgba(0,0,0,0)',
+                            xaxis=dict(gridcolor='lightgray'),
+                            yaxis=dict(gridcolor='lightgray')
+                        )
+                        
+                        st.plotly_chart(fig5, use_container_width=True)
+                except:
+                    pass
+            
+            # ========== TABLAS RESUMEN AVANZADAS ==========
+            st.subheader("📋 Tablas de Resumen")
+            
+            # Tabla 1: Estadísticas descriptivas
+            if 'hemoglobina_dl1' in datos_completos.columns:
+                col_tab1, col_tab2 = st.columns(2)
+                
+                with col_tab1:
+                    st.write("**📊 Estadísticas de Hemoglobina**")
+                    
+                    stats_hb = {
+                        'Estadístico': ['Media', 'Mediana', 'Desviación Estándar', 
+                                      'Mínimo', 'Máximo', 'Percentil 25', 'Percentil 75',
+                                      'Coef. Variación', 'Rango Intercuartil'],
+                        'Valor (g/dL)': [
+                            f"{datos_completos['hemoglobina_dl1'].mean():.2f}",
+                            f"{datos_completos['hemoglobina_dl1'].median():.2f}",
+                            f"{datos_completos['hemoglobina_dl1'].std():.2f}",
+                            f"{datos_completos['hemoglobina_dl1'].min():.2f}",
+                            f"{datos_completos['hemoglobina_dl1'].max():.2f}",
+                            f"{datos_completos['hemoglobina_dl1'].quantile(0.25):.2f}",
+                            f"{datos_completos['hemoglobina_dl1'].quantile(0.75):.2f}",
+                            f"{(datos_completos['hemoglobina_dl1'].std()/datos_completos['hemoglobina_dl1'].mean()*100):.1f}%" if datos_completos['hemoglobina_dl1'].mean() > 0 else "N/A",
+                            f"{(datos_completos['hemoglobina_dl1'].quantile(0.75)-datos_completos['hemoglobina_dl1'].quantile(0.25)):.2f}"
+                        ]
+                    }
+                    
+                    stats_hb_df = pd.DataFrame(stats_hb)
+                    st.dataframe(stats_hb_df, use_container_width=True, hide_index=True)
+                
+                with col_tab2:
+                    st.write("**📈 Categorías de Hemoglobina**")
+                    
+                    categorias_hb = {
+                        'Categoría': ['Anemia Severa (<1.0)', 'Anemia Moderada (1.0-1.19)', 
+                                     'Normal Bajo (1.2-1.49)', 'Normal (≥1.5)'],
+                        'Rango (g/dL)': ['< 1.0', '1.0 - 1.19', '1.2 - 1.49', '≥ 1.5'],
+                        'Casos': [
+                            len(datos_completos[datos_completos['hemoglobina_dl1'] < 1.0]),
+                            len(datos_completos[(datos_completos['hemoglobina_dl1'] >= 1.0) & 
+                                               (datos_completos['hemoglobina_dl1'] < 1.2)]),
+                            len(datos_completos[(datos_completos['hemoglobina_dl1'] >= 1.2) & 
+                                               (datos_completos['hemoglobina_dl1'] < 1.5)]),
+                            len(datos_completos[datos_completos['hemoglobina_dl1'] >= 1.5])
+                        ]
+                    }
+                    
+                    categorias_hb_df = pd.DataFrame(categorias_hb)
+                    categorias_hb_df['%'] = (categorias_hb_df['Casos'] / total_casos * 100).round(1).astype(str) + '%'
+                    st.dataframe(categorias_hb_df, use_container_width=True, hide_index=True)
+            
+            # ========== DATOS COMPLETOS CON FILTROS ==========
+            st.subheader("🗃️ Datos Completos con Filtros")
+            
+            # Filtros interactivos
+            col_filtro1, col_filtro2, col_filtro3 = st.columns(3)
+            
+            with col_filtro1:
+                if 'riesgo' in datos_completos.columns:
+                    riesgo_options = ['Todos'] + list(datos_completos['riesgo'].dropna().unique())
+                    filtro_riesgo = st.selectbox("Filtrar por riesgo:", riesgo_options)
+            
+            with col_filtro2:
+                if 'region' in datos_completos.columns:
+                    region_options = ['Todas'] + list(datos_completos['region'].dropna().unique())
+                    filtro_region = st.selectbox("Filtrar por región:", region_options)
+            
+            with col_filtro3:
+                if 'hemoglobina_dl1' in datos_completos.columns:
+                    filtro_hb = st.slider(
+                        "Filtrar por hemoglobina mínima:",
+                        min_value=float(datos_completos['hemoglobina_dl1'].min()),
+                        max_value=float(datos_completos['hemoglobina_dl1'].max()),
+                        value=float(datos_completos['hemoglobina_dl1'].min())
+                    )
+            
+            # Aplicar filtros
+            datos_filtrados = datos_completos.copy()
+            
+            if 'riesgo' in datos_completos.columns and filtro_riesgo != 'Todos':
+                datos_filtrados = datos_filtrados[datos_filtrados['riesgo'] == filtro_riesgo]
+            
+            if 'region' in datos_completos.columns and filtro_region != 'Todas':
+                datos_filtrados = datos_filtrados[datos_filtrados['region'] == filtro_region]
             
             if 'hemoglobina_dl1' in datos_completos.columns:
-                hb_col = datos_completos['hemoglobina_dl1'].dropna()
-                if len(hb_col) > 0:
-                    resumen_lista.append({
-                        'Variable': 'Hemoglobina',
-                        'Media': f"{hb_col.mean():.2f}",
-                        'Mediana': f"{hb_col.median():.2f}",
-                        'Mínimo': f"{hb_col.min():.2f}",
-                        'Máximo': f"{hb_col.max():.2f}"
-                    })
+                datos_filtrados = datos_filtrados[datos_filtrados['hemoglobina_dl1'] >= filtro_hb]
             
-            if 'edad' in datos_completos.columns:
-                edad_col = datos_completos['edad'].dropna()
-                if len(edad_col) > 0:
-                    resumen_lista.append({
-                        'Variable': 'Edad',
-                        'Media': f"{edad_col.mean():.1f}",
-                        'Mediana': f"{edad_col.median():.1f}",
-                        'Mínimo': f"{edad_col.min():.0f}",
-                        'Máximo': f"{edad_col.max():.0f}"
-                    })
+            st.info(f"📊 Mostrando {len(datos_filtrados)} de {len(datos_completos)} registros")
             
-            if resumen_lista:
-                resumen_df = pd.DataFrame(resumen_lista)
-                st.dataframe(resumen_df, use_container_width=True)
+            # Botón de descarga
+            csv = datos_filtrados.to_csv(index=False).encode('utf-8')
+            st.download_button(
+                label="💾 Descargar datos filtrados (CSV)",
+                data=csv,
+                file_name="datos_filtrados.csv",
+                mime="text/csv",
+                type="secondary"
+            )
             
-            # ========== DATOS COMPLETOS ==========
-            st.subheader("📋 Datos Completos")
-            st.dataframe(datos_completos, use_container_width=True, height=300)
+            # Mostrar datos filtrados
+            st.dataframe(
+                datos_filtrados,
+                use_container_width=True,
+                height=400,
+                column_config={
+                    "hemoglobina_dl1": st.column_config.NumberColumn(
+                        "Hemoglobina",
+                        help="Nivel de hemoglobina en g/dL",
+                        format="%.2f g/dL"
+                    ),
+                    "edad": st.column_config.NumberColumn(
+                        "Edad",
+                        help="Edad en años",
+                        format="%d años"
+                    )
+                }
+            )
             
+            # ========== RESUMEN FINAL ==========
+            with st.expander("📝 Resumen Ejecutivo del Análisis"):
+                st.write("### 🔍 Hallazgos Principales")
+                
+                col_res1, col_res2 = st.columns(2)
+                
+                with col_res1:
+                    st.write("**📈 Tendencias Identificadas:**")
+                    
+                    if 'hemoglobina_dl1' in datos_completos.columns:
+                        tasa_anemia = len(datos_completos[datos_completos['hemoglobina_dl1'] < 1.2]) / total_casos * 100
+                        
+                        if tasa_anemia > 30:
+                            st.error(f"🚨 **ALERTA:** Tasa de anemia del {tasa_anemia:.1f}% (supera el 30%)")
+                        elif tasa_anemia > 15:
+                            st.warning(f"⚠️ **ATENCIÓN:** Tasa de anemia del {tasa_anemia:.1f}% (entre 15-30%)")
+                        else:
+                            st.success(f"✅ **ESTABLE:** Tasa de anemia del {tasa_anemia:.1f}% (por debajo del 15%)")
+                    
+                    st.write(f"• **Total de pacientes:** {total_casos:,}")
+                    st.write(f"• **En seguimiento:** {en_seguimiento} ({porcentaje_seguimiento:.1f}%)")
+                    st.write(f"• **Calidad de datos:** {completitud:.1f}%")
+                
+                with col_res2:
+                    st.write("**🎯 Recomendaciones:**")
+                    st.write("1. **Priorizar seguimiento** a pacientes de alto riesgo")
+                    st.write("2. **Reforzar recolección** en regiones con menos datos")
+                    st.write("3. **Implementar alertas** para Hb < 1.2 g/dL")
+                    st.write("4. **Analizar causas** de variación por región")
+                    
         else:
-            st.info("📝 No hay datos disponibles para mostrar estadísticas")
-
+            st.warning("📭 No hay datos disponibles para el análisis")
+            
+            # Mostrar datos de ejemplo
+            if st.checkbox("Mostrar datos de ejemplo para probar visualizaciones"):
+                # Crear datos de ejemplo
+                import numpy as np
+                import pandas as pd
+                
+                np.random.seed(42)
+                ejemplo_data = pd.DataFrame({
+                    'region': np.random.choice(['Norte', 'Sur', 'Este', 'Oeste'], 100),
+                    'hemoglobina_dl1': np.random.normal(1.3, 0.3, 100),
+                    'edad': np.random.randint(18, 80, 100),
+                    'riesgo': np.random.choice(['ALTO', 'MEDIO', 'BAJO'], 100, p=[0.2, 0.3, 0.5]),
+                    'en_seguimiento': np.random.choice([True, False], 100, p=[0.7, 0.3]),
+                    'genero': np.random.choice(['M', 'F'], 100)
+                })
+                
+                st.dataframe(ejemplo_data.head(10))
+                st.info("Estos son datos de ejemplo para probar las visualizaciones")
+    
+    else:
+        # Pantalla inicial
+        st.info("👆 **Presiona el botón azul arriba** para cargar el análisis estadístico completo")
+        
+        st.markdown("""
+        ### 📊 ¿Qué incluye este dashboard?
+        
+        | Característica | Descripción |
+        |----------------|-------------|
+        | **🎯 KPIs Coloridos** | Métricas con colores según estado (rojo/amarillo/verde) |
+        | **📈 Gráficos Interactivos** | Gráficos que puedes hacer zoom y explorar |
+        | **🔄 Filtros en Tiempo Real** | Filtra los datos según tus necesidades |
+        | **📊 Análisis Estadístico** | Media, mediana, desviación, correlaciones |
+        | **💾 Exportación de Datos** | Descarga los datos filtrados en CSV |
+        | **📝 Resumen Ejecutivo** | Hallazgos y recomendaciones automáticas |
+        
+        ### 🎨 Características Visuales:
+        - Colores diferenciados por categoría
+        - Gráficos responsivos
+        - Indicadores visuales de alerta
+        - Tooltips informativos
+        - Diseño moderno y profesional
+        """)
 # ==================================================
 # PESTAÑA 4: EVALUACIÓN NUTRICIONAL
 # ==================================================
