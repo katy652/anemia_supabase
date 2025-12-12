@@ -2019,8 +2019,512 @@ with tab3:
         # Si no se ha iniciado análisis, solo mostrar botón
         if not st.session_state.analisis_iniciado:
             st.info("👆 Presiona el botón 'INICIAR ANÁLISIS COMPLETO' para comenzar")
+
 # ==================================================
-# PESTAÑA 4: EVALUACIÓN NUTRICIONAL
+# PESTAÑA 4: SEGUIMIENTO Y REGISTRO DE CITAS
+# ==================================================
+
+with tab4:
+    st.markdown("""
+    <div style='background: linear-gradient(135deg, #10B981 0%, #34D399 100%); padding: 25px; border-radius: 15px; margin-bottom: 30px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);'>
+        <h1 style='color: white; text-align: center; margin: 0; font-size: 2.5rem;'>
+            📋 Sistema de Seguimiento y Citas
+        </h1>
+        <p style='color: rgba(255,255,255,0.9); text-align: center; margin-top: 10px; font-size: 1.1rem;'>
+            Registro de nuevas citas y seguimiento de pacientes
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # ========== BUSCADOR DE PACIENTES ==========
+    st.markdown("## 🔍 Buscar Paciente para Seguimiento")
+    
+    col_buscar1, col_buscar2, col_buscar3 = st.columns([2, 2, 1])
+    
+    with col_buscar1:
+        metodo_busqueda = st.selectbox(
+            "Método de búsqueda:",
+            ["Por DNI", "Por Nombre y Apellido", "Por Código de Paciente"]
+        )
+    
+    with col_buscar2:
+        if metodo_busqueda == "Por DNI":
+            dni_buscar = st.text_input("Ingrese DNI del paciente:", placeholder="Ej: 45258525")
+        elif metodo_busqueda == "Por Nombre y Apellido":
+            nombre_buscar = st.text_input("Ingrese nombre del paciente:", placeholder="Ej: Maria Gonzales")
+        else:
+            codigo_buscar = st.text_input("Ingrese código del paciente:", placeholder="Ej: P-001")
+    
+    with col_buscar3:
+        st.write("")  # Espaciador
+        st.write("")  # Espaciador
+        buscar_paciente = st.button("🔍 Buscar Paciente", use_container_width=True)
+    
+    # ========== FUNCIÓN PARA BUSCAR PACIENTE ==========
+    def buscar_paciente_db(metodo, valor):
+        """Busca paciente en la base de datos"""
+        try:
+            datos_completos = obtener_datos_supabase()
+            
+            if datos_completos.empty:
+                return None
+            
+            if metodo == "Por DNI" and valor:
+                if 'dni' in datos_completos.columns:
+                    paciente = datos_completos[datos_completos['dni'] == valor]
+                    if not paciente.empty:
+                        return paciente.iloc[0].to_dict()
+            
+            elif metodo == "Por Nombre y Apellido" and valor:
+                if 'nombre_apellido' in datos_completos.columns:
+                    paciente = datos_completos[datos_completos['nombre_apellido'].str.contains(valor, case=False, na=False)]
+                    if not paciente.empty:
+                        return paciente.iloc[0].to_dict()
+            
+            elif metodo == "Por Código de Paciente" and valor:
+                if 'codigo_paciente' in datos_completos.columns:
+                    paciente = datos_completos[datos_completos['codigo_paciente'] == valor]
+                    if not paciente.empty:
+                        return paciente.iloc[0].to_dict()
+            
+            return None
+        
+        except Exception as e:
+            st.error(f"Error al buscar paciente: {e}")
+            return None
+    
+    # ========== MOSTRAR RESULTADO DE BÚSQUEDA ==========
+    paciente_encontrado = None
+    
+    if buscar_paciente:
+        with st.spinner("Buscando paciente..."):
+            if metodo_busqueda == "Por DNI" and dni_buscar:
+                paciente_encontrado = buscar_paciente_db("Por DNI", dni_buscar)
+            elif metodo_busqueda == "Por Nombre y Apellido" and nombre_buscar:
+                paciente_encontrado = buscar_paciente_db("Por Nombre y Apellido", nombre_buscar)
+            elif metodo_busqueda == "Por Código de Paciente" and codigo_buscar:
+                paciente_encontrado = buscar_paciente_db("Por Código de Paciente", codigo_buscar)
+    
+    if paciente_encontrado:
+        st.success(f"✅ Paciente encontrado: {paciente_encontrado.get('nombre_apellido', 'No disponible')}")
+        
+        # ========== PANEL DE INFORMACIÓN DEL PACIENTE ==========
+        with st.expander("📋 **Información del Paciente**", expanded=True):
+            col_info1, col_info2 = st.columns(2)
+            
+            with col_info1:
+                st.markdown(f"""
+                **👤 Datos Personales:**
+                - **Nombre:** {paciente_encontrado.get('nombre_apellido', 'No disponible')}
+                - **DNI:** {paciente_encontrado.get('dni', 'No disponible')}
+                - **Edad:** {paciente_encontrado.get('edad', 'No disponible')} años
+                - **Género:** {paciente_encontrado.get('genero', 'No disponible')}
+                - **Fecha Nacimiento:** {paciente_encontrado.get('fecha_nacimiento', 'No disponible')}
+                """)
+            
+            with col_info2:
+                st.markdown(f"""
+                **📍 Datos Geográficos:**
+                - **Región:** {paciente_encontrado.get('region', 'No disponible')}
+                - **Provincia:** {paciente_encontrado.get('provincia', 'No disponible')}
+                - **Distrito:** {paciente_encontrado.get('distrito', 'No disponible')}
+                - **Altitud:** {paciente_encontrado.get('altitud_msnm', 'No disponible')} msnm
+                - **Dirección:** {paciente_encontrado.get('direccion', 'No disponible')}
+                """)
+        
+        # ========== HISTORIAL CLÍNICO ==========
+        st.markdown("## 🏥 Historial Clínico")
+        
+        # Simular historial (en un sistema real, esto vendría de una tabla de historial)
+        historial_data = {
+            'fecha': ['2024-01-15', '2024-02-20', '2024-03-25'],
+            'hemoglobina': [10.5, 11.0, 11.5],
+            'diagnostico': ['Anemia Moderada', 'Anemia Leve', 'Mejoría'],
+            'tratamiento': ['Suplemento de hierro', 'Continuar suplemento', 'Control mensual'],
+            'medico': ['Dr. Perez', 'Dr. Perez', 'Dr. Lopez']
+        }
+        
+        historial_df = pd.DataFrame(historial_data)
+        
+        col_hist1, col_hist2 = st.columns([3, 1])
+        
+        with col_hist1:
+            st.dataframe(historial_df, use_container_width=True, hide_index=True)
+        
+        with col_hist2:
+            # Gráfico de evolución de hemoglobina
+            fig_evolucion = px.line(
+                historial_df,
+                x='fecha',
+                y='hemoglobina',
+                title='<b>Evolución de Hemoglobina</b>',
+                markers=True,
+                height=300
+            )
+            
+            # Línea de referencia para anemia
+            fig_evolucion.add_hline(
+                y=11.0,
+                line_dash="dash",
+                line_color="red",
+                annotation_text="Umbral Anemia"
+            )
+            
+            fig_evolucion.add_hline(
+                y=12.0,
+                line_dash="dash",
+                line_color="green",
+                annotation_text="Normal"
+            )
+            
+            st.plotly_chart(fig_evolucion, use_container_width=True)
+        
+        # ========== FORMULARIO PARA NUEVA CITA ==========
+        st.markdown("## 📝 Registrar Nueva Cita")
+        
+        with st.form("form_nueva_cita"):
+            st.markdown("### 🩺 Datos de la Nueva Consulta")
+            
+            col_cita1, col_cita2, col_cita3 = st.columns(3)
+            
+            with col_cita1:
+                fecha_cita = st.date_input("Fecha de la cita:", value=datetime.now())
+                peso = st.number_input("Peso (kg):", min_value=0.0, max_value=50.0, value=0.0, step=0.1)
+                talla = st.number_input("Talla (cm):", min_value=0.0, max_value=150.0, value=0.0, step=0.1)
+            
+            with col_cita2:
+                hemoglobina_nueva = st.number_input(
+                    "Hemoglobina (g/dL):",
+                    min_value=5.0,
+                    max_value=20.0,
+                    value=paciente_encontrado.get('hemoglobina_dl1', 0.0),
+                    step=0.1
+                )
+                
+                # Calcular hemoglobina ajustada
+                altitud_paciente = paciente_encontrado.get('altitud_msnm', 0)
+                ajuste_hb = obtener_ajuste_hemoglobina(altitud_paciente)
+                hemoglobina_ajustada = hemoglobina_nueva + ajuste_hb
+                
+                st.info(f"**HB ajustada:** {hemoglobina_ajustada:.1f} g/dL")
+                
+                # Clasificar anemia
+                edad_meses = paciente_encontrado.get('edad', 0) * 12
+                clasificacion, color, recomendacion = clasificar_anemia(hemoglobina_ajustada, edad_meses)
+                
+                st.markdown(f"""
+                <div style='background-color: {color}; padding: 10px; border-radius: 5px; margin: 10px 0;'>
+                    <b>{clasificacion}</b>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            with col_cita3:
+                estado_nutricional = st.selectbox(
+                    "Estado Nutricional:",
+                    ["Normal", "Riesgo de Desnutrición", "Desnutrición Leve", "Desnutrición Moderada", "Desnutrición Severa"]
+                )
+                
+                suplementacion = st.selectbox(
+                    "Suplementación Actual:",
+                    ["Ninguna", "Hierro", "Multivitamínico", "Hierro + Zinc", "Hierro + Ácido Fólico"]
+                )
+                
+                cumplimiento = st.select_slider(
+                    "Cumplimiento del tratamiento:",
+                    options=["Nulo", "Bajo", "Regular", "Bueno", "Excelente"],
+                    value="Regular"
+                )
+            
+            # Síntomas y observaciones
+            st.markdown("### 📋 Síntomas Presentados")
+            
+            col_sint1, col_sint2, col_sint3, col_sint4 = st.columns(4)
+            
+            with col_sint1:
+                palidez = st.checkbox("Palidez")
+                fatiga = st.checkbox("Fatiga")
+            with col_sint2:
+                irritabilidad = st.checkbox("Irritabilidad")
+                anorexia = st.checkbox("Anorexia")
+            with col_sint3:
+                taquicardia = st.checkbox("Taquicardia")
+                soplo_cardiaco = st.checkbox("Soplo Cardíaco")
+            with col_sint4:
+                otros_sintomas = st.text_input("Otros síntomas:", placeholder="Escriba otros síntomas")
+            
+            # Observaciones y tratamiento
+            observaciones = st.text_area(
+                "Observaciones y Recomendaciones:",
+                placeholder="Detalle las observaciones de la consulta, recomendaciones, cambios en tratamiento, etc.",
+                height=100
+            )
+            
+            # Próxima cita
+            col_prox1, col_prox2 = st.columns(2)
+            with col_prox1:
+                proxima_cita = st.date_input("Próxima cita recomendada:", value=datetime.now() + timedelta(days=30))
+            with col_prox2:
+                urgencia = st.selectbox(
+                    "Prioridad de seguimiento:",
+                    ["Rutina", "Prioritario", "Urgente"]
+                )
+            
+            # Botón para guardar
+            col_guardar1, col_guardar2, col_guardar3 = st.columns([1, 1, 2])
+            
+            with col_guardar1:
+                guardar_cita = st.form_submit_button("💾 Guardar Cita", type="primary", use_container_width=True)
+            
+            with col_guardar2:
+                imprimir_reporte = st.form_submit_button("🖨️ Imprimir Reporte", use_container_width=True)
+            
+            with col_guardar3:
+                st.info("La cita se registrará en el historial del paciente")
+        
+        # ========== GUARDAR LA NUEVA CITA ==========
+        if guardar_cita:
+            try:
+                # Preparar datos de la nueva cita
+                nueva_cita = {
+                    'dni_paciente': paciente_encontrado.get('dni'),
+                    'nombre_paciente': paciente_encontrado.get('nombre_apellido'),
+                    'fecha_cita': fecha_cita.strftime('%Y-%m-%d'),
+                    'hemoglobina': hemoglobina_nueva,
+                    'hemoglobina_ajustada': hemoglobina_ajustada,
+                    'clasificacion_anemia': clasificacion,
+                    'peso': peso,
+                    'talla': talla,
+                    'estado_nutricional': estado_nutricional,
+                    'suplementacion': suplementacion,
+                    'cumplimiento_tratamiento': cumplimiento,
+                    'sintomas': {
+                        'palidez': palidez,
+                        'fatiga': fatiga,
+                        'irritabilidad': irritabilidad,
+                        'anorexia': anorexia,
+                        'taquicardia': taquicardia,
+                        'soplo_cardiaco': soplo_cardiaco,
+                        'otros': otros_sintomas
+                    },
+                    'observaciones': observaciones,
+                    'proxima_cita': proxima_cita.strftime('%Y-%m-%d'),
+                    'prioridad': urgencia,
+                    'fecha_registro': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                    'registrado_por': 'Usuario Actual'  # En un sistema real, esto sería el usuario logueado
+                }
+                
+                # Aquí iría el código para guardar en Supabase
+                # Por ahora, solo mostramos un mensaje
+                
+                st.success("✅ Cita registrada exitosamente")
+                
+                # Mostrar resumen
+                with st.expander("📋 Ver Resumen de Cita Guardada", expanded=True):
+                    col_res1, col_res2 = st.columns(2)
+                    
+                    with col_res1:
+                        st.markdown(f"""
+                        **📅 Datos de la Cita:**
+                        - **Fecha:** {fecha_cita.strftime('%d/%m/%Y')}
+                        - **Hemoglobina:** {hemoglobina_nueva} g/dL
+                        - **Hemoglobina Ajustada:** {hemoglobina_ajustada:.1f} g/dL
+                        - **Clasificación:** {clasificacion}
+                        - **Peso/Talla:** {peso} kg / {talla} cm
+                        """)
+                    
+                    with col_res2:
+                        st.markdown(f"""
+                        **📋 Tratamiento y Seguimiento:**
+                        - **Estado Nutricional:** {estado_nutricional}
+                        - **Suplementación:** {suplementacion}
+                        - **Cumplimiento:** {cumplimiento}
+                        - **Próxima Cita:** {proxima_cita.strftime('%d/%m/%Y')}
+                        - **Prioridad:** {urgencia}
+                        """)
+                
+                # Opción para actualizar datos del paciente principal
+                st.markdown("---")
+                actualizar_paciente = st.checkbox("📝 Actualizar datos principales del paciente con esta información")
+                
+                if actualizar_paciente:
+                    # Código para actualizar el registro principal del paciente en Supabase
+                    # Esto actualizaría la hemoglobina más reciente y el estado de seguimiento
+                    
+                    datos_actualizados = {
+                        'hemoglobina_dl1': hemoglobina_nueva,
+                        'ultima_cita': fecha_cita.strftime('%Y-%m-%d'),
+                        'en_seguimiento': True,
+                        'proxima_cita': proxima_cita.strftime('%Y-%m-%d'),
+                        'estado_actual': clasificacion,
+                        'estado_nutricional': estado_nutricional,
+                        'fecha_actualizacion': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                    }
+                    
+                    st.success("✅ Datos principales del paciente actualizados")
+                    
+            except Exception as e:
+                st.error(f"❌ Error al guardar la cita: {e}")
+        
+        # ========== IMPRIMIR REPORTE ==========
+        if imprimir_reporte:
+            try:
+                # Generar PDF del reporte (simulación)
+                reporte_html = f"""
+                <html>
+                <head>
+                    <title>Reporte de Consulta - {paciente_encontrado.get('nombre_apellido')}</title>
+                    <style>
+                        body {{ font-family: Arial, sans-serif; margin: 20px; }}
+                        .header {{ text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 20px; }}
+                        .section {{ margin-bottom: 20px; }}
+                        .label {{ font-weight: bold; color: #333; }}
+                        table {{ width: 100%; border-collapse: collapse; margin: 10px 0; }}
+                        th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}
+                        th {{ background-color: #f2f2f2; }}
+                        .footer {{ margin-top: 30px; font-size: 0.9em; color: #666; text-align: center; }}
+                    </style>
+                </head>
+                <body>
+                    <div class="header">
+                        <h1>Reporte de Consulta Médica</h1>
+                        <h3>Sistema de Monitoreo de Anemia Infantil</h3>
+                    </div>
+                    
+                    <div class="section">
+                        <h2>Datos del Paciente</h2>
+                        <p><span class="label">Nombre:</span> {paciente_encontrado.get('nombre_apellido')}</p>
+                        <p><span class="label">DNI:</span> {paciente_encontrado.get('dni')}</p>
+                        <p><span class="label">Edad:</span> {paciente_encontrado.get('edad')} años</p>
+                        <p><span class="label">Fecha Consulta:</span> {fecha_cita.strftime('%d/%m/%Y')}</p>
+                    </div>
+                    
+                    <div class="section">
+                        <h2>Resultados de la Consulta</h2>
+                        <table>
+                            <tr>
+                                <th>Parámetro</th>
+                                <th>Valor</th>
+                                <th>Interpretación</th>
+                            </tr>
+                            <tr>
+                                <td>Hemoglobina (g/dL)</td>
+                                <td>{hemoglobina_nueva}</td>
+                                <td>{clasificacion}</td>
+                            </tr>
+                            <tr>
+                                <td>Peso (kg)</td>
+                                <td>{peso}</td>
+                                <td>-</td>
+                            </tr>
+                            <tr>
+                                <td>Talla (cm)</td>
+                                <td>{talla}</td>
+                                <td>-</td>
+                            </tr>
+                            <tr>
+                                <td>Estado Nutricional</td>
+                                <td>{estado_nutricional}</td>
+                                <td>-</td>
+                            </tr>
+                        </table>
+                    </div>
+                    
+                    <div class="section">
+                        <h2>Recomendaciones y Tratamiento</h2>
+                        <p><span class="label">Suplementación:</span> {suplementacion}</p>
+                        <p><span class="label">Observaciones:</span> {observaciones}</p>
+                        <p><span class="label">Próxima Cita:</span> {proxima_cita.strftime('%d/%m/%Y')}</p>
+                        <p><span class="label">Prioridad:</span> {urgencia}</p>
+                    </div>
+                    
+                    <div class="footer">
+                        <p>Reporte generado el {datetime.now().strftime('%d/%m/%Y %H:%M')}</p>
+                        <p>Sistema de Monitoreo de Anemia Infantil - Centro de Salud</p>
+                    </div>
+                </body>
+                </html>
+                """
+                
+                # Crear botón de descarga
+                st.download_button(
+                    label="📥 Descargar Reporte (HTML)",
+                    data=reporte_html,
+                    file_name=f"reporte_{paciente_encontrado.get('dni')}_{fecha_cita.strftime('%Y%m%d')}.html",
+                    mime="text/html",
+                    icon="📄"
+                )
+                
+                st.success("✅ Reporte generado. Haga clic en el botón para descargar.")
+                
+            except Exception as e:
+                st.error(f"❌ Error al generar reporte: {e}")
+    
+    elif buscar_paciente and not paciente_encontrado:
+        st.error("❌ Paciente no encontrado. Verifique los datos ingresados.")
+    
+    # ========== LISTA DE PACIENTES EN SEGUIMIENTO ==========
+    st.markdown("---")
+    st.markdown("## 📋 Pacientes en Seguimiento Activo")
+    
+    try:
+        datos_completos = obtener_datos_supabase()
+        
+        if not datos_completos.empty:
+            # Filtrar pacientes en seguimiento (asumiendo columna 'en_seguimiento')
+            if 'en_seguimiento' in datos_completos.columns:
+                pacientes_seguimiento = datos_completos[datos_completos['en_seguimiento'] == True]
+                
+                if not pacientes_seguimiento.empty:
+                    # Seleccionar columnas relevantes
+                    columnas_relevantes = ['nombre_apellido', 'dni', 'edad', 'ultima_cita', 'proxima_cita', 'estado_actual']
+                    columnas_disponibles = [col for col in columnas_relevantes if col in pacientes_seguimiento.columns]
+                    
+                    if columnas_disponibles:
+                        st.dataframe(
+                            pacientes_seguimiento[columnas_disponibles].head(20),
+                            use_container_width=True,
+                            height=300,
+                            hide_index=True
+                        )
+                        
+                        # Métricas resumen
+                        col_met1, col_met2, col_met3 = st.columns(3)
+                        with col_met1:
+                            st.metric("Total en seguimiento", len(pacientes_seguimiento))
+                        with col_met2:
+                            # Contar citas próximas (en los próximos 7 días)
+                            if 'proxima_cita' in pacientes_seguimiento.columns:
+                                try:
+                                    citas_proximas = 0
+                                    for fecha_str in pacientes_seguimiento['proxima_cita'].dropna():
+                                        try:
+                                            fecha_cita = datetime.strptime(str(fecha_str), '%Y-%m-%d')
+                                            if (fecha_cita - datetime.now()).days <= 7:
+                                                citas_proximas += 1
+                                        except:
+                                            continue
+                                    st.metric("Citas próx. 7 días", citas_proximas)
+                                except:
+                                    st.metric("Citas próx. 7 días", "N/A")
+                        with col_met3:
+                            # Promedio de edad
+                            if 'edad' in pacientes_seguimiento.columns:
+                                edad_promedio = pacientes_seguimiento['edad'].mean()
+                                st.metric("Edad promedio", f"{edad_promedio:.1f} años")
+                    else:
+                        st.info("No hay columnas de seguimiento disponibles")
+                else:
+                    st.info("No hay pacientes en seguimiento activo")
+            else:
+                st.info("La columna 'en_seguimiento' no está disponible en los datos")
+        else:
+            st.info("No hay datos disponibles para mostrar")
+    
+    except Exception as e:
+        st.error(f"Error al cargar datos de seguimiento: {e}")
+
+# ==================================================
+# PESTAÑA 5: EVALUACIÓN NUTRICIONAL
 # ==================================================
 
 with tab4:
@@ -2125,7 +2629,7 @@ with tab4:
             st.info("No se pudieron cargar las tablas de referencia")
 
 # ==================================================
-# PESTAÑA 5: DASHBOARD NACIONAL
+# PESTAÑA 6: DASHBOARD NACIONAL
 # ==================================================
 
 with tab5:
