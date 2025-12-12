@@ -2026,7 +2026,7 @@ with tab3:
 
 with tab4:
     st.markdown("""
-    <div style='background: linear-gradient(135deg, #10B981 0%, #34D399 100%); padding: 25px; border-radius: 15px; margin-bottom: 30px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);'>
+    <div style='background: linear-gradient(135deg, #1E3A8A 0%, #3B82F6 100%); padding: 25px; border-radius: 15px; margin-bottom: 30px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);'>
         <h1 style='color: white; text-align: center; margin: 0; font-size: 2.5rem;'>
             📋 Sistema de Seguimiento y Citas
         </h1>
@@ -2433,7 +2433,7 @@ with tab4:
                         <h2>Recomendaciones y Tratamiento</h2>
                         <p><span class="label">Suplementación:</span> {suplementacion}</p>
                         <p><span class="label">Observaciones:</span> {observaciones}</p>
-                        <p><span class="label">Próxima Cita:</span> {proxima_cita.strftime('%d/%m/%Y')}</p>
+                        <p><span class="label">Próxima Cita:** {proxima_cita.strftime('%d/%m/%Y')}</p>
                         <p><span class="label">Prioridad:</span> {urgencia}</p>
                     </div>
                     
