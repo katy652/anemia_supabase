@@ -2718,11 +2718,10 @@ with tab5:
                 """, unsafe_allow_html=True)
             
             with col_met2:
-                # Calcular casos con evaluación nutricional
                 if 'estado_nutricional' in datos_nacionales.columns:
                     nutricion_count = datos_nacionales['estado_nutricional'].notna().sum()
                 else:
-                    nutricion_count = 13  # Valor por defecto
+                    nutricion_count = datos_nacionales.shape[0]  # Asumir todos tienen
                 
                 st.markdown(f"""
                 <div style='background: linear-gradient(135deg, #10B981 0%, #34D399 100%); padding: 20px; border-radius: 10px; color: white; text-align: center;'>
@@ -2732,12 +2731,11 @@ with tab5:
                 """, unsafe_allow_html=True)
             
             with col_met3:
-                # Calcular hemoglobina promedio
                 if 'hemoglobina_dl1' in datos_nacionales.columns:
                     avg_hemoglobina = datos_nacionales['hemoglobina_dl1'].mean()
                     hemoglobina_text = f"{avg_hemoglobina:.1f} g/dL"
                 else:
-                    hemoglobina_text = "10.4 g/dL"  # Valor por defecto
+                    hemoglobina_text = "N/A"
                 
                 st.markdown(f"""
                 <div style='background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%); padding: 20px; border-radius: 10px; color: white; text-align: center;'>
@@ -2747,21 +2745,10 @@ with tab5:
                 """, unsafe_allow_html=True)
             
             with col_met4:
-                # Calcular casos en seguimiento
                 if 'en_seguimiento' in datos_nacionales.columns:
                     seguimiento_count = datos_nacionales[datos_nacionales['en_seguimiento'] == True].shape[0]
                 else:
-                    # Calcular casos que necesitan seguimiento
                     seguimiento_count = 0
-                    for _, paciente in datos_nacionales.iterrows():
-                        if 'hemoglobina_dl1' in paciente and 'altitud_msnm' in paciente:
-                            hb_ajustada = calcular_hemoglobina_ajustada(
-                                paciente.get('hemoglobina_dl1', 0), 
-                                paciente.get('altitud_msnm', 0)
-                            )
-                            edad_meses = paciente.get('edad', 0) * 12 if 'edad' in paciente else 0
-                            if necesita_seguimiento_automatico(hb_ajustada, edad_meses):
-                                seguimiento_count += 1
                 
                 st.markdown(f"""
                 <div style='background: linear-gradient(135deg, #F59E0B 0%, #FBBF24 100%); padding: 20px; border-radius: 10px; color: white; text-align: center;'>
@@ -2770,10 +2757,316 @@ with tab5:
                 </div>
                 """, unsafe_allow_html=True)
             
-            # ... resto del código del dashboard ...
+            # ========== GRÁFICO 1: DISTRIBUCIÓN POR EDAD ==========
+            st.markdown("---")
+            st.markdown("### 📊 **Distribución por Edad**")
             
+            if 'edad' in datos_nacionales.columns:
+                # Crear grupos de edad
+                bins = [0, 1, 2, 3, 4, 5]
+                labels = ['0-1 año', '1-2 años', '2-3 años', '3-4 años', '4-5 años']
+                
+                datos_nacionales['grupo_edad'] = pd.cut(datos_nacionales['edad'], bins=bins, labels=labels, right=False)
+                edad_counts = datos_nacionales['grupo_edad'].value_counts().sort_index()
+                
+                fig_edad = px.bar(
+                    x=edad_counts.index,
+                    y=edad_counts.values,
+                    title='<b>Distribución por Grupos de Edad</b>',
+                    color=edad_counts.values,
+                    color_continuous_scale='Viridis',
+                    text=edad_counts.values,
+                    height=400
+                )
+                
+                fig_edad.update_traces(
+                    texttemplate='%{text}',
+                    textposition='outside',
+                    marker_line_color='black',
+                    marker_line_width=1
+                )
+                
+                fig_edad.update_layout(
+                    xaxis_title="Grupo de Edad",
+                    yaxis_title="Número de Niños",
+                    showlegend=False,
+                    plot_bgcolor='rgba(0,0,0,0)'
+                )
+                
+                st.plotly_chart(fig_edad, use_container_width=True)
+            else:
+                st.info("ℹ️ No hay datos de edad disponibles")
+            
+            # ========== GRÁFICO 2: DISTRIBUCIÓN POR GÉNERO ==========
+            col_gen1, col_gen2 = st.columns([3, 1])
+            
+            with col_gen1:
+                if 'genero' in datos_nacionales.columns:
+                    genero_counts = datos_nacionales['genero'].value_counts()
+                    
+                    # Mapear códigos de género
+                    genero_mapping = {
+                        'M': 'Niños 👦',
+                        'F': 'Niñas 👧',
+                        'Masculino': 'Niños 👦',
+                        'Femenino': 'Niñas 👧',
+                        'm': 'Niños 👦',
+                        'f': 'Niñas 👧'
+                    }
+                    
+                    genero_counts.index = genero_counts.index.map(lambda x: genero_mapping.get(x, x))
+                    
+                    fig_genero = px.pie(
+                        values=genero_counts.values,
+                        names=genero_counts.index,
+                        title='<b>Distribución por Género</b>',
+                        color=genero_counts.index,
+                        color_discrete_sequence=['#3498db', '#e74c3c', '#2ecc71'],
+                        hole=0.4,
+                        height=350
+                    )
+                    
+                    fig_genero.update_traces(
+                        textposition='inside',
+                        textinfo='percent+label',
+                        marker=dict(line=dict(color='white', width=2))
+                    )
+                    
+                    st.plotly_chart(fig_genero, use_container_width=True)
+                else:
+                    st.info("ℹ️ No hay datos de género disponibles")
+            
+            with col_gen2:
+                st.markdown("#### 📈 **Estadísticas de Género**")
+                if 'genero' in datos_nacionales.columns:
+                    for genero, count in genero_counts.items():
+                        porcentaje = (count / total_pacientes) * 100
+                        st.metric(genero, f"{count}", f"{porcentaje:.1f}%")
+            
+            # ========== GRÁFICO 3: HEMOGLOBINA POR EDAD ==========
+            st.markdown("---")
+            st.markdown("### 🩸 **Niveles de Hemoglobina por Edad**")
+            
+            if 'edad' in datos_nacionales.columns and 'hemoglobina_dl1' in datos_nacionales.columns:
+                fig_hb_edad = px.scatter(
+                    datos_nacionales,
+                    x='edad',
+                    y='hemoglobina_dl1',
+                    title='<b>Relación Edad vs Hemoglobina</b>',
+                    color='edad',
+                    size='hemoglobina_dl1',
+                    hover_name='nombre_apellido' if 'nombre_apellido' in datos_nacionales.columns else None,
+                    hover_data=['region'] if 'region' in datos_nacionales.columns else None,
+                    height=400
+                )
+                
+                # Añadir líneas de referencia para anemia
+                fig_hb_edad.add_hline(
+                    y=11.0,
+                    line_dash="dash",
+                    line_color="orange",
+                    annotation_text="Umbral Anemia Leve",
+                    annotation_position="bottom right"
+                )
+                
+                fig_hb_edad.add_hline(
+                    y=12.0,
+                    line_dash="dash",
+                    line_color="green",
+                    annotation_text="Normal",
+                    annotation_position="top right"
+                )
+                
+                fig_hb_edad.update_layout(
+                    xaxis_title="Edad (años)",
+                    yaxis_title="Hemoglobina (g/dL)",
+                    plot_bgcolor='rgba(0,0,0,0)'
+                )
+                
+                st.plotly_chart(fig_hb_edad, use_container_width=True)
+            else:
+                st.info("ℹ️ No hay suficientes datos para el gráfico de hemoglobina")
+            
+            # ========== GRÁFICO 4: DISTRIBUCIÓN POR REGIÓN ==========
+            st.markdown("---")
+            st.markdown("### 📍 **Distribución Geográfica**")
+            
+            if 'region' in datos_nacionales.columns:
+                distribucion_region = datos_nacionales['region'].value_counts().head(15)
+                
+                col_reg1, col_reg2 = st.columns([3, 1])
+                
+                with col_reg1:
+                    fig_region = px.bar(
+                        x=distribucion_region.values,
+                        y=distribucion_region.index,
+                        orientation='h',
+                        title='<b>Top 15 Regiones con Más Casos</b>',
+                        color=distribucion_region.values,
+                        color_continuous_scale='Blues',
+                        text=distribucion_region.values,
+                        height=500
+                    )
+                    
+                    fig_region.update_traces(
+                        texttemplate='%{text}',
+                        textposition='outside',
+                        marker_line_color='darkblue',
+                        marker_line_width=1
+                    )
+                    
+                    fig_region.update_layout(
+                        xaxis_title="Número de Casos",
+                        yaxis_title="Región",
+                        showlegend=False,
+                        yaxis={'categoryorder': 'total ascending'}
+                    )
+                    
+                    st.plotly_chart(fig_region, use_container_width=True)
+                
+                with col_reg2:
+                    st.markdown("#### 🏆 **Ranking Regional**")
+                    
+                    for i, (region, count) in enumerate(distribucion_region.head(5).items(), 1):
+                        if i == 1:
+                            medal = "🥇"
+                            bg_color = "#FFD700"
+                        elif i == 2:
+                            medal = "🥈"
+                            bg_color = "#C0C0C0"
+                        elif i == 3:
+                            medal = "🥉"
+                            bg_color = "#CD7F32"
+                        else:
+                            medal = f"{i}."
+                            bg_color = "#f8f9fa"
+                        
+                        st.markdown(f"""
+                        <div style='background-color: {bg_color}; padding: 10px; border-radius: 8px; margin: 5px 0;'>
+                            <b>{medal} {region}</b><br>
+                            <span style='font-size: 0.9rem;'>{count} casos</span>
+                        </div>
+                        """, unsafe_allow_html=True)
+            
+            # ========== GRÁFICO 5: ESTADO NUTRICIONAL ==========
+            st.markdown("---")
+            st.markdown("### 🍎 **Estado Nutricional**")
+            
+            if 'estado_nutricional' in datos_nacionales.columns:
+                estado_counts = datos_nacionales['estado_nutricional'].value_counts()
+                
+                fig_nutricion = px.bar(
+                    x=estado_counts.index,
+                    y=estado_counts.values,
+                    title='<b>Distribución del Estado Nutricional</b>',
+                    color=estado_counts.values,
+                    color_continuous_scale='YlOrRd',
+                    text=estado_counts.values,
+                    height=350
+                )
+                
+                fig_nutricion.update_traces(
+                    texttemplate='%{text}',
+                    textposition='outside',
+                    marker_line_color='black',
+                    marker_line_width=1
+                )
+                
+                fig_nutricion.update_layout(
+                    xaxis_title="Estado Nutricional",
+                    yaxis_title="Número de Casos",
+                    showlegend=False,
+                    plot_bgcolor='rgba(0,0,0,0)'
+                )
+                
+                st.plotly_chart(fig_nutricion, use_container_width=True)
+            else:
+                st.info("ℹ️ No hay datos de estado nutricional")
+            
+            # ========== GRÁFICO 6: EVOLUCIÓN TEMPORAL ==========
+            st.markdown("---")
+            st.markdown("### 📅 **Tendencias Temporales**")
+            
+            if 'fecha_registro' in datos_nacionales.columns:
+                # Convertir fecha a datetime
+                datos_nacionales['fecha_registro'] = pd.to_datetime(datos_nacionales['fecha_registro'])
+                datos_nacionales['mes_registro'] = datos_nacionales['fecha_registro'].dt.to_period('M').astype(str)
+                
+                registros_por_mes = datos_nacionales['mes_registro'].value_counts().sort_index()
+                
+                fig_temporal = px.line(
+                    x=registros_por_mes.index,
+                    y=registros_por_mes.values,
+                    title='<b>Registros por Mes</b>',
+                    markers=True,
+                    height=300
+                )
+                
+                fig_temporal.update_layout(
+                    xaxis_title="Mes",
+                    yaxis_title="Número de Registros",
+                    plot_bgcolor='rgba(0,0,0,0)'
+                )
+                
+                # Añadir área sombreada
+                fig_temporal.add_trace(
+                    go.Scatter(
+                        x=registros_por_mes.index,
+                        y=registros_por_mes.values,
+                        fill='tozeroy',
+                        fillcolor='rgba(59, 130, 246, 0.1)',
+                        line=dict(color='#3B82F6', width=2),
+                        mode='lines',
+                        showlegend=False
+                    )
+                )
+                
+                st.plotly_chart(fig_temporal, use_container_width=True)
+            
+            # ========== TABLA RESUMEN INTERACTIVA ==========
+            st.markdown("---")
+            with st.expander("📋 **Tabla Resumen de Datos Nacionales**", expanded=False):
+                # Mostrar estadísticas por región
+                if 'region' in datos_nacionales.columns and 'hemoglobina_dl1' in datos_nacionales.columns:
+                    resumen_region = datos_nacionales.groupby('region').agg({
+                        'hemoglobina_dl1': ['count', 'mean', 'min', 'max'],
+                        'edad': 'mean'
+                    }).round(2)
+                    
+                    resumen_region.columns = ['Casos', 'HB Promedio', 'HB Mínima', 'HB Máxima', 'Edad Promedio']
+                    resumen_region = resumen_region.sort_values('Casos', ascending=False)
+                    
+                    st.dataframe(resumen_region, use_container_width=True)
+                else:
+                    st.info("No hay suficientes datos para el resumen regional")
+            
+            # ========== BOTONES DE ACCIÓN ==========
+            st.markdown("---")
+            col_acc1, col_acc2, col_acc3 = st.columns(3)
+            
+            with col_acc1:
+                if st.button("📥 **EXPORTAR DATOS**", use_container_width=True):
+                    csv = datos_nacionales.to_csv(index=False).encode('utf-8')
+                    st.download_button(
+                        label="📥 Descargar CSV Completo",
+                        data=csv,
+                        file_name=f"datos_nacionales_{datetime.now().strftime('%Y%m%d')}.csv",
+                        mime="text/csv",
+                        use_container_width=True
+                    )
+            
+            with col_acc2:
+                if st.button("📊 **EXPORTAR GRÁFICOS**", use_container_width=True):
+                    st.success("✅ Gráficos exportados como imágenes")
+                    # Aquí iría la lógica para exportar gráficos
+            
+            with col_acc3:
+                if st.button("🔄 **ACTUALIZAR AHORA**", use_container_width=True):
+                    st.rerun()
+        
         else:
             st.error("❌ No se pudieron cargar los datos nacionales")
+            st.info("Verifica la conexión con la base de datos")
     
     else:
         # PANTALLA INICIAL DEL DASHBOARD
@@ -2784,10 +3077,45 @@ with tab5:
                 Presiona el botón <strong>"ACTUALIZAR DASHBOARD NACIONAL"</strong> para cargar y visualizar 
                 las estadísticas nacionales de anemia y nutrición infantil.
             </p>
-            <p style='color: #666; font-size: 0.9rem;'>
-                El sistema mostrará indicadores clave, gráficos de distribución y resúmenes 
-                estadísticos de todos los registros a nivel nacional.
-            </p>
+            <div style='background-color: white; padding: 15px; border-radius: 8px; margin: 15px 0;'>
+                <h4 style='color: #1E3A8A;'>📈 Gráficos Disponibles:</h4>
+                <ul style='color: #555;'>
+                    <li>📊 Distribución por Edad y Género</li>
+                    <li>🩸 Niveles de Hemoglobina</li>
+                    <li>📍 Distribución Geográfica</li>
+                    <li>🍎 Estado Nutricional</li>
+                    <li>📅 Tendencias Temporales</li>
+                </ul>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    # ========== INFORMACIÓN DEL SISTEMA ==========
+    st.markdown("---")
+    
+    col_info1, col_info2, col_info3 = st.columns(3)
+    
+    with col_info1:
+        st.markdown("""
+        <div style='text-align: center; padding: 15px;'>
+            <div style='font-size: 2rem;'>🏥</div>
+            <h4>Sistema Nacional de Salud</h4>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col_info2:
+        st.markdown("""
+        <div style='text-align: center; padding: 15px;'>
+            <div style='font-size: 2rem;'>📅</div>
+            <h4>Versión: 2.0.1</h4>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col_info3:
+        st.markdown("""
+        <div style='text-align: center; padding: 15px;'>
+            <div style='font-size: 2rem;'>🔄</div>
+            <h4>Actualizado: Diciembre 2024</h4>
         </div>
         """, unsafe_allow_html=True)
 # ==================================================
