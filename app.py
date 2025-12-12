@@ -1195,679 +1195,11 @@ with tab3:
         st.session_state.datos_filtrados = None
     if 'filtros_aplicados' not in st.session_state:
         st.session_state.filtros_aplicados = False
+    if 'analisis_iniciado' not in st.session_state:
+        st.session_state.analisis_iniciado = False  # NUEVO: Controlar si el análisis fue iniciado
     
-    # BOTÓN PRINCIPAL MEJORADO
-    if st.button("🚀 INICIAR ANÁLISIS COMPLETO", type="primary", use_container_width=True):
-        with st.spinner("🔍 Analizando datos de anemia infantil..."):
-            datos_completos = obtener_datos_supabase()
-        
-        if not datos_completos.empty:
-            # FILTRAR SOLO NIÑOS MENORES DE 5 AÑOS
-            if 'edad' in datos_completos.columns:
-                datos_ninos = datos_completos[datos_completos['edad'] < 5].copy()
-                st.success(f"✅ {len(datos_ninos)} niños menores de 5 años analizados")
-                datos_analisis = datos_ninos
-            else:
-                datos_analisis = datos_completos
-                st.success(f"✅ {len(datos_analisis)} registros analizados")
-            
-            # Guardar en session_state
-            st.session_state.datos_originales = datos_analisis.copy()
-            st.session_state.datos_filtrados = datos_analisis.copy()
-            st.session_state.filtros_aplicados = False
-            
-            total_casos = len(datos_analisis)
-            
-            # ========== PANEL DE CONTROL AVANZADO CON FILTROS FUNCIONALES ==========
-            st.markdown("---")
-            st.markdown("## 🎛️ **Panel de Control Avanzado con Filtros**")
-            
-            with st.expander("🔍 **CONFIGURAR FILTROS**", expanded=True):
-                col_f1, col_f2, col_f3, col_f4 = st.columns(4)
-                
-                with col_f1:
-                    st.markdown("#### 👶 **Edad**")
-                    edad_min, edad_max = st.slider(
-                        "Rango de edad (años):",
-                        min_value=0,
-                        max_value=5,
-                        value=(0, 5),
-                        help="Filtrar por rango de edad"
-                    )
-                
-                with col_f2:
-                    st.markdown("#### 🩸 **Hemoglobina**")
-                    filtro_hb = st.selectbox(
-                        "Nivel de hemoglobina ajustada:",
-                        ["Todos", "Anemia Severa (<9.0 g/dL)", "Anemia Moderada (9.0-10.9 g/dL)", 
-                         "Anemia Leve (11.0-11.9 g/dL)", "Normal (≥12.0 g/dL)"]
-                    )
-                
-                with col_f3:
-                    st.markdown("#### 👦👧 **Género**")
-                    if 'genero' in datos_analisis.columns:
-                        genero_opciones = ['Todos'] + datos_analisis['genero'].dropna().unique().tolist()
-                        filtro_genero = st.selectbox(
-                            "Seleccionar género:",
-                            genero_opciones
-                        )
-                    else:
-                        filtro_genero = 'Todos'
-                
-                with col_f4:
-                    st.markdown("#### 🌍 **Región**")
-                    if 'region' in datos_analisis.columns:
-                        region_opciones = ['Todas'] + datos_analisis['region'].dropna().unique().tolist()
-                        filtro_region = st.selectbox(
-                            "Seleccionar región:",
-                            region_opciones
-                        )
-                    else:
-                        filtro_region = 'Todas'
-                
-                # Segunda fila de filtros
-                col_f5, col_f6, col_f7, col_f8 = st.columns(4)
-                
-                with col_f5:
-                    st.markdown("#### ⛰️ **Altitud**")
-                    if 'altitud_msnm' in datos_analisis.columns:
-                        alt_min = int(datos_analisis['altitud_msnm'].min())
-                        alt_max = int(datos_analisis['altitud_msnm'].max())
-                        filtro_altitud = st.slider(
-                            "Rango de altitud (msnm):",
-                            min_value=alt_min,
-                            max_value=alt_max,
-                            value=(alt_min, alt_max)
-                        )
-                    else:
-                        filtro_altitud = (0, 5000)
-                
-                with col_f6:
-                    st.markdown("#### 📋 **Seguimiento**")
-                    if 'en_seguimiento' in datos_analisis.columns:
-                        filtro_seguimiento = st.selectbox(
-                            "Estado de seguimiento:",
-                            ["Todos", "En seguimiento", "Sin seguimiento"]
-                        )
-                    else:
-                        filtro_seguimiento = "Todos"
-                
-                with col_f7:
-                    st.markdown("#### 🍎 **Estado Nutricional**")
-                    # Simular estado nutricional si no existe
-                    if 'estado_nutricional' not in datos_analisis.columns:
-                        datos_analisis['estado_nutricional'] = np.random.choice(
-                            ['Normal', 'Riesgo', 'Desnutrición'], 
-                            len(datos_analisis)
-                        )
-                    
-                    estado_nut_opciones = ['Todos'] + datos_analisis['estado_nutricional'].dropna().unique().tolist()
-                    filtro_nutricion = st.selectbox(
-                        "Estado nutricional:",
-                        estado_nut_opciones
-                    )
-                
-                with col_f8:
-                    st.markdown("#### 📊 **Ordenar por**")
-                    ordenar_por = st.selectbox(
-                        "Ordenar resultados:",
-                        ["Nombre", "Edad", "Hemoglobina", "Altitud", "Riesgo"]
-                    )
-                    orden_ascendente = st.checkbox("Orden ascendente", value=True)
-            
-            # Botones de acción para filtros
-            col_btn1, col_btn2, col_btn3, col_btn4 = st.columns(4)
-            
-            with col_btn1:
-                aplicar_filtros = st.button("✅ **APLICAR FILTROS**", type="primary", use_container_width=True)
-            
-            with col_btn2:
-                limpiar_filtros = st.button("🗑️ **LIMPIAR FILTROS**", use_container_width=True)
-            
-            with col_btn3:
-                exportar_filtrado = st.button("📥 **EXPORTAR FILTRADO**", use_container_width=True)
-            
-            with col_btn4:
-                generar_reporte = st.button("📄 **GENERAR REPORTE**", use_container_width=True)
-            
-            # Función para aplicar filtros
-            def aplicar_filtros_funcion(datos, edad_range, hb_filtro, genero_filtro, region_filtro, 
-                                       altitud_range, seguimiento_filtro, nutricion_filtro):
-                
-                datos_filtrados = datos.copy()
-                
-                # 1. Filtro por edad
-                if 'edad' in datos_filtrados.columns:
-                    datos_filtrados = datos_filtrados[
-                        (datos_filtrados['edad'] >= edad_range[0]) & 
-                        (datos_filtrados['edad'] <= edad_range[1])
-                    ]
-                
-                # 2. Filtro por hemoglobina (primero calcular hemoglobina ajustada)
-                if hb_filtro != "Todos" and 'hemoglobina_dl1' in datos_filtrados.columns:
-                    # Calcular hemoglobina ajustada para cada paciente
-                    hb_ajustada_values = []
-                    for _, row in datos_filtrados.iterrows():
-                        hb_medida = row.get('hemoglobina_dl1', 0)
-                        altitud = row.get('altitud_msnm', 0)
-                        ajuste = obtener_ajuste_hemoglobina(altitud)
-                        hb_ajustada = hb_medida + ajuste
-                        hb_ajustada_values.append(hb_ajustada)
-                    
-                    datos_filtrados['hb_ajustada'] = hb_ajustada_values
-                    
-                    if hb_filtro == "Anemia Severa (<9.0 g/dL)":
-                        datos_filtrados = datos_filtrados[datos_filtrados['hb_ajustada'] < 9.0]
-                    elif hb_filtro == "Anemia Moderada (9.0-10.9 g/dL)":
-                        datos_filtrados = datos_filtrados[
-                            (datos_filtrados['hb_ajustada'] >= 9.0) & 
-                            (datos_filtrados['hb_ajustada'] <= 10.9)
-                        ]
-                    elif hb_filtro == "Anemia Leve (11.0-11.9 g/dL)":
-                        datos_filtrados = datos_filtrados[
-                            (datos_filtrados['hb_ajustada'] >= 11.0) & 
-                            (datos_filtrados['hb_ajustada'] <= 11.9)
-                        ]
-                    elif hb_filtro == "Normal (≥12.0 g/dL)":
-                        datos_filtrados = datos_filtrados[datos_filtrados['hb_ajustada'] >= 12.0]
-                
-                # 3. Filtro por género
-                if genero_filtro != "Todos" and 'genero' in datos_filtrados.columns:
-                    datos_filtrados = datos_filtrados[datos_filtrados['genero'] == genero_filtro]
-                
-                # 4. Filtro por región
-                if region_filtro != "Todas" and 'region' in datos_filtrados.columns:
-                    datos_filtrados = datos_filtrados[datos_filtrados['region'] == region_filtro]
-                
-                # 5. Filtro por altitud
-                if 'altitud_msnm' in datos_filtrados.columns:
-                    datos_filtrados = datos_filtrados[
-                        (datos_filtrados['altitud_msnm'] >= altitud_range[0]) & 
-                        (datos_filtrados['altitud_msnm'] <= altitud_range[1])
-                    ]
-                
-                # 6. Filtro por seguimiento
-                if seguimiento_filtro != "Todos" and 'en_seguimiento' in datos_filtrados.columns:
-                    if seguimiento_filtro == "En seguimiento":
-                        datos_filtrados = datos_filtrados[datos_filtrados['en_seguimiento'] == True]
-                    elif seguimiento_filtro == "Sin seguimiento":
-                        datos_filtrados = datos_filtrados[datos_filtrados['en_seguimiento'] == False]
-                
-                # 7. Filtro por estado nutricional
-                if nutricion_filtro != "Todos" and 'estado_nutricional' in datos_filtrados.columns:
-                    datos_filtrados = datos_filtrados[datos_filtrados['estado_nutricional'] == nutricion_filtro]
-                
-                # 8. Ordenar resultados
-                if ordenar_por == "Nombre" and 'nombre_apellido' in datos_filtrados.columns:
-                    datos_filtrados = datos_filtrados.sort_values('nombre_apellido', ascending=orden_ascendente)
-                elif ordenar_por == "Edad" and 'edad' in datos_filtrados.columns:
-                    datos_filtrados = datos_filtrados.sort_values('edad', ascending=orden_ascendente)
-                elif ordenar_por == "Hemoglobina" and 'hemoglobina_dl1' in datos_filtrados.columns:
-                    datos_filtrados = datos_filtrados.sort_values('hemoglobina_dl1', ascending=orden_ascendente)
-                elif ordenar_por == "Altitud" and 'altitud_msnm' in datos_filtrados.columns:
-                    datos_filtrados = datos_filtrados.sort_values('altitud_msnm', ascending=orden_ascendente)
-                elif ordenar_por == "Riesgo" and 'riesgo' in datos_filtrados.columns:
-                    datos_filtrados = datos_filtrados.sort_values('riesgo', ascending=orden_ascendente)
-                
-                return datos_filtrados
-            
-            # Aplicar filtros cuando se presiona el botón
-            if aplicar_filtros:
-                with st.spinner("🔄 Aplicando filtros..."):
-                    datos_filtrados = aplicar_filtros_funcion(
-                        st.session_state.datos_originales,
-                        (edad_min, edad_max),
-                        filtro_hb,
-                        filtro_genero,
-                        filtro_region,
-                        filtro_altitud,
-                        filtro_seguimiento,
-                        filtro_nutricion
-                    )
-                    
-                    st.session_state.datos_filtrados = datos_filtrados
-                    st.session_state.filtros_aplicados = True
-                    
-                    st.success(f"✅ Filtros aplicados: {len(datos_filtrados)} de {len(st.session_state.datos_originales)} registros")
-                    
-                    # Mostrar resumen de filtros aplicados
-                    st.info(f"""
-                    **📋 Filtros activos:**
-                    - Edad: {edad_min}-{edad_max} años
-                    - Hemoglobina: {filtro_hb}
-                    - Género: {filtro_genero}
-                    - Región: {filtro_region}
-                    - Altitud: {filtro_altitud[0]}-{filtro_altitud[1]} msnm
-                    - Seguimiento: {filtro_seguimiento}
-                    - Nutrición: {filtro_nutricion}
-                    """)
-            
-            # Limpiar filtros
-            if limpiar_filtros:
-                st.session_state.datos_filtrados = st.session_state.datos_originales.copy()
-                st.session_state.filtros_aplicados = False
-                st.success("🔄 Filtros limpiados - Mostrando todos los datos")
-                st.rerun()
-            
-            # Exportar datos filtrados
-            if exportar_filtrado:
-                datos_a_exportar = st.session_state.datos_filtrados if st.session_state.filtros_aplicados else st.session_state.datos_originales
-                
-                if not datos_a_exportar.empty:
-                    csv = datos_a_exportar.to_csv(index=False).encode('utf-8')
-                    st.download_button(
-                        label="📥 Descargar datos filtrados (CSV)",
-                        data=csv,
-                        file_name=f"anemia_filtrado_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
-                        mime="text/csv"
-                    )
-                else:
-                    st.warning("No hay datos para exportar")
-            
-            # Generar reporte
-            if generar_reporte:
-                datos_reporte = st.session_state.datos_filtrados if st.session_state.filtros_aplicados else st.session_state.datos_originales
-                
-                with st.expander("📋 **REPORTE COMPLETO CON FILTROS**", expanded=True):
-                    st.markdown(f"""
-                    ### 📊 REPORTE DE ANÁLISIS - ANEMIA INFANTIL
-                    
-                    **Fecha generación:** {datetime.now().strftime('%d/%m/%Y %H:%M')}
-                    **Total registros analizados:** {len(datos_reporte)}
-                    **Filtros aplicados:** {'SÍ' if st.session_state.filtros_aplicados else 'NO'}
-                    
-                    **📈 ESTADÍSTICAS PRINCIPALES:**
-                    - **Edad promedio:** {datos_reporte['edad'].mean() if 'edad' in datos_reporte.columns else 'N/A':.1f} años
-                    - **Hemoglobina promedio:** {datos_reporte['hemoglobina_dl1'].mean() if 'hemoglobina_dl1' in datos_reporte.columns else 'N/A':.1f} g/dL
-                    - **Casos en seguimiento:** {len(datos_reporte[datos_reporte['en_seguimiento'] == True]) if 'en_seguimiento' in datos_reporte.columns else 'N/A'}
-                    
-                    **🌍 DISTRIBUCIÓN GEOGRÁFICA:**
-                    - **Regiones incluidas:** {datos_reporte['region'].nunique() if 'region' in datos_reporte.columns else 'N/A'}
-                    - **Altitud promedio:** {datos_reporte['altitud_msnm'].mean() if 'altitud_msnm' in datos_reporte.columns else 'N/A':.0f} msnm
-                    
-                    **👦👧 DISTRIBUCIÓN POR GÉNERO:**
-                    """)
-                    
-                    if 'genero' in datos_reporte.columns:
-                        genero_counts = datos_reporte['genero'].value_counts()
-                        for genero, count in genero_counts.items():
-                            porcentaje = (count / len(datos_reporte)) * 100
-                            st.markdown(f"- **{genero}:** {count} pacientes ({porcentaje:.1f}%)")
-                    
-                    st.markdown("""
-                    **🚨 RECOMENDACIONES:**
-                    1. Revisar casos críticos identificados
-                    2. Implementar seguimiento para casos prioritarios
-                    3. Generar alertas para regiones de alto riesgo
-                    4. Programar controles periódicos
-                    """)
-            
-            # Determinar qué datos usar para las visualizaciones
-            if st.session_state.filtros_aplicados:
-                datos_visualizacion = st.session_state.datos_filtrados.copy()
-                st.info(f"📊 **Visualizando {len(datos_visualizacion)} registros filtrados**")
-            else:
-                datos_visualizacion = datos_analisis.copy()
-            
-            # ========== SECCIÓN 1: FORMULARIO - RIESGO POR GÉNERO ==========
-            st.markdown("## 📋 **1. Formulario: Riesgo de Anemia por Género**")
-            
-            col_form1, col_form2 = st.columns([2, 1])
-            
-            with col_form1:
-                if 'genero' in datos_visualizacion.columns:
-                    # Procesar datos de género
-                    genero_counts = datos_visualizacion['genero'].value_counts().reset_index()
-                    genero_counts.columns = ['Genero', 'Cantidad']
-                    
-                    # Normalizar nombres
-                    genero_mapping = {'M': 'Niños 👦', 'F': 'Niñas 👧', 'Masculino': 'Niños 👦', 'Femenino': 'Niñas 👧'}
-                    genero_counts['Genero'] = genero_counts['Genero'].map(lambda x: genero_mapping.get(x, x))
-                    
-                    # Gráfico avanzado de género
-                    fig_genero = px.pie(
-                        genero_counts,
-                        values='Cantidad',
-                        names='Genero',
-                        title='<b>Distribución por Género</b>',
-                        color='Genero',
-                        color_discrete_sequence=['#3498db', '#e74c3c'],
-                        hole=0.5,
-                        height=350
-                    )
-                    
-                    fig_genero.update_traces(
-                        textposition='inside',
-                        textinfo='percent+label+value',
-                        marker=dict(line=dict(color='white', width=2))
-                    )
-                    
-                    st.plotly_chart(fig_genero, use_container_width=True)
-            
-            with col_form2:
-                st.markdown("### 📊 Estadísticas Detalladas")
-                
-                if 'genero' in datos_visualizacion.columns and 'hemoglobina_dl1' in datos_visualizacion.columns:
-                    # Calcular riesgos por género
-                    for genero_label, genero_codes in [('Niños 👦', ['M', 'Masculino']), ('Niñas 👧', ['F', 'Femenino'])]:
-                        data_genero = datos_visualizacion[datos_visualizacion['genero'].isin(genero_codes)]
-                        if len(data_genero) > 0:
-                            # Calcular hemoglobina ajustada
-                            riesgo_count = 0
-                            for _, row in data_genero.iterrows():
-                                hb_medida = row.get('hemoglobina_dl1', 0)
-                                altitud = row.get('altitud_msnm', 0)
-                                ajuste = obtener_ajuste_hemoglobina(altitud)
-                                hb_ajustada = hb_medida + ajuste
-                                
-                                # Clasificar según edad
-                                edad_meses = row.get('edad', 0) * 12  # Convertir años a meses
-                                clasificacion, _, _ = clasificar_anemia(hb_ajustada, edad_meses)
-                                
-                                if clasificacion in ["ANEMIA LEVE", "ANEMIA MODERADA", "ANEMIA SEVERA"]:
-                                    riesgo_count += 1
-                            
-                            riesgo = (riesgo_count / len(data_genero)) * 100 if len(data_genero) > 0 else 0
-                            
-                            # Determinar color
-                            if riesgo > 30:
-                                icon = "🔴"
-                                color_class = "stError"
-                            elif riesgo > 15:
-                                icon = "🟡"
-                                color_class = "stWarning"
-                            else:
-                                icon = "🟢"
-                                color_class = "stSuccess"
-                            
-                            st.markdown(f"""
-                            <div style='background-color: #f8f9fa; padding: 15px; border-radius: 10px; border-left: 4px solid {icon=="🔴" and "#dc3545" or icon=="🟡" and "#ffc107" or "#28a745"}; margin: 10px 0;'>
-                                <h4 style='margin: 0;'>{icon} {genero_label}</h4>
-                                <p style='margin: 5px 0; font-size: 1.5rem; font-weight: bold;'>{len(data_genero)} niños</p>
-                                <p style='margin: 0; color: {icon=="🔴" and "#dc3545" or icon=="🟡" and "#856404" or "#155724"}'>
-                                    <b>{riesgo:.1f}%</b> riesgo de anemia
-                                </p>
-                            </div>
-                            """, unsafe_allow_html=True)
-            
-            # ========== SECCIÓN 2: MONITOREO - RIESGO POR ALTITUD ==========
-            st.markdown("## 📊 **2. Monitoreo: Riesgo de Anemia por Altitud**")
-            
-            # Usar datos reales de altitud
-            if 'altitud_msnm' in datos_visualizacion.columns:
-                datos_visualizacion['altitud'] = datos_visualizacion['altitud_msnm']
-            elif 'altitud' not in datos_visualizacion.columns:
-                # Simular datos si no existen
-                altitudes = [500, 1000, 1500, 2000, 2500, 3000, 3500, 4000]
-                datos_visualizacion['altitud'] = np.random.choice(altitudes, len(datos_visualizacion))
-            
-            col_mon1, col_mon2 = st.columns([3, 1])
-            
-            with col_mon1:
-                # Crear rangos de altitud
-                bins = [0, 500, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500]
-                labels = ['0-500', '500-1000', '1000-1500', '1500-2000', 
-                         '2000-2500', '2500-3000', '3000-3500', '3500-4000', '4000+']
-                
-                datos_visualizacion['rango_altitud'] = pd.cut(datos_visualizacion['altitud'], bins=bins, labels=labels, right=False)
-                
-                # Calcular riesgo por altitud
-                riesgo_altitud_data = []
-                for rango in labels:
-                    data_rango = datos_visualizacion[datos_visualizacion['rango_altitud'] == rango]
-                    if len(data_rango) > 0:
-                        # Calcular porcentaje con anemia
-                        riesgo_count = 0
-                        for _, row in data_rango.iterrows():
-                            hb_medida = row.get('hemoglobina_dl1', 0)
-                            altitud = row.get('altitud', 0)
-                            ajuste = obtener_ajuste_hemoglobina(altitud)
-                            hb_ajustada = hb_medida + ajuste
-                            edad_meses = row.get('edad', 0) * 12
-                            clasificacion, _, _ = clasificar_anemia(hb_ajustada, edad_meses)
-                            
-                            if clasificacion in ["ANEMIA LEVE", "ANEMIA MODERADA", "ANEMIA SEVERA"]:
-                                riesgo_count += 1
-                        
-                        riesgo = (riesgo_count / len(data_rango)) * 100 if len(data_rango) > 0 else 0
-                        riesgo_altitud_data.append({'Altitud': rango, '% Riesgo': riesgo, 'Casos': len(data_rango)})
-                    else:
-                        riesgo_altitud_data.append({'Altitud': rango, '% Riesgo': 0, 'Casos': 0})
-                
-                riesgo_df = pd.DataFrame(riesgo_altitud_data)
-                
-                # Gráfico de altitud mejorado
-                fig_altitud = px.bar(
-                    riesgo_df,
-                    x='Altitud',
-                    y='% Riesgo',
-                    title='<b>Porcentaje de Riesgo por Altitud (metros sobre el nivel del mar)</b>',
-                    color='% Riesgo',
-                    color_continuous_scale='RdYlGn_r',
-                    text='% Riesgo',
-                    height=400
-                )
-                
-                fig_altitud.update_traces(
-                    texttemplate='%{text:.1f}%',
-                    textposition='outside',
-                    marker_line_color='black',
-                    marker_line_width=1
-                )
-                
-                # Añadir línea de referencia crítica
-                fig_altitud.add_hline(
-                    y=30,
-                    line_dash="dash",
-                    line_color="red",
-                    annotation_text="Umbral Crítico (30%)"
-                )
-                
-                fig_altitud.update_layout(
-                    xaxis_title="Rango de Altitud (m)",
-                    yaxis_title="% de Niños con Anemia",
-                    plot_bgcolor='rgba(0,0,0,0)'
-                )
-                
-                st.plotly_chart(fig_altitud, use_container_width=True)
-            
-            with col_mon2:
-                st.markdown("### 📈 Análisis por Altitud")
-                
-                # Encontrar altitud más riesgosa
-                if len(riesgo_df) > 0:
-                    max_idx = riesgo_df['% Riesgo'].idxmax()
-                    max_data = riesgo_df.loc[max_idx]
-                    
-                    st.markdown(f"""
-                    <div style='background-color: #fff3cd; padding: 15px; border-radius: 10px; border: 1px solid #ffeaa7; margin-bottom: 15px;'>
-                        <h5 style='color: #856404; margin: 0;'>⚠️ Zona de Mayor Riesgo</h5>
-                        <p style='font-size: 1.8rem; font-weight: bold; margin: 5px 0; color: #dc3545;'>{max_data['Altitud']} m</p>
-                        <p style='margin: 0;'>{max_data['% Riesgo']:.1f}% de riesgo</p>
-                        <p style='margin: 0; font-size: 0.9rem; color: #666;'>{max_data['Casos']} casos analizados</p>
-                    </div>
-                    """, unsafe_allow_html=True)
-                
-                # Recomendaciones específicas
-                with st.expander("📋 Recomendaciones por Altitud"):
-                    st.markdown("""
-                    **Para altitud < 1500m:**
-                    - Control trimestral
-                    - Suplementación preventiva
-                    
-                    **Para altitud 1500-3000m:**
-                    - Control mensual
-                    - Suplementación obligatoria
-                    - Educación nutricional
-                    
-                    **Para altitud > 3000m:**
-                    - Control quincenal
-                    - Suplementación intensiva
-                    - Derivación especializada
-                    """)
-            
-            # ========== SECCIÓN 3: ANÁLISIS - RIESGO POR REGIÓN ==========
-            st.markdown("## 📍 **3. Análisis: Riesgo de Anemia por Región**")
-            
-            if 'region' in datos_visualizacion.columns:
-                # Calcular estadísticas por región
-                region_stats = []
-                for region in datos_visualizacion['region'].dropna().unique():
-                    data_region = datos_visualizacion[datos_visualizacion['region'] == region]
-                    total = len(data_region)
-                    
-                    if total > 0:
-                        # Calcular casos con anemia
-                        casos_anemia = 0
-                        for _, row in data_region.iterrows():
-                            hb_medida = row.get('hemoglobina_dl1', 0)
-                            altitud = row.get('altitud_msnm', row.get('altitud', 0))
-                            ajuste = obtener_ajuste_hemoglobina(altitud)
-                            hb_ajustada = hb_medida + ajuste
-                            edad_meses = row.get('edad', 0) * 12
-                            clasificacion, _, _ = clasificar_anemia(hb_ajustada, edad_meses)
-                            
-                            if clasificacion in ["ANEMIA LEVE", "ANEMIA MODERADA", "ANEMIA SEVERA"]:
-                                casos_anemia += 1
-                        
-                        riesgo = (casos_anemia / total) * 100
-                        
-                        region_stats.append({
-                            'Región': region,
-                            'Total': total,
-                            'Casos Anemia': casos_anemia,
-                            '% Riesgo': riesgo
-                        })
-                
-                if region_stats:
-                    region_df = pd.DataFrame(region_stats).sort_values('% Riesgo', ascending=False)
-                    
-                    col_ana1, col_ana2 = st.columns([3, 1])
-                    
-                    with col_ana1:
-                        # Mapa de calor por región
-                        fig_region = px.bar(
-                            region_df.head(15),
-                            y='Región',
-                            x='% Riesgo',
-                            title='<b>Regiones con Mayor Riesgo de Anemia</b>',
-                            color='% Riesgo',
-                            color_continuous_scale='Reds',
-                            orientation='h',
-                            text='% Riesgo',
-                            height=500
-                        )
-                        
-                        fig_region.update_traces(
-                            texttemplate='%{text:.1f}%',
-                            textposition='outside',
-                            marker_line_color='darkred',
-                            marker_line_width=1
-                        )
-                        
-                        fig_region.update_layout(
-                            yaxis={'categoryorder': 'total ascending'},
-                            xaxis_title="% de Riesgo de Anemia",
-                            yaxis_title="Región"
-                        )
-                        
-                        st.plotly_chart(fig_region, use_container_width=True)
-                    
-                    with col_ana2:
-                        st.markdown("### 🏆 Ranking Regional")
-                        
-                        # Mostrar top 5
-                        for i, (_, row) in enumerate(region_df.head(5).iterrows(), 1):
-                            if i == 1:
-                                medal = "🥇"
-                                bg_color = "#FFD700"
-                            elif i == 2:
-                                medal = "🥈"
-                                bg_color = "#C0C0C0"
-                            elif i == 3:
-                                medal = "🥉"
-                                bg_color = "#CD7F32"
-                            else:
-                                medal = f"{i}."
-                                bg_color = "#f8f9fa"
-                            
-                            st.markdown(f"""
-                            <div style='background-color: {bg_color}; padding: 10px; border-radius: 8px; margin: 5px 0;'>
-                                <b>{medal} {row['Región']}</b><br>
-                                <span style='font-size: 0.9rem;'>{row['% Riesgo']:.1f}% riesgo</span>
-                            </div>
-                            """, unsafe_allow_html=True)
-                        
-                        # Selector interactivo
-                        region_seleccionada = st.selectbox(
-                            "🔍 Ver detalles de región:",
-                            region_df['Región'].tolist()
-                        )
-                        
-                        if region_seleccionada:
-                            region_data = region_df[region_df['Región'] == region_seleccionada].iloc[0]
-                            col1, col2 = st.columns(2)
-                            with col1:
-                                st.metric("Total casos", region_data['Total'])
-                            with col2:
-                                st.metric("% Riesgo", f"{region_data['% Riesgo']:.1f}%")
-            
-            # ========== TABLA DE DATOS INTERACTIVA CON FILTROS ==========
-            st.markdown("---")
-            with st.expander(f"🗂️ **Ver Datos Detallados ({len(datos_visualizacion)} registros)**", expanded=False):
-                
-                # Configurar columnas para mejor visualización
-                column_config = {}
-                if 'hemoglobina_dl1' in datos_visualizacion.columns:
-                    column_config['hemoglobina_dl1'] = st.column_config.ProgressColumn(
-                        "Hemoglobina",
-                        help="Nivel de hemoglobina en g/dL",
-                        format="%.2f g/dL",
-                        min_value=5,
-                        max_value=20
-                    )
-                
-                if 'edad' in datos_visualizacion.columns:
-                    column_config['edad'] = st.column_config.NumberColumn(
-                        "Edad",
-                        help="Edad en años",
-                        format="%.1f años",
-                        min_value=0,
-                        max_value=5
-                    )
-                
-                if 'altitud_msnm' in datos_visualizacion.columns:
-                    column_config['altitud_msnm'] = st.column_config.NumberColumn(
-                        "Altitud",
-                        help="Altitud en metros",
-                        format="%d msnm"
-                    )
-                
-                # Mostrar tabla
-                st.dataframe(
-                    datos_visualizacion,
-                    use_container_width=True,
-                    height=400,
-                    column_config=column_config,
-                    hide_index=True
-                )
-                
-                # Botón de descarga
-                csv = datos_visualizacion.to_csv(index=False).encode('utf-8')
-                st.download_button(
-                    label="📥 Descargar Datos Actuales (CSV)",
-                    data=csv,
-                    file_name=f"anemia_infantil_filtrado_{datetime.now().strftime('%Y%m%d')}.csv",
-                    mime="text/csv",
-                    icon="💾"
-                )
-        
-        else:
-            st.error("❌ No se pudieron cargar los datos de la base de datos")
-            st.info("Verifica la conexión con Supabase o si existen registros en la base de datos")
-    
-    else:
-        # PANTALLA DE INICIO MEJORADA
+    # ========== PANTALLA DE INICIO (SOLO SI NO SE HA INICIADO ANÁLISIS) ==========
+    if not st.session_state.analisis_iniciado:
         col_welcome1, col_welcome2 = st.columns([2, 1])
         
         with col_welcome1:
@@ -1962,6 +1294,349 @@ with tab3:
             
             **💡 Tip:** Todos los gráficos se actualizan automáticamente con los filtros aplicados
             """)
+    
+    # BOTÓN PRINCIPAL MEJORADO - AHORA AFUERA DEL CONDICIONAL
+    col_btn_principal, col_btn_reset = st.columns([3, 1])
+    
+    with col_btn_principal:
+        if st.button("🚀 INICIAR ANÁLISIS COMPLETO", type="primary", use_container_width=True):
+            with st.spinner("🔍 Analizando datos de anemia infantil..."):
+                datos_completos = obtener_datos_supabase()
+            
+            if not datos_completos.empty:
+                # FILTRAR SOLO NIÑOS MENORES DE 5 AÑOS
+                if 'edad' in datos_completos.columns:
+                    datos_ninos = datos_completos[datos_completos['edad'] < 5].copy()
+                    st.success(f"✅ {len(datos_ninos)} niños menores de 5 años analizados")
+                    datos_analisis = datos_ninos
+                else:
+                    datos_analisis = datos_completos
+                    st.success(f"✅ {len(datos_analisis)} registros analizados")
+                
+                # Guardar en session_state
+                st.session_state.datos_originales = datos_analisis.copy()
+                st.session_state.datos_filtrados = datos_analisis.copy()
+                st.session_state.filtros_aplicados = False
+                st.session_state.analisis_iniciado = True  # MARCAR QUE SE INICIÓ
+                st.rerun()  # Forzar rerun para mostrar los filtros
+            else:
+                st.error("❌ No se pudieron cargar los datos de la base de datos")
+    
+    with col_btn_reset:
+        if st.button("🔄 Reiniciar Análisis", use_container_width=True):
+            st.session_state.analisis_iniciado = False
+            st.session_state.datos_originales = None
+            st.session_state.datos_filtrados = None
+            st.session_state.filtros_aplicados = False
+            st.rerun()
+    
+    # ========== INTERFAZ DE ANÁLISIS (SOLO SI SE INICIÓ) ==========
+    if st.session_state.analisis_iniciado and st.session_state.datos_originales is not None:
+        datos_analisis = st.session_state.datos_originales.copy()
+        total_casos = len(datos_analisis)
+        
+        # ========== PANEL DE CONTROL AVANZADO CON FILTROS FUNCIONALES ==========
+        st.markdown("---")
+        st.markdown("## 🎛️ **Panel de Control Avanzado con Filtros**")
+        
+        with st.expander("🔍 **CONFIGURAR FILTROS**", expanded=True):
+            col_f1, col_f2, col_f3, col_f4 = st.columns(4)
+            
+            with col_f1:
+                st.markdown("#### 👶 **Edad**")
+                edad_min, edad_max = st.slider(
+                    "Rango de edad (años):",
+                    min_value=0,
+                    max_value=5,
+                    value=(0, 5),
+                    help="Filtrar por rango de edad",
+                    key="filtro_edad"  # IMPORTANTE: Añadir key único
+                )
+            
+            with col_f2:
+                st.markdown("#### 🩸 **Hemoglobina**")
+                filtro_hb = st.selectbox(
+                    "Nivel de hemoglobina ajustada:",
+                    ["Todos", "Anemia Severa (<9.0 g/dL)", "Anemia Moderada (9.0-10.9 g/dL)", 
+                     "Anemia Leve (11.0-11.9 g/dL)", "Normal (≥12.0 g/dL)"],
+                    key="filtro_hb"
+                )
+            
+            with col_f3:
+                st.markdown("#### 👦👧 **Género**")
+                if 'genero' in datos_analisis.columns:
+                    genero_opciones = ['Todos'] + datos_analisis['genero'].dropna().unique().tolist()
+                    filtro_genero = st.selectbox(
+                        "Seleccionar género:",
+                        genero_opciones,
+                        key="filtro_genero"
+                    )
+                else:
+                    filtro_genero = 'Todos'
+            
+            with col_f4:
+                st.markdown("#### 🌍 **Región**")
+                if 'region' in datos_analisis.columns:
+                    region_opciones = ['Todas'] + datos_analisis['region'].dropna().unique().tolist()
+                    filtro_region = st.selectbox(
+                        "Seleccionar región:",
+                        region_opciones,
+                        key="filtro_region"
+                    )
+                else:
+                    filtro_region = 'Todas'
+            
+            # Segunda fila de filtros
+            col_f5, col_f6, col_f7, col_f8 = st.columns(4)
+            
+            with col_f5:
+                st.markdown("#### ⛰️ **Altitud**")
+                if 'altitud_msnm' in datos_analisis.columns:
+                    alt_min = int(datos_analisis['altitud_msnm'].min())
+                    alt_max = int(datos_analisis['altitud_msnm'].max())
+                    filtro_altitud = st.slider(
+                        "Rango de altitud (msnm):",
+                        min_value=alt_min,
+                        max_value=alt_max,
+                        value=(alt_min, alt_max),
+                        key="filtro_altitud"
+                    )
+                else:
+                    filtro_altitud = (0, 5000)
+            
+            with col_f6:
+                st.markdown("#### 📋 **Seguimiento**")
+                if 'en_seguimiento' in datos_analisis.columns:
+                    filtro_seguimiento = st.selectbox(
+                        "Estado de seguimiento:",
+                        ["Todos", "En seguimiento", "Sin seguimiento"],
+                        key="filtro_seguimiento"
+                    )
+                else:
+                    filtro_seguimiento = "Todos"
+            
+            with col_f7:
+                st.markdown("#### 🍎 **Estado Nutricional**")
+                # Simular estado nutricional si no existe
+                if 'estado_nutricional' not in datos_analisis.columns:
+                    datos_analisis['estado_nutricional'] = np.random.choice(
+                        ['Normal', 'Riesgo', 'Desnutrición'], 
+                        len(datos_analisis)
+                    )
+                
+                estado_nut_opciones = ['Todos'] + datos_analisis['estado_nutricional'].dropna().unique().tolist()
+                filtro_nutricion = st.selectbox(
+                    "Estado nutricional:",
+                    estado_nut_opciones,
+                    key="filtro_nutricion"
+                )
+            
+            with col_f8:
+                st.markdown("#### 📊 **Ordenar por**")
+                ordenar_por = st.selectbox(
+                    "Ordenar resultados:",
+                    ["Nombre", "Edad", "Hemoglobina", "Altitud", "Riesgo"],
+                    key="ordenar_por"
+                )
+                orden_ascendente = st.checkbox("Orden ascendente", value=True, key="orden_ascendente")
+        
+        # Botones de acción para filtros
+        col_btn1, col_btn2, col_btn3, col_btn4 = st.columns(4)
+        
+        with col_btn1:
+            aplicar_filtros = st.button("✅ **APLICAR FILTROS**", type="primary", use_container_width=True, key="btn_aplicar_filtros")
+        
+        with col_btn2:
+            limpiar_filtros = st.button("🗑️ **LIMPIAR FILTROS**", use_container_width=True, key="btn_limpiar_filtros")
+        
+        with col_btn3:
+            exportar_filtrado = st.button("📥 **EXPORTAR FILTRADO**", use_container_width=True, key="btn_exportar_filtrado")
+        
+        with col_btn4:
+            generar_reporte = st.button("📄 **GENERAR REPORTE**", use_container_width=True, key="btn_generar_reporte")
+        
+        # Función para aplicar filtros
+        def aplicar_filtros_funcion(datos, edad_range, hb_filtro, genero_filtro, region_filtro, 
+                                   altitud_range, seguimiento_filtro, nutricion_filtro, ordenar_por, orden_ascendente):
+            
+            datos_filtrados = datos.copy()
+            
+            # 1. Filtro por edad
+            if 'edad' in datos_filtrados.columns:
+                datos_filtrados = datos_filtrados[
+                    (datos_filtrados['edad'] >= edad_range[0]) & 
+                    (datos_filtrados['edad'] <= edad_range[1])
+                ]
+            
+            # 2. Filtro por hemoglobina (primero calcular hemoglobina ajustada)
+            if hb_filtro != "Todos" and 'hemoglobina_dl1' in datos_filtrados.columns:
+                # Calcular hemoglobina ajustada para cada paciente
+                hb_ajustada_values = []
+                for _, row in datos_filtrados.iterrows():
+                    hb_medida = row.get('hemoglobina_dl1', 0)
+                    altitud = row.get('altitud_msnm', 0)
+                    ajuste = obtener_ajuste_hemoglobina(altitud)
+                    hb_ajustada = hb_medida + ajuste
+                    hb_ajustada_values.append(hb_ajustada)
+                
+                datos_filtrados['hb_ajustada'] = hb_ajustada_values
+                
+                if hb_filtro == "Anemia Severa (<9.0 g/dL)":
+                    datos_filtrados = datos_filtrados[datos_filtrados['hb_ajustada'] < 9.0]
+                elif hb_filtro == "Anemia Moderada (9.0-10.9 g/dL)":
+                    datos_filtrados = datos_filtrados[
+                        (datos_filtrados['hb_ajustada'] >= 9.0) & 
+                        (datos_filtrados['hb_ajustada'] <= 10.9)
+                    ]
+                elif hb_filtro == "Anemia Leve (11.0-11.9 g/dL)":
+                    datos_filtrados = datos_filtrados[
+                        (datos_filtrados['hb_ajustada'] >= 11.0) & 
+                        (datos_filtrados['hb_ajustada'] <= 11.9)
+                    ]
+                elif hb_filtro == "Normal (≥12.0 g/dL)":
+                    datos_filtrados = datos_filtrados[datos_filtrados['hb_ajustada'] >= 12.0]
+            
+            # 3. Filtro por género
+            if genero_filtro != "Todos" and 'genero' in datos_filtrados.columns:
+                datos_filtrados = datos_filtrados[datos_filtrados['genero'] == genero_filtro]
+            
+            # 4. Filtro por región
+            if region_filtro != "Todas" and 'region' in datos_filtrados.columns:
+                datos_filtrados = datos_filtrados[datos_filtrados['region'] == region_filtro]
+            
+            # 5. Filtro por altitud
+            if 'altitud_msnm' in datos_filtrados.columns:
+                datos_filtrados = datos_filtrados[
+                    (datos_filtrados['altitud_msnm'] >= altitud_range[0]) & 
+                    (datos_filtrados['altitud_msnm'] <= altitud_range[1])
+                ]
+            
+            # 6. Filtro por seguimiento
+            if seguimiento_filtro != "Todos" and 'en_seguimiento' in datos_filtrados.columns:
+                if seguimiento_filtro == "En seguimiento":
+                    datos_filtrados = datos_filtrados[datos_filtrados['en_seguimiento'] == True]
+                elif seguimiento_filtro == "Sin seguimiento":
+                    datos_filtrados = datos_filtrados[datos_filtrados['en_seguimiento'] == False]
+            
+            # 7. Filtro por estado nutricional
+            if nutricion_filtro != "Todos" and 'estado_nutricional' in datos_filtrados.columns:
+                datos_filtrados = datos_filtrados[datos_filtrados['estado_nutricional'] == nutricion_filtro]
+            
+            # 8. Ordenar resultados
+            if ordenar_por == "Nombre" and 'nombre_apellido' in datos_filtrados.columns:
+                datos_filtrados = datos_filtrados.sort_values('nombre_apellido', ascending=orden_ascendente)
+            elif ordenar_por == "Edad" and 'edad' in datos_filtrados.columns:
+                datos_filtrados = datos_filtrados.sort_values('edad', ascending=orden_ascendente)
+            elif ordenar_por == "Hemoglobina" and 'hemoglobina_dl1' in datos_filtrados.columns:
+                datos_filtrados = datos_filtrados.sort_values('hemoglobina_dl1', ascending=orden_ascendente)
+            elif ordenar_por == "Altitud" and 'altitud_msnm' in datos_filtrados.columns:
+                datos_filtrados = datos_filtrados.sort_values('altitud_msnm', ascending=orden_ascendente)
+            elif ordenar_por == "Riesgo" and 'riesgo' in datos_filtrados.columns:
+                datos_filtrados = datos_filtrados.sort_values('riesgo', ascending=orden_ascendente)
+            
+            return datos_filtrados
+        
+        # Aplicar filtros cuando se presiona el botón
+        if aplicar_filtros:
+            with st.spinner("🔄 Aplicando filtros..."):
+                datos_filtrados = aplicar_filtros_funcion(
+                    st.session_state.datos_originales,
+                    (edad_min, edad_max),
+                    filtro_hb,
+                    filtro_genero,
+                    filtro_region,
+                    filtro_altitud,
+                    filtro_seguimiento,
+                    filtro_nutricion,
+                    ordenar_por,
+                    orden_ascendente
+                )
+                
+                st.session_state.datos_filtrados = datos_filtrados
+                st.session_state.filtros_aplicados = True
+                
+                st.success(f"✅ Filtros aplicados: {len(datos_filtrados)} de {len(st.session_state.datos_originales)} registros")
+                
+                # Mostrar resumen de filtros aplicados
+                st.info(f"""
+                **📋 Filtros activos:**
+                - Edad: {edad_min}-{edad_max} años
+                - Hemoglobina: {filtro_hb}
+                - Género: {filtro_genero}
+                - Región: {filtro_region}
+                - Altitud: {filtro_altitud[0]}-{filtro_altitud[1]} msnm
+                - Seguimiento: {filtro_seguimiento}
+                - Nutrición: {filtro_nutricion}
+                """)
+                
+                st.rerun()  # Forzar rerun para actualizar visualizaciones
+        
+        # Limpiar filtros
+        if limpiar_filtros:
+            st.session_state.datos_filtrados = st.session_state.datos_originales.copy()
+            st.session_state.filtros_aplicados = False
+            st.success("🔄 Filtros limpiados - Mostrando todos los datos")
+            st.rerun()
+        
+        # Exportar datos filtrados
+        if exportar_filtrado:
+            datos_a_exportar = st.session_state.datos_filtrados if st.session_state.filtros_aplicados else st.session_state.datos_originales
+            
+            if not datos_a_exportar.empty:
+                csv = datos_a_exportar.to_csv(index=False).encode('utf-8')
+                st.download_button(
+                    label="📥 Descargar datos filtrados (CSV)",
+                    data=csv,
+                    file_name=f"anemia_filtrado_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
+                    mime="text/csv"
+                )
+            else:
+                st.warning("No hay datos para exportar")
+        
+        # Generar reporte
+        if generar_reporte:
+            datos_reporte = st.session_state.datos_filtrados if st.session_state.filtros_aplicados else st.session_state.datos_originales
+            
+            with st.expander("📋 **REPORTE COMPLETO CON FILTROS**", expanded=True):
+                st.markdown(f"""
+                ### 📊 REPORTE DE ANÁLISIS - ANEMIA INFANTIL
+                
+                **Fecha generación:** {datetime.now().strftime('%d/%m/%Y %H:%M')}
+                **Total registros analizados:** {len(datos_reporte)}
+                **Filtros aplicados:** {'SÍ' if st.session_state.filtros_aplicados else 'NO'}
+                
+                **📈 ESTADÍSTICAS PRINCIPALES:**
+                - **Edad promedio:** {datos_reporte['edad'].mean() if 'edad' in datos_reporte.columns else 'N/A':.1f} años
+                - **Hemoglobina promedio:** {datos_reporte['hemoglobina_dl1'].mean() if 'hemoglobina_dl1' in datos_reporte.columns else 'N/A':.1f} g/dL
+                - **Casos en seguimiento:** {len(datos_reporte[datos_reporte['en_seguimiento'] == True]) if 'en_seguimiento' in datos_reporte.columns else 'N/A'}
+                
+                **🌍 DISTRIBUCIÓN GEOGRÁFICA:**
+                - **Regiones incluidas:** {datos_reporte['region'].nunique() if 'region' in datos_reporte.columns else 'N/A'}
+                - **Altitud promedio:** {datos_reporte['altitud_msnm'].mean() if 'altitud_msnm' in datos_reporte.columns else 'N/A':.0f} msnm
+                
+                **👦👧 DISTRIBUCIÓN POR GÉNERO:**
+                """)
+                
+                if 'genero' in datos_reporte.columns:
+                    genero_counts = datos_reporte['genero'].value_counts()
+                    for genero, count in genero_counts.items():
+                        porcentaje = (count / len(datos_reporte)) * 100
+                        st.markdown(f"- **{genero}:** {count} pacientes ({porcentaje:.1f}%)")
+                
+                st.markdown("""
+                **🚨 RECOMENDACIONES:**
+                1. Revisar casos críticos identificados
+                2. Implementar seguimiento para casos prioritarios
+                3. Generar alertas para regiones de alto riesgo
+                4. Programar controles periódicos
+                """)
+        
+        # Determinar qué datos usar para las visualizaciones
+        if st.session_state.filtros_aplicados and st.session_state.datos_filtrados is not None:
+            datos_visualizacion = st.session_state.datos_filtrados.copy()
+            st.info(f"📊 **Visualizando {len(datos_visualizacion)} registros filtrados**")
+        else:
+            datos_visualizacion = datos_analisis.copy()
 # ==================================================
 # PESTAÑA 4: EVALUACIÓN NUTRICIONAL
 # ==================================================
