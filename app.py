@@ -1926,7 +1926,7 @@ with tab3:
                 <p>Riesgo por región</p>
                 <small>Comparativa regional</small>
             </div>
-            ""', unsafe_allow_html=True)
+            """, unsafe_allow_html=True)
         
         with col_feat4:
             st.markdown("""
