@@ -1196,7 +1196,7 @@ with tab3:
     if 'filtros_aplicados' not in st.session_state:
         st.session_state.filtros_aplicados = False
     if 'analisis_iniciado' not in st.session_state:
-        st.session_state.analisis_iniciado = False  # NUEVO: Controlar si el análisis fue iniciado
+        st.session_state.analisis_iniciado = False  # Controlar si el análisis fue iniciado
     
     # ========== PANTALLA DE INICIO (SOLO SI NO SE HA INICIADO ANÁLISIS) ==========
     if not st.session_state.analisis_iniciado:
@@ -1350,7 +1350,7 @@ with tab3:
                     max_value=5,
                     value=(0, 5),
                     help="Filtrar por rango de edad",
-                    key="filtro_edad"  # IMPORTANTE: Añadir key único
+                    key="filtro_edad"
                 )
             
             with col_f2:
@@ -1593,9 +1593,35 @@ with tab3:
             else:
                 st.warning("No hay datos para exportar")
         
-        # Generar reporte
+        # Generar reporte (CÓDIGO CORREGIDO)
         if generar_reporte:
             datos_reporte = st.session_state.datos_filtrados if st.session_state.filtros_aplicados else st.session_state.datos_originales
+            
+            # Calcular estadísticas ANTES del string f-formatted
+            if 'edad' in datos_reporte.columns and not datos_reporte['edad'].empty:
+                edad_promedio = f"{datos_reporte['edad'].mean():.1f}"
+            else:
+                edad_promedio = 'N/A'
+            
+            if 'hemoglobina_dl1' in datos_reporte.columns and not datos_reporte['hemoglobina_dl1'].empty:
+                hemoglobina_promedio = f"{datos_reporte['hemoglobina_dl1'].mean():.1f}"
+            else:
+                hemoglobina_promedio = 'N/A'
+            
+            if 'en_seguimiento' in datos_reporte.columns:
+                casos_seguimiento = len(datos_reporte[datos_reporte['en_seguimiento'] == True])
+            else:
+                casos_seguimiento = 'N/A'
+            
+            if 'region' in datos_reporte.columns and not datos_reporte['region'].empty:
+                regiones_incluidas = datos_reporte['region'].nunique()
+            else:
+                regiones_incluidas = 'N/A'
+            
+            if 'altitud_msnm' in datos_reporte.columns and not datos_reporte['altitud_msnm'].empty:
+                altitud_promedio = f"{datos_reporte['altitud_msnm'].mean():.0f}"
+            else:
+                altitud_promedio = 'N/A'
             
             with st.expander("📋 **REPORTE COMPLETO CON FILTROS**", expanded=True):
                 st.markdown(f"""
@@ -1606,18 +1632,18 @@ with tab3:
                 **Filtros aplicados:** {'SÍ' if st.session_state.filtros_aplicados else 'NO'}
                 
                 **📈 ESTADÍSTICAS PRINCIPALES:**
-                - **Edad promedio:** {datos_reporte['edad'].mean() if 'edad' in datos_reporte.columns else 'N/A':.1f} años
-                - **Hemoglobina promedio:** {datos_reporte['hemoglobina_dl1'].mean() if 'hemoglobina_dl1' in datos_reporte.columns else 'N/A':.1f} g/dL
-                - **Casos en seguimiento:** {len(datos_reporte[datos_reporte['en_seguimiento'] == True]) if 'en_seguimiento' in datos_reporte.columns else 'N/A'}
+                - **Edad promedio:** {edad_promedio} años
+                - **Hemoglobina promedio:** {hemoglobina_promedio} g/dL
+                - **Casos en seguimiento:** {casos_seguimiento}
                 
                 **🌍 DISTRIBUCIÓN GEOGRÁFICA:**
-                - **Regiones incluidas:** {datos_reporte['region'].nunique() if 'region' in datos_reporte.columns else 'N/A'}
-                - **Altitud promedio:** {datos_reporte['altitud_msnm'].mean() if 'altitud_msnm' in datos_reporte.columns else 'N/A':.0f} msnm
+                - **Regiones incluidas:** {regiones_incluidas}
+                - **Altitud promedio:** {altitud_promedio} msnm
                 
                 **👦👧 DISTRIBUCIÓN POR GÉNERO:**
                 """)
                 
-                if 'genero' in datos_reporte.columns:
+                if 'genero' in datos_reporte.columns and not datos_reporte['genero'].empty:
                     genero_counts = datos_reporte['genero'].value_counts()
                     for genero, count in genero_counts.items():
                         porcentaje = (count / len(datos_reporte)) * 100
@@ -1637,6 +1663,362 @@ with tab3:
             st.info(f"📊 **Visualizando {len(datos_visualizacion)} registros filtrados**")
         else:
             datos_visualizacion = datos_analisis.copy()
+        
+        # ========== SECCIÓN 1: FORMULARIO - RIESGO POR GÉNERO ==========
+        st.markdown("## 📋 **1. Formulario: Riesgo de Anemia por Género**")
+        
+        col_form1, col_form2 = st.columns([2, 1])
+        
+        with col_form1:
+            if 'genero' in datos_visualizacion.columns:
+                # Procesar datos de género
+                genero_counts = datos_visualizacion['genero'].value_counts().reset_index()
+                genero_counts.columns = ['Genero', 'Cantidad']
+                
+                # Normalizar nombres
+                genero_mapping = {'M': 'Niños 👦', 'F': 'Niñas 👧', 'Masculino': 'Niños 👦', 'Femenino': 'Niñas 👧'}
+                genero_counts['Genero'] = genero_counts['Genero'].map(lambda x: genero_mapping.get(x, x))
+                
+                # Gráfico avanzado de género
+                fig_genero = px.pie(
+                    genero_counts,
+                    values='Cantidad',
+                    names='Genero',
+                    title='<b>Distribución por Género</b>',
+                    color='Genero',
+                    color_discrete_sequence=['#3498db', '#e74c3c'],
+                    hole=0.5,
+                    height=350
+                )
+                
+                fig_genero.update_traces(
+                    textposition='inside',
+                    textinfo='percent+label+value',
+                    marker=dict(line=dict(color='white', width=2))
+                )
+                
+                st.plotly_chart(fig_genero, use_container_width=True)
+        
+        with col_form2:
+            st.markdown("### 📊 Estadísticas Detalladas")
+            
+            if 'genero' in datos_visualizacion.columns and 'hemoglobina_dl1' in datos_visualizacion.columns:
+                # Calcular riesgos por género
+                for genero_label, genero_codes in [('Niños 👦', ['M', 'Masculino']), ('Niñas 👧', ['F', 'Femenino'])]:
+                    data_genero = datos_visualizacion[datos_visualizacion['genero'].isin(genero_codes)]
+                    if len(data_genero) > 0:
+                        # Calcular hemoglobina ajustada
+                        riesgo_count = 0
+                        for _, row in data_genero.iterrows():
+                            hb_medida = row.get('hemoglobina_dl1', 0)
+                            altitud = row.get('altitud_msnm', 0)
+                            ajuste = obtener_ajuste_hemoglobina(altitud)
+                            hb_ajustada = hb_medida + ajuste
+                            
+                            # Clasificar según edad
+                            edad_meses = row.get('edad', 0) * 12  # Convertir años a meses
+                            clasificacion, _, _ = clasificar_anemia(hb_ajustada, edad_meses)
+                            
+                            if clasificacion in ["ANEMIA LEVE", "ANEMIA MODERADA", "ANEMIA SEVERA"]:
+                                riesgo_count += 1
+                        
+                        riesgo = (riesgo_count / len(data_genero)) * 100 if len(data_genero) > 0 else 0
+                        
+                        # Determinar color
+                        if riesgo > 30:
+                            icon = "🔴"
+                        elif riesgo > 15:
+                            icon = "🟡"
+                        else:
+                            icon = "🟢"
+                        
+                        st.markdown(f"""
+                        <div style='background-color: #f8f9fa; padding: 15px; border-radius: 10px; border-left: 4px solid {icon=="🔴" and "#dc3545" or icon=="🟡" and "#ffc107" or "#28a745"}; margin: 10px 0;'>
+                            <h4 style='margin: 0;'>{icon} {genero_label}</h4>
+                            <p style='margin: 5px 0; font-size: 1.5rem; font-weight: bold;'>{len(data_genero)} niños</p>
+                            <p style='margin: 0; color: {icon=="🔴" and "#dc3545" or icon=="🟡" and "#856404" or "#155724"}'>
+                                <b>{riesgo:.1f}%</b> riesgo de anemia
+                            </p>
+                        </div>
+                        """, unsafe_allow_html=True)
+        
+        # ========== SECCIÓN 2: MONITOREO - RIESGO POR ALTITUD ==========
+        st.markdown("## 📊 **2. Monitoreo: Riesgo de Anemia por Altitud**")
+        
+        # Usar datos reales de altitud
+        if 'altitud_msnm' in datos_visualizacion.columns:
+            datos_visualizacion['altitud'] = datos_visualizacion['altitud_msnm']
+        elif 'altitud' not in datos_visualizacion.columns:
+            # Simular datos si no existen
+            altitudes = [500, 1000, 1500, 2000, 2500, 3000, 3500, 4000]
+            datos_visualizacion['altitud'] = np.random.choice(altitudes, len(datos_visualizacion))
+        
+        col_mon1, col_mon2 = st.columns([3, 1])
+        
+        with col_mon1:
+            # Crear rangos de altitud
+            bins = [0, 500, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500]
+            labels = ['0-500', '500-1000', '1000-1500', '1500-2000', 
+                     '2000-2500', '2500-3000', '3000-3500', '3500-4000', '4000+']
+            
+            datos_visualizacion['rango_altitud'] = pd.cut(datos_visualizacion['altitud'], bins=bins, labels=labels, right=False)
+            
+            # Calcular riesgo por altitud
+            riesgo_altitud_data = []
+            for rango in labels:
+                data_rango = datos_visualizacion[datos_visualizacion['rango_altitud'] == rango]
+                if len(data_rango) > 0:
+                    # Calcular porcentaje con anemia
+                    riesgo_count = 0
+                    for _, row in data_rango.iterrows():
+                        hb_medida = row.get('hemoglobina_dl1', 0)
+                        altitud = row.get('altitud', 0)
+                        ajuste = obtener_ajuste_hemoglobina(altitud)
+                        hb_ajustada = hb_medida + ajuste
+                        edad_meses = row.get('edad', 0) * 12
+                        clasificacion, _, _ = clasificar_anemia(hb_ajustada, edad_meses)
+                        
+                        if clasificacion in ["ANEMIA LEVE", "ANEMIA MODERADA", "ANEMIA SEVERA"]:
+                            riesgo_count += 1
+                    
+                    riesgo = (riesgo_count / len(data_rango)) * 100 if len(data_rango) > 0 else 0
+                    riesgo_altitud_data.append({'Altitud': rango, '% Riesgo': riesgo, 'Casos': len(data_rango)})
+                else:
+                    riesgo_altitud_data.append({'Altitud': rango, '% Riesgo': 0, 'Casos': 0})
+            
+            riesgo_df = pd.DataFrame(riesgo_altitud_data)
+            
+            # Gráfico de altitud mejorado
+            fig_altitud = px.bar(
+                riesgo_df,
+                x='Altitud',
+                y='% Riesgo',
+                title='<b>Porcentaje de Riesgo por Altitud (metros sobre el nivel del mar)</b>',
+                color='% Riesgo',
+                color_continuous_scale='RdYlGn_r',
+                text='% Riesgo',
+                height=400
+            )
+            
+            fig_altitud.update_traces(
+                texttemplate='%{text:.1f}%',
+                textposition='outside',
+                marker_line_color='black',
+                marker_line_width=1
+            )
+            
+            # Añadir línea de referencia crítica
+            fig_altitud.add_hline(
+                y=30,
+                line_dash="dash",
+                line_color="red",
+                annotation_text="Umbral Crítico (30%)"
+            )
+            
+            fig_altitud.update_layout(
+                xaxis_title="Rango de Altitud (m)",
+                yaxis_title="% de Niños con Anemia",
+                plot_bgcolor='rgba(0,0,0,0)'
+            )
+            
+            st.plotly_chart(fig_altitud, use_container_width=True)
+        
+        with col_mon2:
+            st.markdown("### 📈 Análisis por Altitud")
+            
+            # Encontrar altitud más riesgosa
+            if len(riesgo_df) > 0:
+                max_idx = riesgo_df['% Riesgo'].idxmax()
+                max_data = riesgo_df.loc[max_idx]
+                
+                st.markdown(f"""
+                <div style='background-color: #fff3cd; padding: 15px; border-radius: 10px; border: 1px solid #ffeaa7; margin-bottom: 15px;'>
+                    <h5 style='color: #856404; margin: 0;'>⚠️ Zona de Mayor Riesgo</h5>
+                    <p style='font-size: 1.8rem; font-weight: bold; margin: 5px 0; color: #dc3545;'>{max_data['Altitud']} m</p>
+                    <p style='margin: 0;'>{max_data['% Riesgo']:.1f}% de riesgo</p>
+                    <p style='margin: 0; font-size: 0.9rem; color: #666;'>{max_data['Casos']} casos analizados</p>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            # Recomendaciones específicas
+            with st.expander("📋 Recomendaciones por Altitud"):
+                st.markdown("""
+                **Para altitud < 1500m:**
+                - Control trimestral
+                - Suplementación preventiva
+                
+                **Para altitud 1500-3000m:**
+                - Control mensual
+                - Suplementación obligatoria
+                - Educación nutricional
+                
+                **Para altitud > 3000m:**
+                - Control quincenal
+                - Suplementación intensiva
+                - Derivación especializada
+                """)
+        
+        # ========== SECCIÓN 3: ANÁLISIS - RIESGO POR REGIÓN ==========
+        st.markdown("## 📍 **3. Análisis: Riesgo de Anemia por Región**")
+        
+        if 'region' in datos_visualizacion.columns:
+            # Calcular estadísticas por región
+            region_stats = []
+            for region in datos_visualizacion['region'].dropna().unique():
+                data_region = datos_visualizacion[datos_visualizacion['region'] == region]
+                total = len(data_region)
+                
+                if total > 0:
+                    # Calcular casos con anemia
+                    casos_anemia = 0
+                    for _, row in data_region.iterrows():
+                        hb_medida = row.get('hemoglobina_dl1', 0)
+                        altitud = row.get('altitud_msnm', row.get('altitud', 0))
+                        ajuste = obtener_ajuste_hemoglobina(altitud)
+                        hb_ajustada = hb_medida + ajuste
+                        edad_meses = row.get('edad', 0) * 12
+                        clasificacion, _, _ = clasificar_anemia(hb_ajustada, edad_meses)
+                        
+                        if clasificacion in ["ANEMIA LEVE", "ANEMIA MODERADA", "ANEMIA SEVERA"]:
+                            casos_anemia += 1
+                    
+                    riesgo = (casos_anemia / total) * 100
+                    
+                    region_stats.append({
+                        'Región': region,
+                        'Total': total,
+                        'Casos Anemia': casos_anemia,
+                        '% Riesgo': riesgo
+                    })
+            
+            if region_stats:
+                region_df = pd.DataFrame(region_stats).sort_values('% Riesgo', ascending=False)
+                
+                col_ana1, col_ana2 = st.columns([3, 1])
+                
+                with col_ana1:
+                    # Mapa de calor por región
+                    fig_region = px.bar(
+                        region_df.head(15),
+                        y='Región',
+                        x='% Riesgo',
+                        title='<b>Regiones con Mayor Riesgo de Anemia</b>',
+                        color='% Riesgo',
+                        color_continuous_scale='Reds',
+                        orientation='h',
+                        text='% Riesgo',
+                        height=500
+                    )
+                    
+                    fig_region.update_traces(
+                        texttemplate='%{text:.1f}%',
+                        textposition='outside',
+                        marker_line_color='darkred',
+                        marker_line_width=1
+                    )
+                    
+                    fig_region.update_layout(
+                        yaxis={'categoryorder': 'total ascending'},
+                        xaxis_title="% de Riesgo de Anemia",
+                        yaxis_title="Región"
+                    )
+                    
+                    st.plotly_chart(fig_region, use_container_width=True)
+                
+                with col_ana2:
+                    st.markdown("### 🏆 Ranking Regional")
+                    
+                    # Mostrar top 5
+                    for i, (_, row) in enumerate(region_df.head(5).iterrows(), 1):
+                        if i == 1:
+                            medal = "🥇"
+                            bg_color = "#FFD700"
+                        elif i == 2:
+                            medal = "🥈"
+                            bg_color = "#C0C0C0"
+                        elif i == 3:
+                            medal = "🥉"
+                            bg_color = "#CD7F32"
+                        else:
+                            medal = f"{i}."
+                            bg_color = "#f8f9fa"
+                        
+                        st.markdown(f"""
+                        <div style='background-color: {bg_color}; padding: 10px; border-radius: 8px; margin: 5px 0;'>
+                            <b>{medal} {row['Región']}</b><br>
+                            <span style='font-size: 0.9rem;'>{row['% Riesgo']:.1f}% riesgo</span>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    
+                    # Selector interactivo
+                    region_seleccionada = st.selectbox(
+                        "🔍 Ver detalles de región:",
+                        region_df['Región'].tolist(),
+                        key="selector_region"
+                    )
+                    
+                    if region_seleccionada:
+                        region_data = region_df[region_df['Región'] == region_seleccionada].iloc[0]
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            st.metric("Total casos", region_data['Total'])
+                        with col2:
+                            st.metric("% Riesgo", f"{region_data['% Riesgo']:.1f}%")
+        
+        # ========== TABLA DE DATOS INTERACTIVA CON FILTROS ==========
+        st.markdown("---")
+        with st.expander(f"🗂️ **Ver Datos Detallados ({len(datos_visualizacion)} registros)**", expanded=False):
+            
+            # Configurar columnas para mejor visualización
+            column_config = {}
+            if 'hemoglobina_dl1' in datos_visualizacion.columns:
+                column_config['hemoglobina_dl1'] = st.column_config.ProgressColumn(
+                    "Hemoglobina",
+                    help="Nivel de hemoglobina en g/dL",
+                    format="%.2f g/dL",
+                    min_value=5,
+                    max_value=20
+                )
+            
+            if 'edad' in datos_visualizacion.columns:
+                column_config['edad'] = st.column_config.NumberColumn(
+                    "Edad",
+                    help="Edad en años",
+                    format="%.1f años",
+                    min_value=0,
+                    max_value=5
+                )
+            
+            if 'altitud_msnm' in datos_visualizacion.columns:
+                column_config['altitud_msnm'] = st.column_config.NumberColumn(
+                    "Altitud",
+                    help="Altitud en metros",
+                    format="%d msnm"
+                )
+            
+            # Mostrar tabla
+            st.dataframe(
+                datos_visualizacion,
+                use_container_width=True,
+                height=400,
+                column_config=column_config,
+                hide_index=True
+            )
+            
+            # Botón de descarga
+            csv = datos_visualizacion.to_csv(index=False).encode('utf-8')
+            st.download_button(
+                label="📥 Descargar Datos Actuales (CSV)",
+                data=csv,
+                file_name=f"anemia_infantil_filtrado_{datetime.now().strftime('%Y%m%d')}.csv",
+                mime="text/csv",
+                icon="💾"
+            )
+    
+    else:
+        # Si no se ha iniciado análisis, solo mostrar botón
+        if not st.session_state.analisis_iniciado:
+            st.info("👆 Presiona el botón 'INICIAR ANÁLISIS COMPLETO' para comenzar")
 # ==================================================
 # PESTAÑA 4: EVALUACIÓN NUTRICIONAL
 # ==================================================
