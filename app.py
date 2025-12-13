@@ -1678,7 +1678,8 @@ with tab3:
                     use_container_width=True,
                     help="Carga y analiza los datos actuales de anemia"):
             with st.spinner("Analizando datos de anemia infantil..."):
-                datos_completos = obtener_datos_supabase()
+                # Asegúrate de tener esta función definida
+                datos_completos = obtener_datos_supabase()  # <-- Esta función debe estar definida
                 
                 if not datos_completos.empty:
                     st.session_state.datos_estadisticas = datos_completos
@@ -1793,14 +1794,26 @@ with tab3:
             if 'genero' in datos.columns:
                 genero_counts = datos['genero'].value_counts()
                 
+                # Mapear géneros a nombres más descriptivos
+                def mapear_genero(g):
+                    if g in ['M', 'Masculino', 'MALE', 'V', 'VARON']:
+                        return 'Niños'
+                    elif g in ['F', 'Femenino', 'FEMALE', 'MUJER']:
+                        return 'Niñas'
+                    else:
+                        return 'Otro'
+                
+                genero_mapeado = genero_counts.index.map(mapear_genero)
+                
                 # Gráfico circular elegante
-                fig_genero = px.pie(
+                import plotly.graph_objects as go
+                
+                fig_genero = go.Figure(data=[go.Pie(
+                    labels=genero_mapeado,
                     values=genero_counts.values,
-                    names=genero_counts.index.map({'M': 'Niños', 'F': 'Niñas', 'Masculino': 'Niños', 'Femenino': 'Niñas'}).fillna('Otro'),
-                    title='',
-                    color_discrete_sequence=['#64b5f6', '#f48fb1', '#ce93d8'],
-                    hole=0.5
-                )
+                    hole=0.5,
+                    marker_colors=['#64b5f6', '#f48fb1', '#ce93d8']
+                )])
                 
                 fig_genero.update_layout(
                     showlegend=True,
@@ -1838,15 +1851,13 @@ with tab3:
                 
                 altitud_counts = datos['categoria_altitud'].value_counts().sort_index()
                 
-                fig_altitud = px.bar(
+                fig_altitud = go.Figure(data=[go.Bar(
                     x=altitud_counts.index,
                     y=altitud_counts.values,
-                    title='',
-                    color=altitud_counts.values,
-                    color_continuous_scale='Blues',
+                    marker_color=altitud_counts.values,
                     text=altitud_counts.values,
-                    height=300
-                )
+                    textposition='outside'
+                )])
                 
                 fig_altitud.update_layout(
                     xaxis_title="Altitud (msnm)",
@@ -1856,12 +1867,6 @@ with tab3:
                     paper_bgcolor='rgba(0,0,0,0)',
                     plot_bgcolor='rgba(0,0,0,0)',
                     font=dict(color="#2a5298")
-                )
-                
-                fig_altitud.update_traces(
-                    texttemplate='%{text}',
-                    textposition='outside',
-                    marker=dict(line=dict(color='#e3f2fd', width=1))
                 )
                 
                 st.plotly_chart(fig_altitud, use_container_width=True, config={'displayModeBar': False})
@@ -1878,16 +1883,14 @@ with tab3:
             if 'region' in datos.columns:
                 region_counts = datos['region'].value_counts().head(8)
                 
-                fig_region = px.bar(
+                fig_region = go.Figure(data=[go.Bar(
                     y=region_counts.index,
                     x=region_counts.values,
-                    title='',
                     orientation='h',
-                    color=region_counts.values,
-                    color_continuous_scale=['#bbdefb', '#90caf9', '#64b5f6', '#42a5f5', '#2196f3', '#1e88e5', '#1976d2', '#1565c0'],
+                    marker_color=region_counts.values,
                     text=region_counts.values,
-                    height=300
-                )
+                    textposition='outside'
+                )])
                 
                 fig_region.update_layout(
                     yaxis_title="",
@@ -1897,12 +1900,6 @@ with tab3:
                     paper_bgcolor='rgba(0,0,0,0)',
                     plot_bgcolor='rgba(0,0,0,0)',
                     font=dict(color="#2a5298")
-                )
-                
-                fig_region.update_traces(
-                    texttemplate='%{text}',
-                    textposition='outside',
-                    marker=dict(line=dict(color='#e3f2fd', width=1))
                 )
                 
                 st.plotly_chart(fig_region, use_container_width=True, config={'displayModeBar': False})
@@ -1926,52 +1923,47 @@ with tab3:
             
             if 'hemoglobina_dl1' in datos.columns:
                 # Histograma elegante
-                fig_hb = px.histogram(
-                    datos,
-                    x='hemoglobina_dl1',
-                    nbins=25,
-                    title='',
-                    color_discrete_sequence=['#2196f3'],
-                    opacity=0.8,
-                    height=350
-                )
+                fig_hb = go.Figure(data=[go.Histogram(
+                    x=datos['hemoglobina_dl1'],
+                    nbinsx=25,
+                    marker_color='#2196f3',
+                    opacity=0.8
+                )])
                 
-                # Añadir zonas con colores pastel
+                # Añadir zonas con colores pastel (rectángulos)
                 fig_hb.add_vrect(
                     x0=0, x1=9.0,
                     fillcolor="#ffcdd2", opacity=0.3,
-                    layer="below", line_width=0,
-                    annotation_text="<b>SEVERA</b>", 
-                    annotation_position="top",
-                    annotation_font_color="#d32f2f"
+                    layer="below", line_width=0
                 )
                 
                 fig_hb.add_vrect(
                     x0=9.0, x1=10.0,
                     fillcolor="#ffecb3", opacity=0.3,
-                    layer="below", line_width=0,
-                    annotation_text="<b>MODERADA</b>", 
-                    annotation_position="top",
-                    annotation_font_color="#ff8f00"
+                    layer="below", line_width=0
                 )
                 
                 fig_hb.add_vrect(
                     x0=10.0, x1=11.0,
                     fillcolor="#fff9c4", opacity=0.3,
-                    layer="below", line_width=0,
-                    annotation_text="<b>LEVE</b>", 
-                    annotation_position="top",
-                    annotation_font_color="#f9a825"
+                    layer="below", line_width=0
                 )
                 
                 fig_hb.add_vrect(
                     x0=11.0, x1=20,
                     fillcolor="#c8e6c9", opacity=0.3,
-                    layer="below", line_width=0,
-                    annotation_text="<b>NORMAL</b>", 
-                    annotation_position="top",
-                    annotation_font_color="#388e3c"
+                    layer="below", line_width=0
                 )
+                
+                # Añadir anotaciones
+                fig_hb.add_annotation(x=4.5, y=0, text="<b>SEVERA</b>", showarrow=False, 
+                                    font=dict(color="#d32f2f", size=12))
+                fig_hb.add_annotation(x=9.5, y=0, text="<b>MODERADA</b>", showarrow=False,
+                                    font=dict(color="#ff8f00", size=12))
+                fig_hb.add_annotation(x=10.5, y=0, text="<b>LEVE</b>", showarrow=False,
+                                    font=dict(color="#f9a825", size=12))
+                fig_hb.add_annotation(x=15.5, y=0, text="<b>NORMAL</b>", showarrow=False,
+                                    font=dict(color="#388e3c", size=12))
                 
                 fig_hb.update_layout(
                     xaxis_title="Hemoglobina (g/dL)",
@@ -1980,7 +1972,8 @@ with tab3:
                     margin=dict(t=50, b=50, l=50, r=50),
                     paper_bgcolor='rgba(0,0,0,0)',
                     plot_bgcolor='rgba(0,0,0,0)',
-                    font=dict(color="#2a5298")
+                    font=dict(color="#2a5298"),
+                    height=350
                 )
                 
                 fig_hb.update_traces(
@@ -2032,24 +2025,33 @@ with tab3:
                 
                 st.plotly_chart(fig_prevalencia, use_container_width=True, config={'displayModeBar': False})
                 
+                # Calcular porcentajes solo si total > 0
+                if total > 0:
+                    p_normal = (sin_anemia/total*100)
+                    p_leve = (leve/total*100)
+                    p_moderada = (moderada/total*100)
+                    p_severa = (severa/total*100)
+                else:
+                    p_normal = p_leve = p_moderada = p_severa = 0
+                
                 # Estadísticas rápidas
-                st.markdown("""
+                st.markdown(f"""
                 <div style="margin-top: 1rem;">
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                         <div style="background: #e8f5e9; padding: 10px; border-radius: 8px;">
-                            <div style="font-size: 1.2rem; color: #2e7d32; font-weight: 600;">{(sin_anemia/total*100):.1f}%</div>
+                            <div style="font-size: 1.2rem; color: #2e7d32; font-weight: 600;">{p_normal:.1f}%</div>
                             <div style="font-size: 0.8rem; color: #546e7a;">Normal</div>
                         </div>
                         <div style="background: #fffde7; padding: 10px; border-radius: 8px;">
-                            <div style="font-size: 1.2rem; color: #f9a825; font-weight: 600;">{(leve/total*100):.1f}%</div>
+                            <div style="font-size: 1.2rem; color: #f9a825; font-weight: 600;">{p_leve:.1f}%</div>
                             <div style="font-size: 0.8rem; color: #546e7a;">Leve</div>
                         </div>
                         <div style="background: #fff3e0; padding: 10px; border-radius: 8px;">
-                            <div style="font-size: 1.2rem; color: #ef6c00; font-weight: 600;">{(moderada/total*100):.1f}%</div>
+                            <div style="font-size: 1.2rem; color: #ef6c00; font-weight: 600;">{p_moderada:.1f}%</div>
                             <div style="font-size: 0.8rem; color: #546e7a;">Moderada</div>
                         </div>
                         <div style="background: #ffebee; padding: 10px; border-radius: 8px;">
-                            <div style="font-size: 1.2rem; color: #d32f2f; font-weight: 600;">{(severa/total*100):.1f}%</div>
+                            <div style="font-size: 1.2rem; color: #d32f2f; font-weight: 600;">{p_severa:.1f}%</div>
                             <div style="font-size: 0.8rem; color: #546e7a;">Severa</div>
                         </div>
                     </div>
@@ -2070,38 +2072,38 @@ with tab3:
         
         with col_edad1:
             if 'edad_meses' in datos.columns:
-                # Filtrar menores de 5 años
+                # Filtrar menores de 5 años (60 meses)
                 menores_5 = datos[datos['edad_meses'] < 60]
                 
                 if not menores_5.empty:
                     # Crear histograma por edad
-                    fig_menores = px.histogram(
-                        menores_5,
-                        x='edad_meses',
-                        nbins=12,
-                        title='Distribución por Edad (0-5 años)',
-                        color_discrete_sequence=['#64b5f6'],
-                        height=300
-                    )
+                    fig_menores = go.Figure(data=[go.Histogram(
+                        x=menores_5['edad_meses'],
+                        nbinsx=12,
+                        marker_color='#64b5f6'
+                    )])
                     
                     fig_menores.update_layout(
+                        title=dict(text='Distribución por Edad (0-5 años)', font=dict(size=14)),
                         xaxis_title="Edad (meses)",
                         yaxis_title="Número de Niños",
                         showlegend=False,
                         margin=dict(t=50, b=50, l=50, r=50),
                         paper_bgcolor='rgba(0,0,0,0)',
                         plot_bgcolor='rgba(0,0,0,0)',
-                        font=dict(color="#2a5298")
+                        font=dict(color="#2a5298"),
+                        height=300
                     )
                     
                     st.plotly_chart(fig_menores, use_container_width=True)
         
         with col_edad2:
             if 'edad_meses' in datos.columns:
+                total_pacientes = len(datos)
                 menores_5 = len(datos[datos['edad_meses'] < 60])
-                mayores_5 = len(datos) - menores_5
+                mayores_5 = total_pacientes - menores_5
                 
-                porcentaje_menores = (menores_5 / len(datos) * 100) if len(datos) > 0 else 0
+                porcentaje_menores = (menores_5 / total_pacientes * 100) if total_pacientes > 0 else 0
                 
                 st.markdown(f"""
                 <div class="highlight-box">
@@ -2116,7 +2118,7 @@ with tab3:
                             <span style="font-weight: 600;">{menores_5}</span>
                         </div>
                         <div style="display: flex; justify-content: space-between; margin: 5px 0;">
-                            <span>👦 >5 años:</span>
+                            <span>👦 ≥5 años:</span>
                             <span style="font-weight: 600;">{mayores_5}</span>
                         </div>
                     </div>
@@ -2150,6 +2152,11 @@ with tab3:
             with col_exp2:
                 if st.button("📋 **Generar Resumen Ejecutivo**", use_container_width=True, type="secondary"):
                     with st.spinner("Generando resumen ejecutivo..."):
+                        # Verificar que existan las variables necesarias
+                        hb_promedio = datos['hemoglobina_dl1'].mean() if 'hemoglobina_dl1' in datos.columns else 0
+                        edad_promedio = (datos['edad_meses'].mean()/12) if 'edad_meses' in datos.columns else 0
+                        seguimiento = datos['en_seguimiento'].sum() if 'en_seguimiento' in datos.columns else 0
+                        
                         # Crear resumen HTML
                         resumen_html = f"""
                         <div style="font-family: Arial, sans-serif; color: #2a5298;">
@@ -2159,22 +2166,22 @@ with tab3:
                             <h3>📈 Métricas Principales</h3>
                             <ul>
                                 <li>Total de pacientes monitoreados: <strong>{total_pacientes}</strong></li>
-                                <li>Hemoglobina promedio: <strong>{datos['hemoglobina_dl1'].mean():.1f} g/dL</strong></li>
-                                <li>Edad promedio: <strong>{(datos['edad_meses'].mean()/12):.1f} años</strong></li>
-                                <li>Pacientes en seguimiento activo: <strong>{datos['en_seguimiento'].sum()}</strong></li>
+                                <li>Hemoglobina promedio: <strong>{hb_promedio:.1f} g/dL</strong></li>
+                                <li>Edad promedio: <strong>{edad_promedio:.1f} años</strong></li>
+                                <li>Pacientes en seguimiento activo: <strong>{seguimiento}</strong></li>
                             </ul>
                             
                             <h3>🩺 Prevalencia de Anemia</h3>
                             <ul>
-                                <li>Sin anemia: <strong>{sin_anemia}</strong> ({(sin_anemia/total*100):.1f}%)</li>
-                                <li>Anemia leve: <strong>{leve}</strong> ({(leve/total*100):.1f}%)</li>
-                                <li>Anemia moderada: <strong>{moderada}</strong> ({(moderada/total*100):.1f}%)</li>
-                                <li>Anemia severa: <strong>{severa}</strong> ({(severa/total*100):.1f}%)</li>
+                                <li>Sin anemia: <strong>{sin_anemia}</strong> ({p_normal:.1f}%)</li>
+                                <li>Anemia leve: <strong>{leve}</strong> ({p_leve:.1f}%)</li>
+                                <li>Anemia moderada: <strong>{moderada}</strong> ({p_moderada:.1f}%)</li>
+                                <li>Anemia severa: <strong>{severa}</strong> ({p_severa:.1f}%)</li>
                             </ul>
                             
                             <h3>🎯 Población Objetivo (<5 años)</h3>
                             <ul>
-                                <li>Niños menores de 5 años: <strong>{menores_5}</strong> ({(porcentaje_menores):.1f}%)</li>
+                                <li>Niños menores de 5 años: <strong>{menores_5}</strong> ({porcentaje_menores:.1f}%)</li>
                             </ul>
                         </div>
                         """
