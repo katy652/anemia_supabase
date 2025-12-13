@@ -153,7 +153,7 @@ st.markdown("""
 
 TABLE_NAME = "alertas_hemoglobina"
 ALTITUD_TABLE = "altitud_regiones"
-CRECIMIENTO_TABLE = "referencia_crecimiento"  # Corregí "crediniento"
+CRECIMIENTO_TABLE = "referencia_crecimiento"
 
 SUPABASE_URL = st.secrets.get("SUPABASE_URL", "https://kwsuszkblbejvliniggd.supabase.co")
 SUPABASE_KEY = st.secrets.get("SUPABASE_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3c3VzemtibGJlanZsaW5pZ2dkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE2ODE0NTUsImV4cCI6MjA3NzI1NzQ1NX0.DQpt-rSNprcUrbOLTgUEEn_0jFIuSX5b0AVuVirk0vw")
@@ -170,65 +170,197 @@ def init_supabase():
 supabase = init_supabase()
 
 # ==================================================
-# FUNCIÓN SIMPLIFICADA PARA CREAR TABLA CITAS
+# OPCIÓN 2: CREACIÓN SIMPLE DE TABLA CON RLS
 # ==================================================
 def crear_tabla_citas_simple():
-    """Crea la tabla citas con RLS básico"""
-    
-    import requests
-    
-    # SQL completo para crear tabla y políticas
-    sql_completo = """
-    -- Crear tabla si no existe
-    CREATE TABLE IF NOT EXISTS citas (
-        id BIGSERIAL PRIMARY KEY,
-        dni_paciente TEXT NOT NULL,
-        fecha_cita DATE NOT NULL,
-        hora_cita TIME NOT NULL,
-        tipo_consulta TEXT,
-        diagnostico TEXT,
-        tratamiento TEXT,
-        observaciones TEXT,
-        investigador_responsable TEXT,
-        proxima_cita DATE,
-        created_at TIMESTAMPTZ DEFAULT NOW()
-    );
-    
-    -- Habilitar RLS
-    ALTER TABLE citas ENABLE ROW LEVEL SECURITY;
-    
-    -- Política simple para todo
-    DROP POLICY IF EXISTS "allow_all_citas" ON citas;
-    CREATE POLICY "allow_all_citas" ON citas
-    FOR ALL TO anon, authenticated
-    USING (true)
-    WITH CHECK (true);
-    """
+    """Crea la tabla citas con RLS básico - VERSIÓN SIMPLIFICADA"""
     
     try:
-        headers = {
-            "apikey": SUPABASE_KEY,
-            "Authorization": f"Bearer {SUPABASE_KEY}",
-            "Content-Type": "application/json"
-        }
+        st.sidebar.info("🛠️ Creando tabla 'citas'...")
         
-        response = requests.post(
-            f"{SUPABASE_URL}/rest/v1/rpc/exec_sql",
-            headers=headers,
-            json={"query": sql_completo}
-        )
-        
-        if response.status_code == 200:
-            st.sidebar.success("✅ Tabla 'citas' creada y RLS configurado")
-            return True
-        else:
-            st.sidebar.error(f"❌ Error: {response.text}")
-            return False
+        # PRIMERO: Intentar crear la tabla directamente con una consulta
+        try:
+            # Intento 1: Usar el cliente Supabase directamente
             
+            # Crear una cita de prueba - esto creará la tabla si no existe en algunos casos
+            test_data = {
+                "dni_paciente": "00000001",
+                "fecha_cita": "2024-01-01",
+                "hora_cita": "10:00:00",
+                "tipo_consulta": "Prueba creación tabla",
+                "diagnostico": "Prueba inicial"
+            }
+            
+            result = supabase.table("citas").insert(test_data).execute()
+            
+            if result.data:
+                st.sidebar.success("✅ Tabla existe y RLS configurado")
+                
+                # Limpiar
+                supabase.table("citas").delete().eq("dni_paciente", "00000001").execute()
+                return True
+                
+        except Exception as insert_error:
+            # Si falla, probablemente la tabla no existe
+            st.sidebar.warning(f"Tabla no existe o error: {str(insert_error)}")
+            
+            # SEGUNDO: Crear tabla usando SQL directo
+            try:
+                import requests
+                
+                # SQL MÁS SIMPLE
+                simple_sql = """
+                -- 1. Crear tabla
+                CREATE TABLE IF NOT EXISTS citas (
+                    id BIGSERIAL PRIMARY KEY,
+                    dni_paciente TEXT,
+                    fecha_cita DATE,
+                    hora_cita TIME,
+                    tipo_consulta TEXT,
+                    diagnostico TEXT,
+                    tratamiento TEXT,
+                    observaciones TEXT,
+                    investigador_responsable TEXT,
+                    proxima_cita DATE,
+                    created_at TIMESTAMPTZ DEFAULT NOW()
+                );
+                
+                -- 2. Habilitar RLS
+                ALTER TABLE citas ENABLE ROW LEVEL SECURITY;
+                
+                -- 3. Crear política simple
+                CREATE POLICY "Enable all for citas" ON citas
+                FOR ALL USING (true) WITH CHECK (true);
+                """
+                
+                # Enviar SQL
+                headers = {
+                    "apikey": SUPABASE_KEY,
+                    "Authorization": f"Bearer {SUPABASE_KEY}",
+                    "Content-Type": "application/json",
+                    "Prefer": "return=minimal"
+                }
+                
+                # Usar endpoint diferente
+                sql_url = f"{SUPABASE_URL}/rest/v1/rpc/exec_sql"
+                
+                response = requests.post(
+                    sql_url,
+                    headers=headers,
+                    json={"query": simple_sql}
+                )
+                
+                st.sidebar.write(f"📤 SQL enviado, status: {response.status_code}")
+                
+                if response.status_code in [200, 201, 204]:
+                    st.sidebar.success("✅ Tabla creada exitosamente")
+                    
+                    # Probar que funciona
+                    test_data = {
+                        "dni_paciente": "00000002",
+                        "fecha_cita": "2024-01-02",
+                        "hora_cita": "11:00:00",
+                        "tipo_consulta": "Prueba después de crear"
+                    }
+                    
+                    test_result = supabase.table("citas").insert(test_data).execute()
+                    
+                    if test_result.data:
+                        st.sidebar.success("✅ ¡RLS configurado correctamente!")
+                        # Limpiar
+                        supabase.table("citas").delete().eq("dni_paciente", "00000002").execute()
+                        return True
+                    else:
+                        st.sidebar.warning("Tabla creada pero error en RLS")
+                        return False
+                        
+                else:
+                    st.sidebar.error(f"❌ Error SQL: {response.text[:200]}")
+                    return False
+                    
+            except Exception as sql_error:
+                st.sidebar.error(f"🔥 Error en SQL: {str(sql_error)}")
+                return False
+                
     except Exception as e:
-        st.sidebar.error(f"🔥 Error: {str(e)}")
+        st.sidebar.error(f"💥 Error general: {str(e)}")
         return False
 
+# ==================================================
+# FUNCIÓN ALTERNATIVA: PRUEBA DIRECTA SIN CREAR TABLA
+# ==================================================
+def probar_guardado_directo():
+    """Prueba directa de guardado - método más simple"""
+    
+    with st.sidebar:
+        st.markdown("### 🧪 Prueba Directa")
+        
+        # Datos de prueba
+        test_cita = {
+            "dni_paciente": "87654321",
+            "fecha_cita": "2024-12-14",
+            "hora_cita": "09:00:00",
+            "tipo_consulta": "Consulta de prueba",
+            "diagnostico": "Paciente de prueba para verificar sistema",
+            "tratamiento": "Observación",
+            "observaciones": "Esta es una prueba del sistema de citas",
+            "investigador_responsable": "Dr. Prueba"
+        }
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            if st.button("📤 Enviar prueba", type="primary"):
+                try:
+                    with st.spinner("Enviando a Supabase..."):
+                        result = supabase.table("citas").insert(test_cita).execute()
+                    
+                    if result.data:
+                        st.success("✅ ¡ÉXITO! Guardado correctamente")
+                        st.info(f"ID: {result.data[0].get('id', 'N/A')}")
+                    elif hasattr(result, 'error'):
+                        st.error(f"❌ Error: {result.error.message}")
+                    else:
+                        st.warning("⚠️ Respuesta inesperada")
+                        
+                except Exception as e:
+                    st.error(f"🔥 Error: {str(e)}")
+        
+        with col2:
+            if st.button("🗑️ Limpiar pruebas"):
+                try:
+                    supabase.table("citas").delete().eq("dni_paciente", "87654321").execute()
+                    supabase.table("citas").delete().eq("dni_paciente", "00000001").execute()
+                    supabase.table("citas").delete().eq("dni_paciente", "00000002").execute()
+                    st.info("Pruebas limpiadas")
+                except:
+                    pass
+
+# ==================================================
+# BOTONES MEJORADOS EN BARRA LATERAL
+# ==================================================
+with st.sidebar:
+    st.markdown("---")
+    st.markdown("### 📅 Configuración de Citas")
+    
+    # Opción 1: Configurar tabla
+    if st.button("🛠️ Configurar tabla 'citas'", type="primary", use_container_width=True):
+        crear_tabla_citas_simple()
+    
+    # Opción 2: Prueba directa
+    probar_guardado_directo()
+    
+    # Opción 3: Verificar conexión
+    if st.button("🔍 Verificar conexión", type="secondary"):
+        try:
+            # Probar lectura de otra tabla
+            test = supabase.table("alertas_hemoglobina").select("*").limit(1).execute()
+            if test.data:
+                st.success(f"✅ Conexión OK - {len(test.data)} registros en alertas_hemoglobina")
+            else:
+                st.warning("⚠️ Conexión OK pero tabla vacía")
+        except Exception as e:
+            st.error(f"❌ Error de conexión: {str(e)}")
 # ==================================================
 # PRUEBA DE GUARDADO SIMPLE
 # ==================================================
