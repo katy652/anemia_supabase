@@ -18,131 +18,195 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Estilos CSS
+# ==================================================
+# ESTILOS CSS MEJORADOS
+# ==================================================
 st.markdown("""
 <style>
-    .main-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        padding: 2rem;
-        border-radius: 10px;
+    /* TÍTULOS CON MEJOR VISUALIZACIÓN */
+    .main-title {
+        background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+        padding: 2.5rem;
+        border-radius: 15px;
         color: white;
         margin-bottom: 2rem;
-    }
-    .risk-high { 
-        background-color: #ffebee; 
-        border-left: 5px solid #f44336;
-        padding: 1rem;
-        border-radius: 5px;
-        margin: 1rem 0;
-    }
-    .risk-moderate { 
-        background-color: #fff3e0; 
-        border-left: 5px solid #ff9800;
-        padding: 1rem;
-        border-radius: 5px;
-        margin: 1rem 0;
-    }
-    .risk-low { 
-        background-color: #e8f5e8; 
-        border-left: 5px solid #4caf50;
-        padding: 1rem;
-        border-radius: 5px;
-        margin: 1rem 0;
-    }
-    .factor-card { 
-        background: white; 
-        padding: 1.5rem; 
-        border-radius: 10px; 
-        margin-bottom: 1rem;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    .metric-card { 
-        background: white; 
-        padding: 1rem; 
-        border-radius: 8px; 
         text-align: center;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        box-shadow: 0 10px 30px rgba(30, 58, 138, 0.2);
     }
-    .climate-card { 
-        background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%); 
-        color: white; 
-        padding: 1rem;
-        border-radius: 10px;
+    
+    .section-title-blue {
+        color: #1e3a8a;
+        font-size: 1.8rem;
+        font-weight: 700;
+        margin-top: 2rem;
+        margin-bottom: 1rem;
+        padding-bottom: 10px;
+        border-bottom: 3px solid #3b82f6;
+    }
+    
+    .section-title-green {
+        color: #065f46;
+        font-size: 1.8rem;
+        font-weight: 700;
+        margin-top: 2rem;
+        margin-bottom: 1rem;
+        padding-bottom: 10px;
+        border-bottom: 3px solid #10b981;
+    }
+    
+    .section-title-red {
+        color: #7f1d1d;
+        font-size: 1.8rem;
+        font-weight: 700;
+        margin-top: 2rem;
+        margin-bottom: 1rem;
+        padding-bottom: 10px;
+        border-bottom: 3px solid #ef4444;
+    }
+    
+    .section-title-purple {
+        color: #5b21b6;
+        font-size: 1.8rem;
+        font-weight: 700;
+        margin-top: 2rem;
+        margin-bottom: 1rem;
+        padding-bottom: 10px;
+        border-bottom: 3px solid #8b5cf6;
+    }
+    
+    /* TARJETAS DE COLORES */
+    .metric-card-blue {
+        background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+        padding: 1.5rem;
+        border-radius: 12px;
+        border-left: 5px solid #3b82f6;
         margin: 0.5rem 0;
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
     }
-    .altitude-card {
-        background: linear-gradient(135deg, #a29bfe 0%, #6c5ce7 100%);
-        color: white;
-        padding: 1rem;
-        border-radius: 10px;
+    
+    .metric-card-green {
+        background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+        padding: 1.5rem;
+        border-radius: 12px;
+        border-left: 5px solid #10b981;
         margin: 0.5rem 0;
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.1);
     }
-    .nutrition-card {
-        background: linear-gradient(135deg, #00b894 0%, #00a085 100%);
-        color: white;
-        padding: 1rem;
-        border-radius: 10px;
+    
+    .metric-card-red {
+        background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+        padding: 1.5rem;
+        border-radius: 12px;
+        border-left: 5px solid #ef4444;
         margin: 0.5rem 0;
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.1);
     }
+    
+    .metric-card-yellow {
+        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        padding: 1.5rem;
+        border-radius: 12px;
+        border-left: 5px solid #f59e0b;
+        margin: 0.5rem 0;
+        box-shadow: 0 4px 12px rgba(245, 158, 11, 0.1);
+    }
+    
+    .metric-card-purple {
+        background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
+        padding: 1.5rem;
+        border-radius: 12px;
+        border-left: 5px solid #8b5cf6;
+        margin: 0.5rem 0;
+        box-shadow: 0 4px 12px rgba(139, 92, 246, 0.1);
+    }
+    
+    /* NÚMEROS DESTACADOS */
+    .highlight-number {
+        font-size: 2.5rem;
+        font-weight: 800;
+        margin-bottom: 0.5rem;
+    }
+    
+    .highlight-blue { color: #1e40af; }
+    .highlight-green { color: #065f46; }
+    .highlight-red { color: #7f1d1d; }
+    .highlight-yellow { color: #92400e; }
+    .highlight-purple { color: #5b21b6; }
+    
+    /* ETIQUETAS */
+    .metric-label {
+        font-size: 0.9rem;
+        color: #6b7280;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    /* ESTADOS DE ANEMIA */
     .severity-critical {
-        background: linear-gradient(135deg, #ff7675 0%, #d63031 100%);
-        color: white;
-        padding: 1rem;
+        background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+        padding: 1.5rem;
         border-radius: 10px;
-        margin: 0.5rem 0;
+        border-left: 5px solid #dc2626;
+        margin: 1rem 0;
     }
+    
     .severity-moderate {
-        background: linear-gradient(135deg, #fdcb6e 0%, #e17055 100%);
-        color: white;
-        padding: 1rem;
+        background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+        padding: 1.5rem;
         border-radius: 10px;
-        margin: 0.5rem 0;
+        border-left: 5px solid #d97706;
+        margin: 1rem 0;
     }
+    
     .severity-mild {
-        background: linear-gradient(135deg, #a29bfe 0%, #6c5ce7 100%);
-        color: white;
-        padding: 1rem;
-        border-radius: 10px;
-        margin: 0.5rem 0;
-    }
-    .severity-none {
-        background: linear-gradient(135deg, #00b894 0%, #00a085 100%);
-        color: white;
-        padding: 1rem;
-        border-radius: 10px;
-        margin: 0.5rem 0;
-    }
-    .interpretacion-critica {
-        background: linear-gradient(135deg, #ff7675 0%, #d63031 100%);
-        color: white;
+        background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
         padding: 1.5rem;
         border-radius: 10px;
+        border-left: 5px solid #2563eb;
         margin: 1rem 0;
-        border-left: 5px solid #ff4444;
     }
-    .interpretacion-moderada {
-        background: linear-gradient(135deg, #fdcb6e 0%, #e17055 100%);
-        color: white;
+    
+    .severity-normal {
+        background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
         padding: 1.5rem;
         border-radius: 10px;
+        border-left: 5px solid #16a34a;
         margin: 1rem 0;
-        border-left: 5px solid #ffaa00;
     }
-    .interpretacion-leve {
-        background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
-        color: white;
-        padding: 1.5rem;
-        border-radius: 10px;
-        margin: 1rem 0;
-        border-left: 5px solid #44AAFF;
+    
+    /* BOTONES MEJORADOS */
+    .stButton > button {
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
     }
-    .interpretacion-normal {
-        background: linear-gradient(135deg, #00b894 0%, #00a085 100%);
-        color: white;
-        padding: 1.5rem;
+    
+    .stButton > button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+    }
+    
+    /* MEJORAS EN FORMULARIOS */
+    .stTextInput > div > div > input,
+    .stNumberInput > div > div > input,
+    .stSelectbox > div > div > select {
+        border-radius: 8px;
+        border: 2px solid #e5e7eb;
+        transition: border-color 0.3s;
+    }
+    
+    .stTextInput > div > div > input:focus,
+    .stNumberInput > div > div > input:focus,
+    .stSelectbox > div > div > select:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    
+    /* TABLAS MEJORADAS */
+    .dataframe {
         border-radius: 10px;
-        margin: 1rem 0;
-        border-left: 5px solid #44FF44;
+        overflow: hidden;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -170,23 +234,21 @@ def init_supabase():
 supabase = init_supabase()
 
 # ==================================================
-# OPCIÓN 2: CREACIÓN SIMPLE DE TABLA CON RLS - VERSIÓN CORREGIDA
+# FUNCIONES PARA TABLA CITAS - VERSIÓN CORREGIDA
 # ==================================================
+
 def crear_tabla_citas_simple():
     """Crea la tabla citas con RLS básico - VERSIÓN CORREGIDA"""
-    
     try:
         st.sidebar.info("🛠️ Configurando tabla 'citas'...")
         
         # Método 1: Intentar crear directamente con Supabase
         try:
-            # Primero verificar si ya existe
             test_check = supabase.table("citas").select("id").limit(1).execute()
             
             if not hasattr(test_check, 'error') or test_check.error is None:
                 st.sidebar.success("✅ Tabla 'citas' ya existe")
                 
-                # Probar si podemos insertar
                 test_data = {
                     "dni_paciente": "99988877",
                     "fecha_cita": "2024-01-01",
@@ -199,7 +261,6 @@ def crear_tabla_citas_simple():
                 
                 if test_insert.data:
                     st.sidebar.success("✅ RLS configurado correctamente")
-                    # Limpiar
                     supabase.table("citas").delete().eq("dni_paciente", "99988877").execute()
                     return True
                 else:
@@ -209,13 +270,12 @@ def crear_tabla_citas_simple():
         except Exception as check_error:
             st.sidebar.info(f"ℹ️ {str(check_error)[:100]}")
         
-        # Método 2: Crear tabla usando SQL directo (simplificado)
+        # Método 2: Crear tabla usando SQL directo
         try:
             import requests
             
             st.sidebar.write("📋 Creando tabla...")
             
-            # 1. Primero intentar crear con un INSERT simple
             test_data = {
                 "dni_paciente": "11111111",
                 "fecha_cita": "2024-01-01",
@@ -238,12 +298,9 @@ def crear_tabla_citas_simple():
             if response.status_code in [200, 201, 409]:
                 st.sidebar.success("✅ Tabla accesible")
                 
-                # 2. Configurar RLS si es necesario
                 st.sidebar.write("🔐 Configurando RLS...")
                 
-                # Política para INSERT
                 try:
-                    # Verificar si podemos hacer un segundo insert
                     test_data2 = {
                         "dni_paciente": "22222222",
                         "fecha_cita": "2024-01-02",
@@ -260,7 +317,6 @@ def crear_tabla_citas_simple():
                     if response2.status_code in [200, 201]:
                         st.sidebar.success("✅ RLS funciona correctamente")
                         
-                        # Limpiar
                         requests.delete(f"{SUPABASE_URL}/rest/v1/citas?dni_paciente=eq.11111111", headers=headers)
                         requests.delete(f"{SUPABASE_URL}/rest/v1/citas?dni_paciente=eq.22222222", headers=headers)
                         
@@ -276,7 +332,6 @@ def crear_tabla_citas_simple():
             else:
                 st.sidebar.error(f"❌ No se pudo crear tabla: {response.status_code}")
                 
-                # Mostrar instrucciones para crear manualmente
                 st.sidebar.markdown("""
                 **📝 Para crear la tabla manualmente:**
                 
@@ -315,31 +370,24 @@ def crear_tabla_citas_simple():
         st.sidebar.error(f"💥 Error general: {str(e)[:200]}")
         return False
 
-# ==================================================
-# FUNCIÓN ALTERNATIVA: PRUEBA DIRECTA - VERSIÓN CORREGIDA
-# ==================================================
 def probar_guardado_directo():
-    """Prueba directa de guardado - VERSIÓN CORREGIDA"""
-    
+    """Prueba directa de guardado - VERSIÓN ÚNICA CORREGIDA"""
     with st.sidebar:
         st.markdown("### 🧪 Prueba Directa")
         
-        # Obtener un DNI real que exista en alertas_hemoglobina
         try:
-            # Buscar un paciente real para probar
             pacientes = supabase.table("alertas_hemoglobina").select("dni").limit(5).execute()
             
             if pacientes.data and len(pacientes.data) > 0:
                 dni_real = pacientes.data[0]["dni"]
                 st.info(f"📋 Usando DNI real: {dni_real}")
             else:
-                dni_real = "12345678"  # DNI por defecto
+                dni_real = "12345678"
                 st.warning("⚠️ No hay pacientes, usando DNI de prueba")
                 
         except:
             dni_real = "12345678"
         
-        # Datos de prueba CON DNI REAL
         test_cita = {
             "dni_paciente": dni_real,
             "fecha_cita": "2024-12-14",
@@ -363,7 +411,6 @@ def probar_guardado_directo():
                         st.success(f"✅ ¡ÉXITO! Guardado correctamente")
                         st.info(f"ID generado: {result.data[0].get('id', 'N/A')}")
                         
-                        # Guardar el ID para poder limpiar después
                         if 'pruebas_ids' not in st.session_state:
                             st.session_state.pruebas_ids = []
                         st.session_state.pruebas_ids.append(result.data[0].get('id'))
@@ -372,7 +419,6 @@ def probar_guardado_directo():
                         error_msg = result.error.message
                         st.error(f"❌ Error: {error_msg}")
                         
-                        # Si es error de foreign key, mostrar solución
                         if "foreign key constraint" in error_msg:
                             st.info("💡 Solución: El DNI debe existir en la tabla 'alertas_hemoglobina'")
                     else:
@@ -384,17 +430,14 @@ def probar_guardado_directo():
         with col2:
             if st.button("🗑️ Limpiar pruebas", key="limpiar_pruebas"):
                 try:
-                    # Limpiar por DNI
                     supabase.table("citas").delete().eq("dni_paciente", dni_real).execute()
                     
-                    # También limpiar otros DNIs de prueba comunes
                     for dni_prueba in ["87654321", "00000001", "00000002", "99988877", "11111111", "22222222"]:
                         try:
                             supabase.table("citas").delete().eq("dni_paciente", dni_prueba).execute()
                         except:
                             pass
                     
-                    # Limpiar por IDs guardados
                     if 'pruebas_ids' in st.session_state:
                         for prueba_id in st.session_state.pruebas_ids:
                             try:
@@ -409,162 +452,7 @@ def probar_guardado_directo():
                     st.info(f"ℹ️ {str(e)[:100]}")
 
 # ==================================================
-# BOTONES MEJORADOS EN BARRA LATERAL - VERSIÓN FINAL
-# ==================================================
-with st.sidebar:
-    st.markdown("---")
-    st.markdown("### 📅 Configuración de Citas")
-    
-    # Opción 1: Configurar tabla
-    if st.button("🛠️ Configurar tabla 'citas'", 
-                 type="primary", 
-                 use_container_width=True,
-                 key="configurar_tabla"):
-        crear_tabla_citas_simple()
-    
-    # Opción 2: Prueba directa
-    probar_guardado_directo()
-    
-    # Opción 3: Verificar conexión
-    if st.button("🔍 Verificar conexión", 
-                 type="secondary",
-                 key="verificar_conexion"):
-        try:
-            with st.spinner("Verificando..."):
-                # Probar lectura de tabla principal
-                test = supabase.table("alertas_hemoglobina").select("dni").limit(3).execute()
-                
-                if test.data:
-                    st.success(f"✅ Conexión OK - {len(test.data)} pacientes encontrados")
-                    
-                    # Mostrar algunos DNIs disponibles
-                    dnis = [p["dni"] for p in test.data[:3]]
-                    st.info(f"📋 DNIs disponibles: {', '.join(dnis)}")
-                else:
-                    st.warning("⚠️ Conexión OK pero tabla vacía")
-                    
-        except Exception as e:
-            st.error(f"❌ Error de conexión: {str(e)[:200]}")
-
-# ==================================================
-# FUNCIÓN ALTERNATIVA: PRUEBA DIRECTA SIN CREAR TABLA
-# ==================================================
-def probar_guardado_directo():
-    """Prueba directa de guardado - método más simple"""
-    
-    with st.sidebar:
-        st.markdown("### 🧪 Prueba Directa")
-        
-        # Datos de prueba
-        test_cita = {
-            "dni_paciente": "87654321",
-            "fecha_cita": "2024-12-14",
-            "hora_cita": "09:00:00",
-            "tipo_consulta": "Consulta de prueba",
-            "diagnostico": "Paciente de prueba para verificar sistema",
-            "tratamiento": "Observación",
-            "observaciones": "Esta es una prueba del sistema de citas",
-            "investigador_responsable": "Dr. Prueba"
-        }
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            if st.button("📤 Enviar prueba", type="primary"):
-                try:
-                    with st.spinner("Enviando a Supabase..."):
-                        result = supabase.table("citas").insert(test_cita).execute()
-                    
-                    if result.data:
-                        st.success("✅ ¡ÉXITO! Guardado correctamente")
-                        st.info(f"ID: {result.data[0].get('id', 'N/A')}")
-                    elif hasattr(result, 'error'):
-                        st.error(f"❌ Error: {result.error.message}")
-                    else:
-                        st.warning("⚠️ Respuesta inesperada")
-                        
-                except Exception as e:
-                    st.error(f"🔥 Error: {str(e)}")
-        
-        with col2:
-            if st.button("🗑️ Limpiar pruebas"):
-                try:
-                    supabase.table("citas").delete().eq("dni_paciente", "87654321").execute()
-                    supabase.table("citas").delete().eq("dni_paciente", "00000001").execute()
-                    supabase.table("citas").delete().eq("dni_paciente", "00000002").execute()
-                    st.info("Pruebas limpiadas")
-                except:
-                    pass
-
-# ==================================================
-# BOTONES MEJORADOS EN BARRA LATERAL
-# ==================================================
-with st.sidebar:
-    st.markdown("---")
-    st.markdown("### 📅 Configuración de Citas")
-    
-    # Opción 1: Configurar tabla
-    if st.button("🛠️ Configurar tabla 'citas'", type="primary", use_container_width=True):
-        crear_tabla_citas_simple()
-    
-    # Opción 2: Prueba directa
-    probar_guardado_directo()
-    
-    # Opción 3: Verificar conexión
-    if st.button("🔍 Verificar conexión", type="secondary"):
-        try:
-            # Probar lectura de otra tabla
-            test = supabase.table("alertas_hemoglobina").select("*").limit(1).execute()
-            if test.data:
-                st.success(f"✅ Conexión OK - {len(test.data)} registros en alertas_hemoglobina")
-            else:
-                st.warning("⚠️ Conexión OK pero tabla vacía")
-        except Exception as e:
-            st.error(f"❌ Error de conexión: {str(e)}")
-# ==================================================
-# PRUEBA DE GUARDADO SIMPLE
-# ==================================================
-def probar_guardado_simple():
-    """Prueba simple de guardado"""
-    try:
-        test_cita = {
-            "dni_paciente": "99988877",
-            "fecha_cita": "2024-12-13",
-            "hora_cita": "15:00:00",
-            "tipo_consulta": "Prueba Simple",
-            "diagnostico": "Probando configuración"
-        }
-        
-        result = supabase.table("citas").insert(test_cita).execute()
-        
-        if result.data:
-            st.sidebar.success("✅ ¡Guardado exitoso!")
-            
-            # Limpiar
-            supabase.table("citas").delete().eq("dni_paciente", "99988877").execute()
-            return True
-        else:
-            st.sidebar.error(f"❌ Error: {result.error.message if hasattr(result, 'error') else 'Sin datos'}")
-            return False
-            
-    except Exception as e:
-        st.sidebar.error(f"🔥 Error: {str(e)}")
-        return False
-
-# ==================================================
-# BOTONES EN BARRA LATERAL
-# ==================================================
-st.sidebar.markdown("---")
-st.sidebar.markdown("### 🔧 Configuración Citas")
-
-if st.sidebar.button("🛠️ Crear tabla citas", type="primary"):
-    if crear_tabla_citas_simple():
-        st.sidebar.success("✅ Configuración completada")
-
-if st.sidebar.button("🧪 Probar guardado", type="secondary"):
-    probar_guardado_simple()
-# ==================================================
-# FUNCIONES DE BASE DE DATOS (CORREGIDAS)
+# FUNCIONES DE BASE DE DATOS
 # ==================================================
 
 def obtener_datos_supabase(tabla=TABLE_NAME):
@@ -617,27 +505,23 @@ def insertar_datos_supabase(datos, tabla=TABLE_NAME):
             st.error("❌ El registro no tiene DNI")
             return None
         
-        # Verificar si ya existe
         if verificar_duplicado(dni):
             st.error(f"❌ El DNI {dni} ya existe en la base de datos")
             return {"status": "duplicado", "dni": dni}
         
-        # Insertar si no existe
         if supabase:
             response = supabase.table(tabla).insert(datos).execute()
             if hasattr(response, 'error') and response.error:
                 st.error(f"❌ Error Supabase al insertar: {response.error}")
-                st.write("Datos que causaron error:", datos)
                 return None
             return response.data[0] if response.data else None
         return None
     except Exception as e:
         st.error(f"Error insertando datos: {e}")
-        st.write("Datos que causaron error:", datos)
         return None
 
 def upsert_datos_supabase(datos, tabla=TABLE_NAME):
-    """Inserta o actualiza datos si ya existen (basado en DNI)"""
+    """Inserta o actualiza datos si ya existen"""
     try:
         if supabase:
             response = supabase.table(tabla)\
@@ -664,7 +548,6 @@ def obtener_altitud_regiones():
             response = supabase.table(ALTITUD_TABLE).select("*").execute()
             if response.data:
                 return {row['region']: row for row in response.data}
-        # Datos de respaldo
         return {
             "AMAZONAS": {"altitud_min": 500, "altitud_max": 3500, "altitud_promedio": 1800},
             "ANCASH": {"altitud_min": 0, "altitud_max": 6768, "altitud_promedio": 3000},
@@ -731,7 +614,7 @@ def interpretar_analisis_hematologico(ferritina, chcm, reticulocitos, transferri
     recomendacion = ""
     codigo_color = ""
     
-    # EVALUAR FERRITINA (Reservas de Hierro)
+    # EVALUAR FERRITINA
     if ferritina < 15:
         interpretacion += "🚨 **DEFICIT SEVERO DE HIERRO**. "
         severidad = "CRITICO"
@@ -745,7 +628,7 @@ def interpretar_analisis_hematologico(ferritina, chcm, reticulocitos, transferri
         interpretacion += "✅ **RESERVAS DE HIERRO ADECUADAS**. "
         severidad = "NORMAL"
     
-    # EVALUAR CHCM (Concentración de Hemoglobina)
+    # EVALUAR CHCM
     if chcm < 32:
         interpretacion += "🚨 **HIPOCROMÍA SEVERA** - Deficiencia avanzada de hierro. "
         severidad = "CRITICO" if severidad != "CRITICO" else severidad
@@ -754,7 +637,7 @@ def interpretar_analisis_hematologico(ferritina, chcm, reticulocitos, transferri
     else:
         interpretacion += "🔄 **HIPERCROMÍA** - Posible esferocitosis. "
     
-    # EVALUAR RETICULOCITOS (Producción Medular)
+    # EVALUAR RETICULOCITOS
     if reticulocitos < 0.5:
         interpretacion += "⚠️ **HIPOPROLIFERACIÓN MEDULAR** - Respuesta insuficiente. "
     elif reticulocitos > 1.5:
@@ -770,23 +653,23 @@ def interpretar_analisis_hematologico(ferritina, chcm, reticulocitos, transferri
     else:
         interpretacion += "✅ **TRANSPORTE ADECUADO**. "
     
-    # CLASIFICACIÓN DE ANEMIA BASADA EN HEMOGLOBINA
+    # CLASIFICACIÓN DE ANEMIA
     clasificacion_hb, _, _ = clasificar_anemia(hemoglobina_ajustada, edad_meses)
     interpretacion += f"📊 **CLASIFICACIÓN HEMOGLOBINA: {clasificacion_hb}**"
     
-    # GENERAR RECOMENDACIÓN ESPECÍFICA
+    # GENERAR RECOMENDACIÓN
     if severidad == "CRITICO":
         recomendacion = "🚨 **INTERVENCIÓN INMEDIATA**: Suplementación con hierro elemental 3-6 mg/kg/día + Control en 15 días + Evaluación médica urgente"
-        codigo_color = "#FF4444"
+        codigo_color = "#DC2626"
     elif severidad == "MODERADO":
         recomendacion = "⚠️ **ACCIÓN PRIORITARIA**: Iniciar suplementación con hierro + Control mensual + Educación nutricional"
-        codigo_color = "#FFAA00"
+        codigo_color = "#D97706"
     elif severidad == "LEVE":
         recomendacion = "🔄 **VIGILANCIA ACTIVA**: Suplementación preventiva + Modificación dietética + Control cada 3 meses"
-        codigo_color = "#44AAFF"
+        codigo_color = "#2563EB"
     else:
         recomendacion = "✅ **SEGUIMIENTO RUTINARIO**: Mantener alimentación balanceada + Control preventivo cada 6 meses"
-        codigo_color = "#44FF44"
+        codigo_color = "#16A34A"
     
     return {
         "interpretacion": interpretacion,
@@ -797,29 +680,24 @@ def interpretar_analisis_hematologico(ferritina, chcm, reticulocitos, transferri
     }
 
 def generar_parametros_hematologicos(hemoglobina_ajustada, edad_meses):
-    """Genera parámetros hematológicos simulados basados en hemoglobina y edad"""
+    """Genera parámetros hematológicos simulados"""
     
-    # Basar los parámetros en el nivel de hemoglobina
     if hemoglobina_ajustada < 9.0:
-        # Anemia severa - parámetros consistentes con deficiencia
         ferritina = np.random.uniform(5, 15)
         chcm = np.random.uniform(28, 31)
         reticulocitos = np.random.uniform(0.5, 1.0)
         transferrina = np.random.uniform(350, 450)
     elif hemoglobina_ajustada < 11.0:
-        # Anemia moderada/leve
         ferritina = np.random.uniform(15, 50)
         chcm = np.random.uniform(31, 33)
         reticulocitos = np.random.uniform(1.0, 1.8)
         transferrina = np.random.uniform(300, 400)
     else:
-        # Sin anemia
         ferritina = np.random.uniform(80, 150)
         chcm = np.random.uniform(33, 36)
         reticulocitos = np.random.uniform(0.8, 1.5)
         transferrina = np.random.uniform(200, 350)
     
-    # Ajustar VCM y HCM basados en CHCM
     vcm = (chcm / 33) * np.random.uniform(75, 95)
     hcm = (chcm / 33) * np.random.uniform(27, 32)
     
@@ -833,14 +711,13 @@ def generar_parametros_hematologicos(hemoglobina_ajustada, edad_meses):
     }
 
 # ==================================================
-# CLASIFICACIÓN DE ANEMIA Y SEGUIMIENTO
+# CLASIFICACIÓN DE ANEMIA
 # ==================================================
 
 def clasificar_anemia(hemoglobina_ajustada, edad_meses):
     """Clasifica la anemia según estándares OMS"""
     
     if edad_meses < 24:
-        # Menores de 2 años
         if hemoglobina_ajustada >= 11.0:
             return "SIN ANEMIA", "NO requiere seguimiento", "success"
         elif 10.0 <= hemoglobina_ajustada < 11.0:
@@ -851,7 +728,6 @@ def clasificar_anemia(hemoglobina_ajustada, edad_meses):
             return "ANEMIA SEVERA", "Seguimiento urgente semanal", "error"
     
     elif 24 <= edad_meses < 60:
-        # 2 a 5 años
         if hemoglobina_ajustada >= 11.5:
             return "SIN ANEMIA", "NO requiere seguimiento", "success"
         elif 10.5 <= hemoglobina_ajustada < 11.5:
@@ -862,7 +738,6 @@ def clasificar_anemia(hemoglobina_ajustada, edad_meses):
             return "ANEMIA SEVERA", "Seguimiento urgente semanal", "error"
     
     else:
-        # Mayores de 5 años
         if hemoglobina_ajustada >= 12.0:
             return "SIN ANEMIA", "NO requiere seguimiento", "success"
         elif 11.0 <= hemoglobina_ajustada < 12.0:
@@ -873,7 +748,6 @@ def clasificar_anemia(hemoglobina_ajustada, edad_meses):
             return "ANEMIA SEVERA", "Seguimiento urgente semanal", "error"
 
 def necesita_seguimiento_automatico(hemoglobina_ajustada, edad_meses):
-    """Determina si necesita seguimiento automático basado en anemia"""
     clasificacion, _, _ = clasificar_anemia(hemoglobina_ajustada, edad_meses)
     return clasificacion in ["ANEMIA MODERADA", "ANEMIA SEVERA"]
 
@@ -888,7 +762,6 @@ def obtener_referencia_crecimiento():
             response = supabase.table(CRECIMIENTO_TABLE).select("*").execute()
             if response.data:
                 return pd.DataFrame(response.data)
-        # Datos de respaldo
         return pd.DataFrame([
             {'edad_meses': 0, 'peso_min_ninas': 2.8, 'peso_promedio_ninas': 3.4, 'peso_max_ninas': 4.2, 'peso_min_ninos': 2.9, 'peso_promedio_ninos': 3.4, 'peso_max_ninos': 4.4, 'talla_min_ninas': 47.0, 'talla_promedio_ninas': 50.3, 'talla_max_ninas': 53.6, 'talla_min_ninos': 47.5, 'talla_promedio_ninos': 50.3, 'talla_max_ninos': 53.8},
             {'edad_meses': 3, 'peso_min_ninas': 4.5, 'peso_promedio_ninas': 5.6, 'peso_max_ninas': 7.0, 'peso_min_ninos': 5.0, 'peso_promedio_ninos': 6.2, 'peso_max_ninos': 7.8, 'talla_min_ninas': 55.0, 'talla_promedio_ninas': 59.0, 'talla_max_ninas': 63.5, 'talla_min_ninos': 57.0, 'talla_promedio_ninos': 60.0, 'talla_max_ninos': 64.5},
@@ -905,7 +778,6 @@ def evaluar_estado_nutricional(edad_meses, peso_kg, talla_cm, genero):
     if referencia_df.empty:
         return "Sin datos referencia", "Sin datos referencia", "NUTRICIÓN NO EVALUADA"
     
-    # Encontrar referencia para la edad
     referencia_edad = referencia_df[referencia_df['edad_meses'] == edad_meses]
     
     if referencia_edad.empty:
@@ -913,7 +785,6 @@ def evaluar_estado_nutricional(edad_meses, peso_kg, talla_cm, genero):
     
     ref = referencia_edad.iloc[0]
     
-    # Determinar valores según género
     if genero == 'F':
         peso_min = ref['peso_min_ninas']
         peso_promedio = ref['peso_promedio_ninas']
@@ -929,7 +800,6 @@ def evaluar_estado_nutricional(edad_meses, peso_kg, talla_cm, genero):
         talla_promedio = ref['talla_promedio_ninos']
         talla_max = ref['talla_max_ninos']
     
-    # Evaluar estado de peso
     if peso_kg < peso_min:
         estado_peso = "BAJO PESO"
     elif peso_kg > peso_max:
@@ -937,7 +807,6 @@ def evaluar_estado_nutricional(edad_meses, peso_kg, talla_cm, genero):
     else:
         estado_peso = "PESO NORMAL"
     
-    # Evaluar estado de talla
     if talla_cm < talla_min:
         estado_talla = "TALLA BAJA"
     elif talla_cm > talla_max:
@@ -945,7 +814,6 @@ def evaluar_estado_nutricional(edad_meses, peso_kg, talla_cm, genero):
     else:
         estado_talla = "TALLA NORMAL"
     
-    # Evaluar estado nutricional general
     if estado_peso == "BAJO PESO" and estado_talla == "TALLA BAJA":
         estado_nutricional = "DESNUTRICIÓN CRÓNICA"
     elif estado_peso == "BAJO PESO":
@@ -1021,7 +889,7 @@ def calcular_riesgo_anemia(hb_ajustada, edad_meses, factores_clinicos, factores_
     elif puntaje >= 25:
         return "ALTO RIESGO", puntaje, "PRIORITARIO"
     elif puntaje >= 15:
-        return "RIESGO MODERADO", puntaje, "EN SEGUIMIENTO"
+        return "RIESGO MODERADO", puntaje, "EN SEGUIMENTO"
     else:
         return "BAJO RIESGO", puntaje, "VIGILANCIA"
 
@@ -1038,16 +906,28 @@ def generar_sugerencias(riesgo, hemoglobina_ajustada, edad_meses):
         return "✅ PREVENCIÓN: Mantener alimentación balanceada, control preventivo cada 6 meses."
 
 # ==================================================
-# INTERFAZ PRINCIPAL
+# INTERFAZ PRINCIPAL CON TÍTULOS MEJORADOS
 # ==================================================
 
-st.markdown('<div class="main-header">', unsafe_allow_html=True)
-st.title("🏥 SISTEMA NIXON - Control de Anemia y Nutrición")
-st.markdown("**Sistema integrado con ajuste por altitud y evaluación nutricional**")
-st.markdown('</div>', unsafe_allow_html=True)
+# TÍTULO PRINCIPAL CON ESTILO MEJORADO
+st.markdown("""
+<div class="main-title">
+    <h1 style="margin: 0; font-size: 2.8rem;">🏥 SISTEMA NIXON - Control de Anemia y Nutrición</h1>
+    <p style="margin: 10px 0 0 0; font-size: 1.2rem; opacity: 0.9;">
+    Sistema integrado con ajuste por altitud y evaluación nutricional
+    </p>
+</div>
+""", unsafe_allow_html=True)
 
+# ESTADO DE CONEXIÓN
 if supabase:
-    st.success("🟢 CONECTADO A SUPABASE")
+    st.markdown("""
+    <div style="background: #d1fae5; padding: 1rem; border-radius: 8px; border-left: 5px solid #10b981; margin-bottom: 2rem;">
+        <p style="margin: 0; color: #065f46; font-weight: 500;">
+        ✅ <strong>CONECTADO A SUPABASE</strong> - Sistema operativo
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
 else:
     st.error("🔴 SIN CONEXIÓN A SUPABASE")
 
@@ -1055,9 +935,9 @@ else:
 tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "📝 Registro Completo", 
     "🔍 Seguimiento Clínico", 
-    "📈 Estadísticas",
+    "📈 Dashboard Nacional",
     "📋 Sistema de Citas",
-    "📊 Dashboard Nacional"
+    "⚙️ Configuración"
 ])
 
 # ==================================================
@@ -1065,13 +945,13 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
 # ==================================================
 
 with tab1:
-    st.header("📝 Registro Completo de Paciente")
+    st.markdown('<div class="section-title-blue">📝 Registro Completo de Paciente</div>', unsafe_allow_html=True)
     
     with st.form("formulario_completo"):
         col1, col2 = st.columns(2)
         
         with col1:
-            st.subheader("👤 Datos Personales")
+            st.markdown('<div class="section-title-blue" style="font-size: 1.4rem;">👤 Datos Personales</div>', unsafe_allow_html=True)
             dni = st.text_input("DNI*", placeholder="Ej: 87654321")
             nombre_completo = st.text_input("Nombre Completo*", placeholder="Ej: Ana García Pérez")
             edad_meses = st.number_input("Edad (meses)*", 1, 240, 24)
@@ -1082,7 +962,7 @@ with tab1:
             estado_paciente = st.selectbox("Estado del Paciente", ESTADOS_PACIENTE)
         
         with col2:
-            st.subheader("🌍 Datos Geográficos")
+            st.markdown('<div class="section-title-blue" style="font-size: 1.4rem;">🌍 Datos Geográficos</div>', unsafe_allow_html=True)
             region = st.selectbox("Región*", PERU_REGIONS)
             departamento = st.text_input("Departamento/Distrito", placeholder="Ej: Lima Metropolitana")
             
@@ -1091,10 +971,10 @@ with tab1:
                 altitud_auto = altitud_info["altitud_promedio"]
                 
                 st.markdown(f"""
-                <div class="altitude-card">
-                    <h4>🏔️ Altitud {region}</h4>
-                    <p><strong>Rango: {altitud_info['altitud_min']} - {altitud_info['altitud_max']} msnm</strong></p>
-                    <p>📊 Promedio: {altitud_info['altitud_promedio']} msnm</p>
+                <div class="metric-card-purple">
+                    <h4 style="margin: 0 0 10px 0; color: #5b21b6;">🏔️ Altitud {region}</h4>
+                    <p style="margin: 5px 0;"><strong>Rango:</strong> {altitud_info['altitud_min']} - {altitud_info['altitud_max']} msnm</p>
+                    <p style="margin: 5px 0;"><strong>Promedio:</strong> {altitud_info['altitud_promedio']} msnm</p>
                 </div>
                 """, unsafe_allow_html=True)
                 
@@ -1102,7 +982,7 @@ with tab1:
             else:
                 altitud_msnm = st.number_input("Altitud (msnm)*", 0, 5000, 500)
             
-            st.subheader("💰 Factores Socioeconómicos")
+            st.markdown('<div class="section-title-blue" style="font-size: 1.4rem;">💰 Factores Socioeconómicos</div>', unsafe_allow_html=True)
             nivel_educativo = st.selectbox("Nivel Educativo", NIVELES_EDUCATIVOS)
             acceso_agua_potable = st.checkbox("Acceso a agua potable")
             tiene_servicio_salud = st.checkbox("Tiene servicio de salud")
@@ -1111,30 +991,48 @@ with tab1:
         col3, col4 = st.columns(2)
         
         with col3:
-            st.subheader("🩺 Parámetros Clínicos")
+            st.markdown('<div class="section-title-blue" style="font-size: 1.4rem;">🩺 Parámetros Clínicos</div>', unsafe_allow_html=True)
             hemoglobina_medida = st.number_input("Hemoglobina medida (g/dL)*", 5.0, 20.0, 11.0, 0.1)
             
-            # Calcular hemoglobina ajustada
             ajuste_hb = obtener_ajuste_hemoglobina(altitud_msnm)
             hemoglobina_ajustada = calcular_hemoglobina_ajustada(hemoglobina_medida, altitud_msnm)
             
-            # Mostrar clasificación de anemia
             clasificacion, recomendacion, tipo_alerta = clasificar_anemia(hemoglobina_ajustada, edad_meses)
             
+            # Mostrar clasificación con estilo
             if tipo_alerta == "error":
-                st.error(f"**{clasificacion}** - {recomendacion}")
+                st.markdown(f"""
+                <div class="severity-critical">
+                    <h4 style="margin: 0 0 10px 0; color: #dc2626;">{clasificacion}</h4>
+                    <p style="margin: 0;">{recomendacion}</p>
+                </div>
+                """, unsafe_allow_html=True)
             elif tipo_alerta == "warning":
-                st.warning(f"**{clasificacion}** - {recomendacion}")
+                st.markdown(f"""
+                <div class="severity-moderate">
+                    <h4 style="margin: 0 0 10px 0; color: #d97706;">{clasificacion}</h4>
+                    <p style="margin: 0;">{recomendacion}</p>
+                </div>
+                """, unsafe_allow_html=True)
             else:
-                st.success(f"**{clasificacion}** - {recomendacion}")
+                st.markdown(f"""
+                <div class="severity-normal">
+                    <h4 style="margin: 0 0 10px 0; color: #16a34a;">{clasificacion}</h4>
+                    <p style="margin: 0;">{recomendacion}</p>
+                </div>
+                """, unsafe_allow_html=True)
             
-            st.metric(
-                "Hemoglobina ajustada al nivel del mar",
-                f"{hemoglobina_ajustada:.1f} g/dL",
-                f"{ajuste_hb:+.1f} g/dL"
-            )
+            # Métrica con estilo
+            st.markdown(f"""
+            <div class="metric-card-blue">
+                <div class="metric-label">HEMOGLOBINA AJUSTADA</div>
+                <div class="highlight-number highlight-blue">{hemoglobina_ajustada:.1f} g/dL</div>
+                <div style="font-size: 0.9rem; color: #6b7280;">
+                Ajuste por altitud: {ajuste_hb:+.1f} g/dL
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
             
-            # Determinar seguimiento automático basado en anemia
             necesita_seguimiento = necesita_seguimiento_automatico(hemoglobina_ajustada, edad_meses)
             en_seguimiento = st.checkbox("Marcar para seguimiento activo", value=necesita_seguimiento)
             
@@ -1150,20 +1048,21 @@ with tab1:
             enfermedades_cronicas = st.text_area("Enfermedades crónicas", placeholder="Ej: Asma, alergias, etc.")
         
         with col4:
-            st.subheader("📋 Factores de Riesgo")
-            st.write("🏥 Factores Clínicos")
+            st.markdown('<div class="section-title-blue" style="font-size: 1.4rem;">📋 Factores de Riesgo</div>', unsafe_allow_html=True)
+            
+            st.markdown('<div style="color: #1e40af; font-weight: 600; margin: 10px 0;">🏥 Factores Clínicos</div>', unsafe_allow_html=True)
             factores_clinicos = st.multiselect("Seleccione factores clínicos:", FACTORES_CLINICOS)
             
-            st.write("💰 Factores Socioeconómicos")
+            st.markdown('<div style="color: #1e40af; font-weight: 600; margin: 10px 0;">💰 Factores Socioeconómicos</div>', unsafe_allow_html=True)
             factores_sociales = st.multiselect("Seleccione factores sociales:", FACTORES_SOCIOECONOMICOS)
         
-        submitted = st.form_submit_button("🎯 ANALIZAR RIESGO Y GUARDAR", type="primary")
+        submitted = st.form_submit_button("🎯 ANALIZAR RIESGO Y GUARDAR", type="primary", use_container_width=True)
     
     if submitted:
         if not dni or not nombre_completo:
             st.error("❌ Complete DNI y nombre del paciente")
         else:
-            # Calcular riesgo usando hemoglobina AJUSTADA
+            # Cálculos
             nivel_riesgo, puntaje, estado = calcular_riesgo_anemia(
                 hemoglobina_ajustada,
                 edad_meses,
@@ -1171,15 +1070,12 @@ with tab1:
                 factores_sociales
             )
             
-            # Generar sugerencias
             sugerencias = generar_sugerencias(nivel_riesgo, hemoglobina_ajustada, edad_meses)
             
-            # Evaluación nutricional
             estado_peso, estado_talla, estado_nutricional = evaluar_estado_nutricional(
                 edad_meses, peso_kg, talla_cm, genero
             )
             
-            # Generar parámetros e interpretación automática
             parametros_simulados = generar_parametros_hematologicos(hemoglobina_ajustada, edad_meses)
             interpretacion_auto = interpretar_analisis_hematologico(
                 parametros_simulados['ferritina'],
@@ -1192,73 +1088,130 @@ with tab1:
             
             # Mostrar resultados
             st.markdown("---")
-            st.subheader("📊 EVALUACIÓN INTEGRAL DEL PACIENTE")
+            st.markdown('<div class="section-title-green">📊 EVALUACIÓN INTEGRAL DEL PACIENTE</div>', unsafe_allow_html=True)
             
             col1, col2 = st.columns(2)
             
             with col1:
-                st.markdown("### 🩺 Estado de Anemia")
-                if "ALTO" in nivel_riesgo:
-                    st.markdown('<div class="risk-high">', unsafe_allow_html=True)
-                elif "MODERADO" in nivel_riesgo:
-                    st.markdown('<div class="risk-moderate">', unsafe_allow_html=True)
-                else:
-                    st.markdown('<div class="risk-low">', unsafe_allow_html=True)
+                st.markdown('<div class="section-title-blue" style="font-size: 1.2rem;">🩺 Estado de Anemia</div>', unsafe_allow_html=True)
                 
-                st.markdown(f"**RIESGO ANEMIA:** {nivel_riesgo}")
-                st.markdown(f"**Puntaje:** {puntaje}/60 puntos")
-                st.markdown(f"**Alerta:** {estado}")
-                st.markdown(f"**Clasificación OMS:** {clasificacion}")
+                if "ALTO" in nivel_riesgo:
+                    st.markdown('<div class="metric-card-red">', unsafe_allow_html=True)
+                elif "MODERADO" in nivel_riesgo:
+                    st.markdown('<div class="metric-card-yellow">', unsafe_allow_html=True)
+                else:
+                    st.markdown('<div class="metric-card-green">', unsafe_allow_html=True)
+                
+                st.markdown(f'<div class="metric-label">RIESGO ANEMIA</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="highlight-number {"highlight-red" if "ALTO" in nivel_riesgo else "highlight-yellow" if "MODERADO" in nivel_riesgo else "highlight-green"}">{nivel_riesgo}</div>', unsafe_allow_html=True)
+                st.markdown(f'<div style="font-size: 0.9rem; color: #6b7280;">Puntaje: {puntaje}/60 puntos | Alerta: {estado}</div>', unsafe_allow_html=True)
+                st.markdown(f'<div style="font-size: 0.9rem; color: #6b7280;">Clasificación OMS: {clasificacion}</div>', unsafe_allow_html=True)
                 st.markdown('</div>', unsafe_allow_html=True)
             
             with col2:
-                st.markdown("### 🍎 Estado Nutricional")
-                st.markdown(f"**Peso:** {estado_peso}")
-                st.markdown(f"**Talla:** {estado_talla}")
-                st.markdown(f"**Estado Nutricional:** {estado_nutricional}")
-                st.markdown(f"**Seguimiento activo:** {'SÍ' if en_seguimiento else 'NO'}")
+                st.markdown('<div class="section-title-blue" style="font-size: 1.2rem;">🍎 Estado Nutricional</div>', unsafe_allow_html=True)
+                
+                st.markdown("""
+                <div class="metric-card-blue">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div>
+                            <div class="metric-label">PESO</div>
+                            <div class="highlight-number highlight-blue">{}</div>
+                        </div>
+                        <div>
+                            <div class="metric-label">TALLA</div>
+                            <div class="highlight-number highlight-blue">{}</div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e5e7eb;">
+                        <div class="metric-label">ESTADO NUTRICIONAL</div>
+                        <div class="highlight-number highlight-blue" style="font-size: 1.8rem;">{}</div>
+                        <div style="font-size: 0.9rem; color: #6b7280; margin-top: 5px;">
+                        Seguimiento activo: {}
+                        </div>
+                    </div>
+                </div>
+                """.format(estado_peso, estado_talla, estado_nutricional, 'SÍ' if en_seguimiento else 'NO'), unsafe_allow_html=True)
             
-            # INTERPRETACIÓN HEMATOLÓGICA AUTOMÁTICA
-            st.markdown("### 🔬 Interpretación Hematológica Automática")
+            # INTERPRETACIÓN HEMATOLÓGICA
+            st.markdown('<div class="section-title-green">🔬 Interpretación Hematológica Automática</div>', unsafe_allow_html=True)
             
-            # Aplicar estilo según severidad
             if interpretacion_auto['severidad'] == "CRITICO":
-                st.markdown(f'<div class="interpretacion-critica">', unsafe_allow_html=True)
+                st.markdown('<div class="severity-critical">', unsafe_allow_html=True)
             elif interpretacion_auto['severidad'] == "MODERADO":
-                st.markdown(f'<div class="interpretacion-moderada">', unsafe_allow_html=True)
+                st.markdown('<div class="severity-moderate">', unsafe_allow_html=True)
             elif interpretacion_auto['severidad'] == "LEVE":
-                st.markdown(f'<div class="interpretacion-leve">', unsafe_allow_html=True)
+                st.markdown('<div class="severity-mild">', unsafe_allow_html=True)
             else:
-                st.markdown(f'<div class="interpretacion-normal">', unsafe_allow_html=True)
+                st.markdown('<div class="severity-normal">', unsafe_allow_html=True)
             
             st.markdown(f"**📋 Análisis Integrado - {interpretacion_auto['severidad']}**")
             st.markdown(f"**Interpretación:** {interpretacion_auto['interpretacion']}")
             st.markdown(f"**💡 Plan Específico:** {interpretacion_auto['recomendacion']}")
             st.markdown('</div>', unsafe_allow_html=True)
             
-            # Mostrar parámetros simulados
-            st.markdown("### 🧪 Parámetros Hematológicos Estimados")
+            # PARÁMETROS HEMATOLÓGICOS
+            st.markdown('<div class="section-title-green">🧪 Parámetros Hematológicos Estimados</div>', unsafe_allow_html=True)
+            
             col_param1, col_param2, col_param3 = st.columns(3)
             with col_param1:
-                st.metric("Ferritina", f"{parametros_simulados['ferritina']} ng/mL")
-                st.metric("CHCM", f"{parametros_simulados['chcm']} g/dL")
+                st.markdown(f"""
+                <div class="metric-card-blue">
+                    <div class="metric-label">FERRITINA</div>
+                    <div class="highlight-number highlight-blue">{parametros_simulados['ferritina']} ng/mL</div>
+                </div>
+                """, unsafe_allow_html=True)
+                st.markdown(f"""
+                <div class="metric-card-blue">
+                    <div class="metric-label">CHCM</div>
+                    <div class="highlight-number highlight-blue">{parametros_simulados['chcm']} g/dL</div>
+                </div>
+                """, unsafe_allow_html=True)
+            
             with col_param2:
-                st.metric("Transferrina", f"{parametros_simulados['transferrina']} mg/dL")
-                st.metric("VCM", f"{parametros_simulados['vcm']} fL")
+                st.markdown(f"""
+                <div class="metric-card-green">
+                    <div class="metric-label">TRANSFERRINA</div>
+                    <div class="highlight-number highlight-green">{parametros_simulados['transferrina']} mg/dL</div>
+                </div>
+                """, unsafe_allow_html=True)
+                st.markdown(f"""
+                <div class="metric-card-green">
+                    <div class="metric-label">VCM</div>
+                    <div class="highlight-number highlight-green">{parametros_simulados['vcm']} fL</div>
+                </div>
+                """, unsafe_allow_html=True)
+            
             with col_param3:
-                st.metric("Reticulocitos", f"{parametros_simulados['reticulocitos']} %")
-                st.metric("HCM", f"{parametros_simulados['hcm']} pg")
+                st.markdown(f"""
+                <div class="metric-card-purple">
+                    <div class="metric-label">RETICULOCITOS</div>
+                    <div class="highlight-number highlight-purple">{parametros_simulados['reticulocitos']} %</div>
+                </div>
+                """, unsafe_allow_html=True)
+                st.markdown(f"""
+                <div class="metric-card-purple">
+                    <div class="metric-label">HCM</div>
+                    <div class="highlight-number highlight-purple">{parametros_simulados['hcm']} pg</div>
+                </div>
+                """, unsafe_allow_html=True)
             
             # SUGERENCIAS
-            st.markdown("### 💡 Plan de Acción General")
-            st.info(sugerencias)
+            st.markdown('<div class="section-title-green">💡 Plan de Acción General</div>', unsafe_allow_html=True)
+            st.markdown(f"""
+            <div class="metric-card-yellow">
+                <div style="font-size: 1.1rem; color: #92400e; font-weight: 600; margin-bottom: 10px;">
+                📋 RECOMENDACIONES
+                </div>
+                <div style="color: #78350f;">
+                {sugerencias}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
             
-            # ============================================
-            # GUARDAR EN SUPABASE CON VERIFICACIÓN DE DUPLICADOS
-            # ============================================
+            # GUARDAR EN SUPABASE
             if supabase:
                 with st.spinner("Verificando y guardando datos..."):
-                    # Crear el registro completo
                     record = {
                         "dni": dni.strip(),
                         "nombre_apellido": nombre_completo.strip(),
@@ -1290,7 +1243,6 @@ with tab1:
                         "severidad_interpretacion": interpretacion_auto['severidad']
                     }
                     
-                    # Insertar usando la función que verifica duplicados
                     resultado = insertar_datos_supabase(record)
                     
                     if resultado:
@@ -1312,20 +1264,18 @@ with tab1:
 # ==================================================
 
 with tab2:
-    st.header("🔍 Seguimiento Clínico por Gravedad")
+    st.markdown('<div class="section-title-blue">🔍 Seguimiento Clínico por Gravedad</div>', unsafe_allow_html=True)
     
     col1, col2 = st.columns([2, 1])
     
     with col1:
-        st.subheader("📋 Casos que Requieren Seguimiento")
+        st.markdown('<div class="section-title-blue" style="font-size: 1.2rem;">📋 Casos que Requieren Seguimiento</div>', unsafe_allow_html=True)
         
-        if st.button("🔄 Actualizar casos prioritarios"):
+        if st.button("🔄 Actualizar casos prioritarios", type="primary"):
             with st.spinner("Analizando gravedad de casos..."):
-                # Obtener todos los pacientes
                 todos_pacientes = obtener_datos_supabase()
                 
                 if not todos_pacientes.empty:
-                    # Calcular hemoglobina ajustada y clasificar
                     pacientes_analizados = todos_pacientes.copy()
                     
                     analisis_data = []
@@ -1350,8 +1300,6 @@ with tab2:
                         analisis_data.append(analisis)
                     
                     analisis_df = pd.DataFrame(analisis_data)
-                    
-                    # Filtrar solo los que necesitan seguimiento (moderado + severo)
                     casos_seguimiento = analisis_df[
                         analisis_df['clasificacion_anemia'].isin(["ANEMIA MODERADA", "ANEMIA SEVERA"])
                     ]
@@ -1359,12 +1307,10 @@ with tab2:
                     if not casos_seguimiento.empty:
                         st.success(f"🚨 {len(casos_seguimiento)} casos requieren seguimiento activo")
                         
-                        # Ordenar por gravedad (severa primero)
                         orden_gravedad = {"ANEMIA SEVERA": 1, "ANEMIA MODERADA": 2}
                         casos_seguimiento['orden'] = casos_seguimiento['clasificacion_anemia'].map(orden_gravedad)
                         casos_seguimiento = casos_seguimiento.sort_values('orden').drop('orden', axis=1)
                         
-                        # Mostrar tabla
                         st.dataframe(
                             casos_seguimiento,
                             use_container_width=True,
@@ -1381,18 +1327,32 @@ with tab2:
                             }
                         )
                         
-                        # Métricas de gravedad
-                        st.subheader("📊 Distribución por Gravedad")
+                        st.markdown('<div class="section-title-blue" style="font-size: 1.2rem;">📊 Distribución por Gravedad</div>', unsafe_allow_html=True)
                         severos = len(casos_seguimiento[casos_seguimiento['clasificacion_anemia'] == "ANEMIA SEVERA"])
                         moderados = len(casos_seguimiento[casos_seguimiento['clasificacion_anemia'] == "ANEMIA MODERADA"])
                         
                         col_met1, col_met2, col_met3 = st.columns(3)
                         with col_met1:
-                            st.metric("🟥 Severos", severos)
+                            st.markdown(f"""
+                            <div class="metric-card-red">
+                                <div class="metric-label">ANEMIA SEVERA</div>
+                                <div class="highlight-number highlight-red">{severos}</div>
+                            </div>
+                            """, unsafe_allow_html=True)
                         with col_met2:
-                            st.metric("🟨 Moderados", moderados)
+                            st.markdown(f"""
+                            <div class="metric-card-yellow">
+                                <div class="metric-label">ANEMIA MODERADA</div>
+                                <div class="highlight-number highlight-yellow">{moderados}</div>
+                            </div>
+                            """, unsafe_allow_html=True)
                         with col_met3:
-                            st.metric("📅 Total Prioridad", len(casos_seguimiento))
+                            st.markdown(f"""
+                            <div class="metric-card-blue">
+                                <div class="metric-label">TOTAL PRIORIDAD</div>
+                                <div class="highlight-number highlight-blue">{len(casos_seguimiento)}</div>
+                            </div>
+                            """, unsafe_allow_html=True)
                         
                     else:
                         st.success("✅ No hay casos que requieran seguimiento activo")
@@ -1406,816 +1366,248 @@ with tab2:
                     st.info("📝 No hay pacientes registrados en el sistema")
     
     with col2:
-        st.subheader("🎯 Criterios de Seguimiento")
+        st.markdown('<div class="section-title-blue" style="font-size: 1.2rem;">🎯 Criterios de Seguimiento</div>', unsafe_allow_html=True)
         
         st.markdown("""
         <div class="severity-critical">
-        <h4>🚨 ANEMIA SEVERA</h4>
-        <p><strong>Seguimiento:</strong> Urgente semanal</p>
-        <p><strong>Acción:</strong> Suplementación inmediata + Control médico</p>
+            <h4 style="margin: 0 0 10px 0; color: #dc2626;">🚨 ANEMIA SEVERA</h4>
+            <p style="margin: 5px 0;"><strong>Seguimiento:</strong> Urgente semanal</p>
+            <p style="margin: 5px 0;"><strong>Acción:</strong> Suplementación inmediata + Control médico</p>
         </div>
         """, unsafe_allow_html=True)
         
         st.markdown("""
         <div class="severity-moderate">
-        <h4>⚠️ ANEMIA MODERADA</h4>
-        <p><strong>Seguimiento:</strong> Mensual</p>
-        <p><strong>Acción:</strong> Suplementación + Monitoreo</p>
+            <h4 style="margin: 0 0 10px 0; color: #d97706;">⚠️ ANEMIA MODERADA</h4>
+            <p style="margin: 5px 0;"><strong>Seguimiento:</strong> Mensual</p>
+            <p style="margin: 5px 0;"><strong>Acción:</strong> Suplementación + Monitoreo</p>
         </div>
         """, unsafe_allow_html=True)
         
         st.markdown("""
         <div class="severity-mild">
-        <h4>✅ ANEMIA LEVE</h4>
-        <p><strong>Seguimiento:</strong> Cada 3 meses</p>
-        <p><strong>Acción:</strong> Educación nutricional</p>
+            <h4 style="margin: 0 0 10px 0; color: #2563eb;">✅ ANEMIA LEVE</h4>
+            <p style="margin: 5px 0;"><strong>Seguimiento:</strong> Cada 3 meses</p>
+            <p style="margin: 5px 0;"><strong>Acción:</strong> Educación nutricional</p>
         </div>
         """, unsafe_allow_html=True)
         
         st.markdown("""
-        <div class="severity-none">
-        <h4>💚 SIN ANEMIA</h4>
-        <p><strong>Seguimiento:</strong> Cada 6 meses</p>
-        <p><strong>Acción:</strong> Prevención</p>
+        <div class="severity-normal">
+            <h4 style="margin: 0 0 10px 0; color: #16a34a;">💚 SIN ANEMIA</h4>
+            <p style="margin: 5px 0;"><strong>Seguimiento:</strong> Cada 6 meses</p>
+            <p style="margin: 5px 0;"><strong>Acción:</strong> Prevención</p>
         </div>
         """, unsafe_allow_html=True)
 
-    # SECCIÓN: ANÁLISIS HEMATOLÓGICO COMPLETO CON INTERPRETACIÓN
-    st.markdown("---")
-    st.header("🔬 Análisis Hematológico Completo con Interpretación")
-    
-    if st.button("🧪 Generar Análisis Hematológico Avanzado"):
-        with st.spinner("Procesando parámetros hematológicos con interpretación automática..."):
-            todos_pacientes = obtener_datos_supabase()
-            
-            if not todos_pacientes.empty:
-                # Calcular todos los parámetros con interpretación
-                analisis_data = []
-                interpretaciones_data = []
-                
-                for _, paciente in todos_pacientes.iterrows():
-                    hb_ajustada = calcular_hemoglobina_ajustada(
-                        paciente.get('hemoglobina_dl1', 0), 
-                        paciente.get('altitud_msnm', 0)
-                    )
-                    
-                    clasificacion, recomendacion, _ = clasificar_anemia(hb_ajustada, paciente.get('edad_meses', 0))
-                    
-                    # Generar parámetros hematológicos realistas
-                    parametros = generar_parametros_hematologicos(hb_ajustada, paciente.get('edad_meses', 0))
-                    
-                    # Generar interpretación automática
-                    interpretacion = interpretar_analisis_hematologico(
-                        parametros['ferritina'],
-                        parametros['chcm'], 
-                        parametros['reticulocitos'],
-                        parametros['transferrina'],
-                        hb_ajustada,
-                        paciente.get('edad_meses', 0)
-                    )
-                    
-                    # Datos para tabla principal
-                    analisis = {
-                        'paciente': paciente.get('nombre_apellido', 'N/A'),
-                        'edad_meses': paciente.get('edad_meses', 0),
-                        'hb_medida': paciente.get('hemoglobina_dl1', 0),
-                        'hb_ajustada': hb_ajustada,
-                        'clasificacion': clasificacion,
-                        'vcm': parametros['vcm'],
-                        'hcm': parametros['hcm'],
-                        'chcm': parametros['chcm'],
-                        'ferritina': parametros['ferritina'],
-                        'transferrina': parametros['transferrina'],
-                        'reticulocitos': parametros['reticulocitos'],
-                        'recomendacion': recomendacion,
-                        'severidad': interpretacion['severidad']
-                    }
-                    analisis_data.append(analisis)
-                    
-                    # Datos para sección de interpretación
-                    interpretaciones_data.append({
-                        'paciente': paciente.get('nombre_apellido', 'N/A'),
-                        'interpretacion': interpretacion['interpretacion'],
-                        'recomendacion_especifica': interpretacion['recomendacion'],
-                        'severidad': interpretacion['severidad'],
-                        'color_alerta': interpretacion['codigo_color']
-                    })
-                
-                analisis_df = pd.DataFrame(analisis_data)
-                interpretaciones_df = pd.DataFrame(interpretaciones_data)
-                
-                st.success(f"🧪 {len(analisis_df)} análisis hematológicos con interpretación generados")
-                
-                # MOSTRAR TABLA PRINCIPAL DE PARÁMETROS
-                st.subheader("📊 Parámetros Hematológicos")
-                st.dataframe(
-                    analisis_df,
-                    use_container_width=True,
-                    height=400,
-                    column_config={
-                        'paciente': 'Paciente',
-                        'edad_meses': 'Edad (meses)',
-                        'hb_medida': st.column_config.NumberColumn('Hb Medida', format='%.1f g/dL'),
-                        'hb_ajustada': st.column_config.NumberColumn('Hb Ajustada', format='%.1f g/dL'),
-                        'clasificacion': 'Clasificación',
-                        'vcm': st.column_config.NumberColumn('VCM', format='%.1f fL'),
-                        'hcm': st.column_config.NumberColumn('HCM', format='%.1f pg'),
-                        'chcm': st.column_config.NumberColumn('CHCM', format='%.1f g/dL'),
-                        'ferritina': st.column_config.NumberColumn('Ferritina', format='%.1f ng/mL'),
-                        'transferrina': st.column_config.NumberColumn('Transferrina', format='%.0f mg/dL'),
-                        'reticulocitos': st.column_config.NumberColumn('Reticulocitos', format='%.1f %%'),
-                        'recomendacion': 'Recomendación',
-                        'severidad': 'Severidad'
-                    }
-                )
-                
-                # MOSTRAR INTERPRETACIONES DETALLADAS
-                st.subheader("🎯 Interpretación Clínica Automática")
-                
-                for _, interpretacion in interpretaciones_df.iterrows():
-                    with st.container():
-                        st.markdown(f"""
-                        <div style="border-left: 5px solid {interpretacion['color_alerta']}; 
-                                    padding: 1rem; margin: 1rem 0; 
-                                    background-color: #f8f9fa; border-radius: 5px;">
-                            <h4>👤 {interpretacion['paciente']} - <span style="color: {interpretacion['color_alerta']}">{interpretacion['severidad']}</span></h4>
-                            <p><strong>Interpretación:</strong> {interpretacion['interpretacion']}</p>
-                            <p><strong>Plan de Acción:</strong> {interpretacion['recomendacion_especifica']}</p>
-                        </div>
-                        """, unsafe_allow_html=True)
-                
-                # GRÁFICO DE DISTRIBUCIÓN POR SEVERIDAD
-                st.subheader("📈 Distribución por Nivel de Severidad")
-                distribucion_severidad = analisis_df['severidad'].value_counts()
-                
-                fig_severidad = px.pie(
-                    values=distribucion_severidad.values,
-                    names=distribucion_severidad.index,
-                    title="Distribución de Pacientes por Severidad",
-                    color=distribucion_severidad.index,
-                    color_discrete_map={
-                        'CRITICO': '#FF4444',
-                        'MODERADO': '#FFAA00', 
-                        'LEVE': '#44AAFF',
-                        'NORMAL': '#44FF44'
-                    }
-                )
-                st.plotly_chart(fig_severidad, use_container_width=True)
-                
-            else:
-                st.info("📝 No hay pacientes registrados para análisis")
-
 # ==================================================
-# PESTAÑA 3: ESTADÍSTICAS - VERSIÓN ELEGANTE AZUL/PASTEL
+# PESTAÑA 3: DASHBOARD NACIONAL
 # ==================================================
 
 with tab3:
-    # ========== HEADER ELEGANTE CON GRADIENTE AZUL ==========
-    st.markdown("""
-    <style>
-    .dashboard-header {
-        background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-        padding: 2.5rem;
-        border-radius: 20px;
-        color: white;
-        margin-bottom: 2rem;
-        text-align: center;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-    }
-    .dashboard-title {
-        font-size: 2.8rem;
-        font-weight: 700;
-        margin-bottom: 0.5rem;
-        letter-spacing: -0.5px;
-    }
-    .dashboard-subtitle {
-        font-size: 1.2rem;
-        opacity: 0.9;
-        font-weight: 300;
-        max-width: 800px;
-        margin: 0 auto;
-        line-height: 1.6;
-    }
-    .welcome-card {
-        background: linear-gradient(135deg, #f8f9ff 0%, #e8eeff 100%);
-        padding: 2rem;
-        border-radius: 15px;
-        border-left: 5px solid #2a5298;
-        margin-bottom: 2rem;
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
-    }
-    .metric-card {
-        background: white;
-        padding: 1.5rem;
-        border-radius: 12px;
-        text-align: center;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-        border-top: 4px solid;
-        transition: transform 0.3s ease;
-    }
-    .metric-card:hover {
-        transform: translateY(-5px);
-    }
-    .analysis-section {
-        background: white;
-        padding: 1.5rem;
-        border-radius: 12px;
-        margin-bottom: 1.5rem;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-        border: 1px solid #eef2ff;
-    }
-    .section-title {
-        color: #2a5298;
-        font-size: 1.4rem;
-        font-weight: 600;
-        margin-bottom: 1rem;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-    .highlight-box {
-        background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
-        padding: 1.5rem;
-        border-radius: 12px;
-        border-left: 4px solid #2196f3;
-    }
-    .stat-badge {
-        display: inline-block;
-        padding: 4px 12px;
-        border-radius: 20px;
-        font-size: 0.85rem;
-        font-weight: 500;
-        margin: 2px;
-    }
-    </style>
+    st.markdown('<div class="section-title-blue">📊 Dashboard Nacional de Anemia y Nutrición</div>', unsafe_allow_html=True)
     
-    <div class="dashboard-header">
-        <div class="dashboard-title">📊 Dashboard de Monitoreo de Anemia</div>
-        <div class="dashboard-subtitle">
-            Sistema de análisis integral para la prevención de anemia infantil
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # ========== TARJETA DE BIENVENIDA ==========
-    st.markdown("""
-    <div class="welcome-card">
-        <h3 style="color: #2a5298; margin-top: 0;">👋 Bienvenido al Sistema de Monitoreo de Anemia Infantil</h3>
-        <p style="color: #546e7a; line-height: 1.6; font-size: 1.05rem;">
-        Este dashboard está diseñado para la <strong>detección temprana</strong> y <strong>monitoreo continuo</strong> 
-        de anemia en niños menores de 5 años. Proporciona análisis en tiempo real, visualizaciones interactivas 
-        y recomendaciones personalizadas para la prevención y tratamiento.
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # ========== BOTÓN PRINCIPAL ==========
-    col_btn, col_status = st.columns([1, 2])
-    
-    with col_btn:
-        if st.button("🔄 **Cargar Datos de Análisis**", 
-                    type="primary", 
-                    use_container_width=True,
-                    help="Carga y analiza los datos actuales de anemia"):
-            with st.spinner("Analizando datos de anemia infantil..."):
-                # Asegúrate de tener esta función definida
-                datos_completos = obtener_datos_supabase()  # <-- Esta función debe estar definida
-                
-                if not datos_completos.empty:
-                    st.session_state.datos_estadisticas = datos_completos
-                    st.success(f"✅ {len(datos_completos)} registros analizados")
-                else:
-                    st.error("❌ No se pudieron cargar datos desde la base de datos")
-    
-    with col_status:
-        if 'datos_estadisticas' in st.session_state:
-            datos = st.session_state.datos_estadisticas
-            st.markdown(f"""
-            <div style="background: #e8f5e9; padding: 1rem; border-radius: 10px; border-left: 4px solid #4caf50;">
-                <p style="margin: 0; color: #2e7d32; font-weight: 500;">
-                📋 <strong>Datos actualizados:</strong> {len(datos)} pacientes registrados | Última actualización: {datetime.now().strftime('%H:%M')}
-                </p>
-            </div>
-            """, unsafe_allow_html=True)
-    
-    # ========== VERIFICAR DATOS ==========
-    if 'datos_estadisticas' not in st.session_state or st.session_state.datos_estadisticas.empty:
-        st.markdown("""
-        <div style="text-align: center; padding: 4rem 2rem; background: linear-gradient(135deg, #f5f7ff 0%, #eef2ff 100%); 
-                    border-radius: 15px; border: 2px dashed #c5cae9; margin: 2rem 0;">
-            <div style="font-size: 4rem; margin-bottom: 1rem; color: #7986cb;">📊</div>
-            <h3 style="color: #3f51b5; margin-bottom: 1rem;">Listo para analizar datos</h3>
-            <p style="color: #5c6bc0; max-width: 500px; margin: 0 auto; line-height: 1.6;">
-            Presiona el botón <strong>"Cargar Datos de Análisis"</strong> para comenzar el monitoreo 
-            de anemia en tu población infantil.
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
-    else:
-        datos = st.session_state.datos_estadisticas
-        
-        # ========== MÉTRICAS PRINCIPALES CON TARJETAS DE COLORES PASTEL ==========
-        st.markdown("## 📈 Métricas Principales")
-        
-        col1, col2, col3, col4 = st.columns(4)
-        
-        with col1:
-            total_pacientes = len(datos)
-            st.markdown(f"""
-            <div class="metric-card" style="border-top-color: #2196f3;">
-                <div style="font-size: 2.5rem; color: #2196f3; font-weight: 700;">{total_pacientes}</div>
-                <div style="color: #546e7a; font-size: 0.9rem; margin-top: 0.5rem;">TOTAL PACIENTES</div>
-                <div style="font-size: 0.8rem; color: #78909c; margin-top: 0.5rem;">
-                <span style="background: #e3f2fd; padding: 2px 8px; border-radius: 10px;">📊 Monitoreados</span>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        with col2:
-            if 'hemoglobina_dl1' in datos.columns:
-                hb_promedio = datos['hemoglobina_dl1'].mean()
-                st.markdown(f"""
-                <div class="metric-card" style="border-top-color: #4caf50;">
-                    <div style="font-size: 2.5rem; color: #4caf50; font-weight: 700;">{hb_promedio:.1f}</div>
-                    <div style="color: #546e7a; font-size: 0.9rem; margin-top: 0.5rem;">HEMOGLOBINA PROMEDIO</div>
-                    <div style="font-size: 0.8rem; color: #78909c; margin-top: 0.5rem;">
-                    <span style="background: #e8f5e9; padding: 2px 8px; border-radius: 10px;">🩺 g/dL</span>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-        
-        with col3:
-            if 'edad_meses' in datos.columns:
-                edad_promedio = datos['edad_meses'].mean() / 12
-                st.markdown(f"""
-                <div class="metric-card" style="border-top-color: #ff9800;">
-                    <div style="font-size: 2.5rem; color: #ff9800; font-weight: 700;">{edad_promedio:.1f}</div>
-                    <div style="color: #546e7a; font-size: 0.9rem; margin-top: 0.5rem;">EDAD PROMEDIO</div>
-                    <div style="font-size: 0.8rem; color: #78909c; margin-top: 0.5rem;">
-                    <span style="background: #fff3e0; padding: 2px 8px; border-radius: 10px;">👶 años</span>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-        
-        with col4:
-            if 'en_seguimiento' in datos.columns:
-                seguimiento = datos['en_seguimiento'].sum()
-                porcentaje = (seguimiento / total_pacientes * 100) if total_pacientes > 0 else 0
-                st.markdown(f"""
-                <div class="metric-card" style="border-top-color: #9c27b0;">
-                    <div style="font-size: 2.5rem; color: #9c27b0; font-weight: 700;">{seguimiento}</div>
-                    <div style="color: #546e7a; font-size: 0.9rem; margin-top: 0.5rem;">EN SEGUIMIENTO</div>
-                    <div style="font-size: 0.8rem; color: #78909c; margin-top: 0.5rem;">
-                    <span style="background: #f3e5f5; padding: 2px 8px; border-radius: 10px;">📋 {porcentaje:.1f}%</span>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-        
-        # ========== ANÁLISIS POR CATEGORÍAS ==========
-        st.markdown("---")
-        st.markdown("""
-        <div class="section-title">
-            <span>🎯 Análisis por Categorías</span>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # Fila 1: Análisis demográficos
-        col_demo1, col_demo2, col_demo3 = st.columns(3)
-        
-        with col_demo1:
-            st.markdown("""
-            <div class="analysis-section">
-                <h4 style="color: #2a5298; margin-top: 0; display: flex; align-items: center; gap: 10px;">
-                    <span>👦👧</span> Análisis por Género
-                </h4>
-            </div>
-            """, unsafe_allow_html=True)
+    if st.button("🔄 Cargar Datos Nacionales", type="primary"):
+        with st.spinner("Cargando datos nacionales..."):
+            datos_nacionales = obtener_datos_supabase()
             
+            if not datos_nacionales.empty:
+                st.session_state.datos_nacionales = datos_nacionales
+                st.success(f"✅ {len(datos_nacionales)} registros nacionales cargados")
+            else:
+                st.error("❌ No se pudieron cargar datos nacionales")
+    
+    if 'datos_nacionales' in st.session_state and not st.session_state.datos_nacionales.empty:
+        datos = st.session_state.datos_nacionales
+        
+        # MÉTRICAS NACIONALES
+        st.markdown('<div class="section-title-blue" style="font-size: 1.2rem;">🎯 Indicadores Nacionales</div>', unsafe_allow_html=True)
+        
+        col_nac1, col_nac2, col_nac3, col_nac4 = st.columns(4)
+        
+        with col_nac1:
+            total_nacional = len(datos)
+            st.markdown(f"""
+            <div class="metric-card-blue">
+                <div class="metric-label">TOTAL EVALUADOS</div>
+                <div class="highlight-number highlight-blue">{total_nacional}</div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col_nac2:
+            if 'region' in datos.columns:
+                regiones_unicas = datos['region'].nunique()
+                st.markdown(f"""
+                <div class="metric-card-green">
+                    <div class="metric-label">REGIÓNES</div>
+                    <div class="highlight-number highlight-green">{regiones_unicas}</div>
+                </div>
+                """, unsafe_allow_html=True)
+        
+        with col_nac3:
+            if 'hemoglobina_dl1' in datos.columns:
+                hb_nacional = datos['hemoglobina_dl1'].mean()
+                st.markdown(f"""
+                <div class="metric-card-purple">
+                    <div class="metric-label">HEMOGLOBINA NACIONAL</div>
+                    <div class="highlight-number highlight-purple">{hb_nacional:.1f} g/dL</div>
+                </div>
+                """, unsafe_allow_html=True)
+        
+        with col_nac4:
+            if 'en_seguimiento' in datos.columns:
+                seguimiento_nacional = datos['en_seguimiento'].sum()
+                st.markdown(f"""
+                <div class="metric-card-yellow">
+                    <div class="metric-label">EN SEGUIMIENTO</div>
+                    <div class="highlight-number highlight-yellow">{seguimiento_nacional}</div>
+                </div>
+                """, unsafe_allow_html=True)
+        
+        # MAPA DE CALOR POR REGIÓN
+        st.markdown('<div class="section-title-blue" style="font-size: 1.2rem;">📍 Mapa de Calor por Región</div>', unsafe_allow_html=True)
+        
+        if 'region' in datos.columns and 'hemoglobina_dl1' in datos.columns:
+            region_stats = datos.groupby('region').agg({
+                'hemoglobina_dl1': ['mean', 'count', 'min', 'max']
+            }).round(2)
+            
+            region_stats.columns = ['hb_promedio', 'casos', 'hb_min', 'hb_max']
+            region_stats = region_stats.reset_index()
+            region_stats = region_stats.sort_values('hb_promedio', ascending=False)
+            
+            st.dataframe(region_stats, use_container_width=True)
+            
+            fig_region_heat = px.bar(
+                region_stats,
+                y='region',
+                x='hb_promedio',
+                color='hb_promedio',
+                color_continuous_scale='RdYlGn',
+                title='<b>Hemoglobina Promedio por Región</b>',
+                text='hb_promedio',
+                orientation='h',
+                height=500
+            )
+            
+            fig_region_heat.update_traces(
+                texttemplate='%{text:.1f}',
+                textposition='outside'
+            )
+            
+            fig_region_heat.update_layout(
+                xaxis_title="Hemoglobina Promedio (g/dL)",
+                yaxis_title="Región",
+                yaxis={'categoryorder': 'total ascending'}
+            )
+            
+            st.plotly_chart(fig_region_heat, use_container_width=True)
+        
+        # TENDENCIAS
+        st.markdown('<div class="section-title-blue" style="font-size: 1.2rem;">📈 Tendencias y Análisis</div>', unsafe_allow_html=True)
+        
+        col_tend1, col_tend2 = st.columns(2)
+        
+        with col_tend1:
+            if 'edad_meses' in datos.columns:
+                datos['edad_años'] = datos['edad_meses'] / 12
+                fig_edad_dist = px.histogram(
+                    datos,
+                    x='edad_años',
+                    nbins=10,
+                    title='<b>Distribución por Edad</b>',
+                    color_discrete_sequence=['#3498db'],
+                    height=300
+                )
+                st.plotly_chart(fig_edad_dist, use_container_width=True)
+        
+        with col_tend2:
             if 'genero' in datos.columns:
                 genero_counts = datos['genero'].value_counts()
-                
-                # Mapear géneros a nombres más descriptivos
-                def mapear_genero(g):
-                    if g in ['M', 'Masculino', 'MALE', 'V', 'VARON']:
-                        return 'Niños'
-                    elif g in ['F', 'Femenino', 'FEMALE', 'MUJER']:
-                        return 'Niñas'
-                    else:
-                        return 'Otro'
-                
-                genero_mapeado = genero_counts.index.map(mapear_genero)
-                
-                # Gráfico circular elegante
-                import plotly.graph_objects as go
-                
-                fig_genero = go.Figure(data=[go.Pie(
-                    labels=genero_mapeado,
+                fig_genero_dist = px.pie(
                     values=genero_counts.values,
-                    hole=0.5,
-                    marker_colors=['#64b5f6', '#f48fb1', '#ce93d8']
-                )])
-                
-                fig_genero.update_layout(
-                    showlegend=True,
-                    margin=dict(t=20, b=20, l=20, r=20),
-                    height=300,
-                    paper_bgcolor='rgba(0,0,0,0)',
-                    plot_bgcolor='rgba(0,0,0,0)',
-                    font=dict(color="#2a5298")
+                    names=genero_counts.index.map({'M': 'Niños', 'F': 'Niñas'}).fillna('Otro'),
+                    title='<b>Distribución por Género</b>',
+                    color_discrete_sequence=['#e74c3c', '#3498db'],
+                    height=300
                 )
-                
-                fig_genero.update_traces(
-                    textposition='inside',
-                    textinfo='percent+label',
-                    marker=dict(line=dict(color='#fff', width=2))
-                )
-                
-                st.plotly_chart(fig_genero, use_container_width=True, config={'displayModeBar': False})
+                st.plotly_chart(fig_genero_dist, use_container_width=True)
         
-        with col_demo2:
-            st.markdown("""
-            <div class="analysis-section">
-                <h4 style="color: #2a5298; margin-top: 0; display: flex; align-items: center; gap: 10px;">
-                    <span>🏔️</span> Riesgo por Altitud
-                </h4>
-            </div>
-            """, unsafe_allow_html=True)
+        # ANÁLISIS DE RIESGO
+        st.markdown('<div class="section-title-blue" style="font-size: 1.2rem;">⚠️ Análisis de Riesgo Nacional</div>', unsafe_allow_html=True)
+        
+        if 'riesgo' in datos.columns:
+            riesgo_counts = datos['riesgo'].value_counts()
             
-            if 'altitud_msnm' in datos.columns:
-                # Clasificar por altitud
-                datos['categoria_altitud'] = pd.cut(
-                    datos['altitud_msnm'],
-                    bins=[0, 1000, 2000, 3000, 5000],
-                    labels=['<1000m', '1000-2000m', '2000-3000m', '>3000m']
+            col_ries1, col_ries2 = st.columns([3, 1])
+            
+            with col_ries1:
+                fig_riesgo = px.bar(
+                    x=riesgo_counts.index,
+                    y=riesgo_counts.values,
+                    title='<b>Distribución de Niveles de Riesgo</b>',
+                    color=riesgo_counts.values,
+                    color_continuous_scale='Reds',
+                    text=riesgo_counts.values,
+                    height=400
                 )
                 
-                altitud_counts = datos['categoria_altitud'].value_counts().sort_index()
-                
-                fig_altitud = go.Figure(data=[go.Bar(
-                    x=altitud_counts.index,
-                    y=altitud_counts.values,
-                    marker_color=altitud_counts.values,
-                    text=altitud_counts.values,
+                fig_riesgo.update_traces(
+                    texttemplate='%{text}',
                     textposition='outside'
-                )])
-                
-                fig_altitud.update_layout(
-                    xaxis_title="Altitud (msnm)",
-                    yaxis_title="Pacientes",
-                    showlegend=False,
-                    margin=dict(t=30, b=30, l=30, r=30),
-                    paper_bgcolor='rgba(0,0,0,0)',
-                    plot_bgcolor='rgba(0,0,0,0)',
-                    font=dict(color="#2a5298")
                 )
                 
-                st.plotly_chart(fig_altitud, use_container_width=True, config={'displayModeBar': False})
-        
-        with col_demo3:
-            st.markdown("""
-            <div class="analysis-section">
-                <h4 style="color: #2a5298; margin-top: 0; display: flex; align-items: center; gap: 10px;">
-                    <span>📍</span> Distribución por Región
-                </h4>
-            </div>
-            """, unsafe_allow_html=True)
+                st.plotly_chart(fig_riesgo, use_container_width=True)
             
-            if 'region' in datos.columns:
-                region_counts = datos['region'].value_counts().head(8)
-                
-                fig_region = go.Figure(data=[go.Bar(
-                    y=region_counts.index,
-                    x=region_counts.values,
-                    orientation='h',
-                    marker_color=region_counts.values,
-                    text=region_counts.values,
-                    textposition='outside'
-                )])
-                
-                fig_region.update_layout(
-                    yaxis_title="",
-                    xaxis_title="Pacientes",
-                    showlegend=False,
-                    margin=dict(t=30, b=30, l=30, r=30),
-                    paper_bgcolor='rgba(0,0,0,0)',
-                    plot_bgcolor='rgba(0,0,0,0)',
-                    font=dict(color="#2a5298")
-                )
-                
-                st.plotly_chart(fig_region, use_container_width=True, config={'displayModeBar': False})
-        
-        # ========== ANÁLISIS DE ANEMIA ==========
-        st.markdown("---")
-        st.markdown("""
-        <div class="section-title">
-            <span>🩺 Análisis de Prevalencia de Anemia</span>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        col_anemia1, col_anemia2 = st.columns([2, 1])
-        
-        with col_anemia1:
-            st.markdown("""
-            <div class="analysis-section">
-                <h4 style="color: #2a5298; margin-top: 0;">📊 Distribución de Hemoglobina</h4>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            if 'hemoglobina_dl1' in datos.columns:
-                # Histograma elegante
-                fig_hb = go.Figure(data=[go.Histogram(
-                    x=datos['hemoglobina_dl1'],
-                    nbinsx=25,
-                    marker_color='#2196f3',
-                    opacity=0.8
-                )])
-                
-                # Añadir zonas con colores pastel (rectángulos)
-                fig_hb.add_vrect(
-                    x0=0, x1=9.0,
-                    fillcolor="#ffcdd2", opacity=0.3,
-                    layer="below", line_width=0
-                )
-                
-                fig_hb.add_vrect(
-                    x0=9.0, x1=10.0,
-                    fillcolor="#ffecb3", opacity=0.3,
-                    layer="below", line_width=0
-                )
-                
-                fig_hb.add_vrect(
-                    x0=10.0, x1=11.0,
-                    fillcolor="#fff9c4", opacity=0.3,
-                    layer="below", line_width=0
-                )
-                
-                fig_hb.add_vrect(
-                    x0=11.0, x1=20,
-                    fillcolor="#c8e6c9", opacity=0.3,
-                    layer="below", line_width=0
-                )
-                
-                # Añadir anotaciones
-                fig_hb.add_annotation(x=4.5, y=0, text="<b>SEVERA</b>", showarrow=False, 
-                                    font=dict(color="#d32f2f", size=12))
-                fig_hb.add_annotation(x=9.5, y=0, text="<b>MODERADA</b>", showarrow=False,
-                                    font=dict(color="#ff8f00", size=12))
-                fig_hb.add_annotation(x=10.5, y=0, text="<b>LEVE</b>", showarrow=False,
-                                    font=dict(color="#f9a825", size=12))
-                fig_hb.add_annotation(x=15.5, y=0, text="<b>NORMAL</b>", showarrow=False,
-                                    font=dict(color="#388e3c", size=12))
-                
-                fig_hb.update_layout(
-                    xaxis_title="Hemoglobina (g/dL)",
-                    yaxis_title="Número de Pacientes",
-                    showlegend=False,
-                    margin=dict(t=50, b=50, l=50, r=50),
-                    paper_bgcolor='rgba(0,0,0,0)',
-                    plot_bgcolor='rgba(0,0,0,0)',
-                    font=dict(color="#2a5298"),
-                    height=350
-                )
-                
-                fig_hb.update_traces(
-                    marker=dict(line=dict(color='#fff', width=1))
-                )
-                
-                st.plotly_chart(fig_hb, use_container_width=True)
-        
-        with col_anemia2:
-            st.markdown("""
-            <div class="highlight-box" style="height: 100%;">
-                <h4 style="color: #1565c0; margin-top: 0;">📈 Prevalencia de Anemia</h4>
-                <p style="color: #546e7a; font-size: 0.95rem;">
-                Distribución de pacientes según clasificación OMS de anemia
-                </p>
-            """, unsafe_allow_html=True)
-            
-            if 'hemoglobina_dl1' in datos.columns and 'edad_meses' in datos.columns:
-                # Calcular prevalencia
-                sin_anemia = len(datos[datos['hemoglobina_dl1'] >= 11.0])
-                leve = len(datos[(datos['hemoglobina_dl1'] >= 10.0) & (datos['hemoglobina_dl1'] < 11.0)])
-                moderada = len(datos[(datos['hemoglobina_dl1'] >= 9.0) & (datos['hemoglobina_dl1'] < 10.0)])
-                severa = len(datos[datos['hemoglobina_dl1'] < 9.0])
-                
-                total = sin_anemia + leve + moderada + severa
-                
-                # Barras horizontales
-                fig_prevalencia = go.Figure()
-                
-                # Agregar barras
-                fig_prevalencia.add_trace(go.Bar(
-                    y=['Normal', 'Leve', 'Moderada', 'Severa'],
-                    x=[sin_anemia, leve, moderada, severa],
-                    orientation='h',
-                    marker_color=['#4caf50', '#ffeb3b', '#ff9800', '#f44336'],
-                    text=[sin_anemia, leve, moderada, severa],
-                    textposition='auto',
-                ))
-                
-                fig_prevalencia.update_layout(
-                    height=300,
-                    showlegend=False,
-                    margin=dict(t=30, b=30, l=100, r=30),
-                    paper_bgcolor='rgba(0,0,0,0)',
-                    plot_bgcolor='rgba(0,0,0,0)',
-                    font=dict(color="#2a5298"),
-                    xaxis_title="Número de Pacientes"
-                )
-                
-                st.plotly_chart(fig_prevalencia, use_container_width=True, config={'displayModeBar': False})
-                
-                # Calcular porcentajes solo si total > 0
-                if total > 0:
-                    p_normal = (sin_anemia/total*100)
-                    p_leve = (leve/total*100)
-                    p_moderada = (moderada/total*100)
-                    p_severa = (severa/total*100)
-                else:
-                    p_normal = p_leve = p_moderada = p_severa = 0
-                
-                # Estadísticas rápidas
-                st.markdown(f"""
-                <div style="margin-top: 1rem;">
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                        <div style="background: #e8f5e9; padding: 10px; border-radius: 8px;">
-                            <div style="font-size: 1.2rem; color: #2e7d32; font-weight: 600;">{p_normal:.1f}%</div>
-                            <div style="font-size: 0.8rem; color: #546e7a;">Normal</div>
-                        </div>
-                        <div style="background: #fffde7; padding: 10px; border-radius: 8px;">
-                            <div style="font-size: 1.2rem; color: #f9a825; font-weight: 600;">{p_leve:.1f}%</div>
-                            <div style="font-size: 0.8rem; color: #546e7a;">Leve</div>
-                        </div>
-                        <div style="background: #fff3e0; padding: 10px; border-radius: 8px;">
-                            <div style="font-size: 1.2rem; color: #ef6c00; font-weight: 600;">{p_moderada:.1f}%</div>
-                            <div style="font-size: 0.8rem; color: #546e7a;">Moderada</div>
-                        </div>
-                        <div style="background: #ffebee; padding: 10px; border-radius: 8px;">
-                            <div style="font-size: 1.2rem; color: #d32f2f; font-weight: 600;">{p_severa:.1f}%</div>
-                            <div style="font-size: 0.8rem; color: #546e7a;">Severa</div>
-                        </div>
+            with col_ries2:
+                for riesgo, count in riesgo_counts.items():
+                    porcentaje = (count / total_nacional) * 100
+                    st.markdown(f"""
+                    <div class="metric-card-blue" style="margin-bottom: 10px;">
+                        <div class="metric-label">{riesgo}</div>
+                        <div class="highlight-number highlight-blue">{count}</div>
+                        <div style="font-size: 0.9rem; color: #6b7280;">{porcentaje:.1f}%</div>
                     </div>
-                </div>
-                """, unsafe_allow_html=True)
-            
-            st.markdown("</div>", unsafe_allow_html=True)
+                    """, unsafe_allow_html=True)
         
-        # ========== FOCO EN MENORES DE 5 AÑOS ==========
-        st.markdown("---")
-        st.markdown("""
-        <div class="section-title">
-            <span>👶 Enfoque en Niños Menores de 5 Años</span>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        col_edad1, col_edad2 = st.columns([3, 1])
-        
-        with col_edad1:
-            if 'edad_meses' in datos.columns:
-                # Filtrar menores de 5 años (60 meses)
-                menores_5 = datos[datos['edad_meses'] < 60]
-                
-                if not menores_5.empty:
-                    # Crear histograma por edad
-                    fig_menores = go.Figure(data=[go.Histogram(
-                        x=menores_5['edad_meses'],
-                        nbinsx=12,
-                        marker_color='#64b5f6'
-                    )])
-                    
-                    fig_menores.update_layout(
-                        title=dict(text='Distribución por Edad (0-5 años)', font=dict(size=14)),
-                        xaxis_title="Edad (meses)",
-                        yaxis_title="Número de Niños",
-                        showlegend=False,
-                        margin=dict(t=50, b=50, l=50, r=50),
-                        paper_bgcolor='rgba(0,0,0,0)',
-                        plot_bgcolor='rgba(0,0,0,0)',
-                        font=dict(color="#2a5298"),
-                        height=300
-                    )
-                    
-                    st.plotly_chart(fig_menores, use_container_width=True)
-        
-        with col_edad2:
-            if 'edad_meses' in datos.columns:
-                total_pacientes = len(datos)
-                menores_5 = len(datos[datos['edad_meses'] < 60])
-                mayores_5 = total_pacientes - menores_5
-                
-                porcentaje_menores = (menores_5 / total_pacientes * 100) if total_pacientes > 0 else 0
-                
-                st.markdown(f"""
-                <div class="highlight-box">
-                    <h4 style="color: #1565c0; margin-top: 0;">🎯 Población Objetivo</h4>
-                    <div style="text-align: center; margin: 1.5rem 0;">
-                        <div style="font-size: 2.5rem; color: #2196f3; font-weight: 700;">{porcentaje_menores:.0f}%</div>
-                        <div style="color: #546e7a; font-size: 0.9rem;">Menores de 5 años</div>
-                    </div>
-                    <div style="font-size: 0.9rem; color: #546e7a;">
-                        <div style="display: flex; justify-content: space-between; margin: 5px 0;">
-                            <span>👶 <5 años:</span>
-                            <span style="font-weight: 600;">{menores_5}</span>
-                        </div>
-                        <div style="display: flex; justify-content: space-between; margin: 5px 0;">
-                            <span>👦 ≥5 años:</span>
-                            <span style="font-weight: 600;">{mayores_5}</span>
-                        </div>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-        
-        # ========== EXPORTAR REPORTE ==========
-        st.markdown("---")
+        # EXPORTAR REPORTE
+        st.markdown('<div class="section-title-blue" style="font-size: 1.2rem;">📥 Exportar Reporte Nacional</div>', unsafe_allow_html=True)
         
         with st.expander("📥 **Exportar Reporte Completo**", expanded=False):
-            st.markdown("""
-            <div style="background: #f5f7ff; padding: 1.5rem; border-radius: 10px;">
-                <h4 style="color: #2a5298; margin-top: 0;">Descargar Informe de Análisis</h4>
-                <p style="color: #546e7a;">Exporte los datos analizados para su uso en informes y presentaciones.</p>
-            """, unsafe_allow_html=True)
-            
-            col_exp1, col_exp2 = st.columns(2)
-            
-            with col_exp1:
-                # CSV
-                csv = datos.to_csv(index=False).encode('utf-8')
-                st.download_button(
-                    label="📊 **Descargar CSV Completo**",
-                    data=csv,
-                    file_name=f"reporte_anemia_{datetime.now().strftime('%Y%m%d')}.csv",
-                    mime="text/csv",
-                    use_container_width=True,
-                    type="secondary"
-                )
-            
-            with col_exp2:
-                if st.button("📋 **Generar Resumen Ejecutivo**", use_container_width=True, type="secondary"):
-                    with st.spinner("Generando resumen ejecutivo..."):
-                        # Verificar que existan las variables necesarias
-                        hb_promedio = datos['hemoglobina_dl1'].mean() if 'hemoglobina_dl1' in datos.columns else 0
-                        edad_promedio = (datos['edad_meses'].mean()/12) if 'edad_meses' in datos.columns else 0
-                        seguimiento = datos['en_seguimiento'].sum() if 'en_seguimiento' in datos.columns else 0
-                        
-                        # Crear resumen HTML
-                        resumen_html = f"""
-                        <div style="font-family: Arial, sans-serif; color: #2a5298;">
-                            <h2>📊 Resumen Ejecutivo - Monitoreo de Anemia</h2>
-                            <p><strong>Fecha de generación:</strong> {datetime.now().strftime('%d/%m/%Y %H:%M')}</p>
-                            
-                            <h3>📈 Métricas Principales</h3>
-                            <ul>
-                                <li>Total de pacientes monitoreados: <strong>{total_pacientes}</strong></li>
-                                <li>Hemoglobina promedio: <strong>{hb_promedio:.1f} g/dL</strong></li>
-                                <li>Edad promedio: <strong>{edad_promedio:.1f} años</strong></li>
-                                <li>Pacientes en seguimiento activo: <strong>{seguimiento}</strong></li>
-                            </ul>
-                            
-                            <h3>🩺 Prevalencia de Anemia</h3>
-                            <ul>
-                                <li>Sin anemia: <strong>{sin_anemia}</strong> ({p_normal:.1f}%)</li>
-                                <li>Anemia leve: <strong>{leve}</strong> ({p_leve:.1f}%)</li>
-                                <li>Anemia moderada: <strong>{moderada}</strong> ({p_moderada:.1f}%)</li>
-                                <li>Anemia severa: <strong>{severa}</strong> ({p_severa:.1f}%)</li>
-                            </ul>
-                            
-                            <h3>🎯 Población Objetivo (<5 años)</h3>
-                            <ul>
-                                <li>Niños menores de 5 años: <strong>{menores_5}</strong> ({porcentaje_menores:.1f}%)</li>
-                            </ul>
-                        </div>
-                        """
-                        
-                        st.markdown(resumen_html, unsafe_allow_html=True)
-            
-            st.markdown("</div>", unsafe_allow_html=True)
+            csv = datos.to_csv(index=False).encode('utf-8')
+            st.download_button(
+                label="📊 **Descargar CSV Completo**",
+                data=csv,
+                file_name=f"reporte_nacional_{datetime.now().strftime('%Y%m%d')}.csv",
+                mime="text/csv",
+                use_container_width=True,
+                type="secondary"
+            )
+    
+    else:
+        st.info("👆 Presiona el botón 'Cargar Datos Nacionales' para ver el dashboard nacional")
+
 # ==================================================
-# PESTAÑA 4: SISTEMA DE CITAS - VINCULADO CON ANEMIA
+# PESTAÑA 4: SISTEMA DE CITAS
 # ==================================================
 
 with tab4:
-    st.header("📋 Sistema de Seguimiento y Citas")
-    st.markdown("Registro de nuevas citas **vinculadas con diagnóstico de anemia**")
+    st.markdown('<div class="section-title-blue">📋 Sistema de Seguimiento y Citas</div>', unsafe_allow_html=True)
     
-    # ========== FUNCIONES VINCULADAS ==========
-    
+    # Funciones auxiliares para citas
     def obtener_citas_con_info_anemia():
-        """Obtiene citas con información de anemia del paciente"""
         try:
-            # Obtener todas las citas
             response_citas = supabase.table("citas").select("*").order("fecha_cita", desc=True).execute()
             citas = response_citas.data if response_citas.data else []
             
             if not citas:
                 return []
             
-            # Obtener información de anemia para cada paciente
             citas_con_info = []
             
             for cita in citas:
                 dni = cita.get('dni_paciente')
                 if dni:
-                    # Buscar información de anemia
                     response_paciente = supabase.table("alertas_hemoglobina")\
                         .select("*")\
                         .eq("dni", dni)\
@@ -2223,7 +1615,6 @@ with tab4:
                     
                     info_anemia = response_paciente.data[0] if response_paciente.data else {}
                     
-                    # Combinar información
                     cita_completa = {
                         **cita,
                         "info_anemia": info_anemia,
@@ -2254,11 +1645,10 @@ with tab4:
             return []
     
     def clasificar_anemia_simple(hemoglobina, edad_meses):
-        """Clasificación simple de anemia"""
         if hemoglobina == 'N/A' or not hemoglobina:
             return "Sin datos"
         
-        if edad_meses < 60:  # Menores de 5 años
+        if edad_meses < 60:
             if hemoglobina >= 11.0:
                 return "Normal"
             elif hemoglobina >= 10.0:
@@ -2278,7 +1668,6 @@ with tab4:
                 return "Severa"
     
     def obtener_color_anemia(clasificacion):
-        """Obtiene color según clasificación de anemia"""
         colores = {
             "Normal": "🟢",
             "Leve": "🟡",
@@ -2288,8 +1677,8 @@ with tab4:
         }
         return colores.get(clasificacion, "⚪")
     
-    # ========== SECCIÓN 1: CITAS CON INFO DE ANEMIA ==========
-    st.subheader("🩺 Citas con Estado de Anemia")
+    # Mostrar citas existentes
+    st.markdown('<div class="section-title-blue" style="font-size: 1.2rem;">🩺 Citas con Estado de Anemia</div>', unsafe_allow_html=True)
     
     if st.button("🔄 Cargar citas con información de anemia", key="cargar_citas_anemia"):
         with st.spinner("Vinculando citas con diagnóstico de anemia..."):
@@ -2301,15 +1690,11 @@ with tab4:
             else:
                 st.warning("⚠️ No hay citas registradas")
     
-    # Mostrar citas vinculadas
     if 'citas_vinculadas' in st.session_state and st.session_state.citas_vinculadas:
         citas_df = pd.DataFrame(st.session_state.citas_vinculadas)
-        
-        # Aplicar colores a la clasificación
         citas_df['anemia_icono'] = citas_df['clasificacion_anemia'].apply(obtener_color_anemia)
         citas_df['anemia_mostrar'] = citas_df['anemia_icono'] + " " + citas_df['clasificacion_anemia']
         
-        # Mostrar tabla ENRIQUECIDA
         st.dataframe(
             citas_df[['fecha_cita', 'hora_cita', 'nombre_paciente', 'dni_paciente',
                      'anemia_mostrar', 'hemoglobina', 'tipo_consulta', 'diagnostico', 'riesgo']],
@@ -2328,31 +1713,50 @@ with tab4:
             }
         )
         
-        # ========== ANÁLISIS ESTADÍSTICO ==========
-        st.markdown("#### 📊 Estadísticas de Anemia en Citas")
+        # Estadísticas
+        st.markdown('<div class="section-title-blue" style="font-size: 1.2rem;">📊 Estadísticas de Anemia en Citas</div>', unsafe_allow_html=True)
         
         col_est1, col_est2, col_est3, col_est4 = st.columns(4)
         
         with col_est1:
             total_citas = len(citas_df)
-            st.metric("Total Citas", total_citas)
+            st.markdown(f"""
+            <div class="metric-card-blue">
+                <div class="metric-label">TOTAL CITAS</div>
+                <div class="highlight-number highlight-blue">{total_citas}</div>
+            </div>
+            """, unsafe_allow_html=True)
         
         with col_est2:
             con_anemia = len(citas_df[citas_df['clasificacion_anemia'].isin(["Leve", "Moderada", "Severa"])])
             porcentaje = (con_anemia / total_citas * 100) if total_citas > 0 else 0
-            st.metric("Con Anemia", con_anemia, f"{porcentaje:.1f}%")
+            st.markdown(f"""
+            <div class="metric-card-yellow">
+                <div class="metric-label">CON ANEMIA</div>
+                <div class="highlight-number highlight-yellow">{con_anemia}</div>
+                <div style="font-size: 0.9rem; color: #6b7280;">{porcentaje:.1f}%</div>
+            </div>
+            """, unsafe_allow_html=True)
         
         with col_est3:
             severas = len(citas_df[citas_df['clasificacion_anemia'] == "Severa"])
-            st.metric("Anemia Severa", severas)
+            st.markdown(f"""
+            <div class="metric-card-red">
+                <div class="metric-label">ANEMIA SEVERA</div>
+                <div class="highlight-number highlight-red">{severas}</div>
+            </div>
+            """, unsafe_allow_html=True)
         
         with col_est4:
             seguimiento = len(citas_df[citas_df['en_seguimiento'] == True])
-            st.metric("En Seguimiento", seguimiento)
+            st.markdown(f"""
+            <div class="metric-card-green">
+                <div class="metric-label">EN SEGUIMIENTO</div>
+                <div class="highlight-number highlight-green">{seguimiento}</div>
+            </div>
+            """, unsafe_allow_html=True)
         
-        # Gráfico de distribución de anemia
-        st.markdown("#### 📈 Distribución de Severidad de Anemia")
-        
+        # Gráfico de distribución
         if 'clasificacion_anemia' in citas_df.columns:
             distribucion = citas_df['clasificacion_anemia'].value_counts()
             
@@ -2361,7 +1765,7 @@ with tab4:
                 y=distribucion.values,
                 title="Casos por Nivel de Anemia",
                 color=distribucion.values,
-                color_continuous_scale='RdYlGn_r',  # Rojo para severa, verde para normal
+                color_continuous_scale='RdYlGn_r',
                 text=distribucion.values,
                 height=300
             )
@@ -2378,1275 +1782,84 @@ with tab4:
             )
             
             st.plotly_chart(fig, use_container_width=True)
-    
-    # ========== SECCIÓN 2: AGENDAR CITA CON ENFOQUE EN ANEMIA ==========
-    st.markdown("---")
-    st.subheader("➕ Agendar Nueva Cita con Diagnóstico de Anemia")
-    
-    # Buscar pacientes CON anemia
-    st.markdown("#### 🔍 Buscar Pacientes con Anemia")
-    
-    filtro_anemia = st.selectbox(
-        "Filtrar por estado de anemia:",
-        ["Todos los pacientes", "Con anemia", "Anemia moderada/severa", "En seguimiento"]
-    )
-    
-    # Obtener pacientes según filtro
-    pacientes_filtrados = []
-    
-    try:
-        response = supabase.table("alertas_hemoglobina").select("*").execute()
-        todos_pacientes = response.data if response.data else []
-        
-        for paciente in todos_pacientes:
-            hb = paciente.get('hemoglobina_dl1', 0)
-            edad = paciente.get('edad_meses', 0)
-            clasificacion = clasificar_anemia_simple(hb, edad)
-            
-            include = False
-            
-            if filtro_anemia == "Todos los pacientes":
-                include = True
-            elif filtro_anemia == "Con anemia" and clasificacion in ["Leve", "Moderada", "Severa"]:
-                include = True
-            elif filtro_anemia == "Anemia moderada/severa" and clasificacion in ["Moderada", "Severa"]:
-                include = True
-            elif filtro_anemia == "En seguimiento" and paciente.get('en_seguimiento', False):
-                include = True
-            
-            if include:
-                pacientes_filtrados.append({
-                    **paciente,
-                    'clasificacion_anemia': clasificacion,
-                    'icono_anemia': obtener_color_anemia(clasificacion)
-                })
-    
-    except Exception as e:
-        st.error(f"Error al cargar pacientes: {str(e)}")
-    
-    # Mostrar lista de pacientes
-    if pacientes_filtrados:
-        st.success(f"✅ {len(pacientes_filtrados)} pacientes encontrados")
-        
-        # Crear opciones para selectbox
-        opciones_pacientes = []
-        for paciente in pacientes_filtrados:
-            nombre = paciente.get('nombre_apellido', 'Sin nombre')
-            dni = paciente.get('dni', 'N/A')
-            anemia = paciente.get('clasificacion_anemia', 'N/A')
-            icono = paciente.get('icono_anemia', '⚪')
-            hb = paciente.get('hemoglobina_dl1', 'N/A')
-            
-            opciones_pacientes.append(f"{icono} {nombre} | DNI: {dni} | Hb: {hb}g/dL | {anemia}")
-        
-        # Seleccionar paciente
-        paciente_seleccionado = st.selectbox(
-            "Seleccione el paciente para la cita:",
-            opciones_pacientes,
-            key="select_paciente_cita"
-        )
-        
-        if paciente_seleccionado:
-            # Extraer DNI de la selección
-            dni_seleccionado = paciente_seleccionado.split("|")[1].split(":")[1].strip()
-            
-            # Buscar paciente completo
-            paciente_completo = None
-            for p in pacientes_filtrados:
-                if p['dni'] == dni_seleccionado:
-                    paciente_completo = p
-                    break
-            
-            if paciente_completo:
-                st.markdown(f"### 📋 Cita para: **{paciente_completo.get('nombre_apellido')}**")
-                
-                # Mostrar alerta de anemia
-                clasificacion = paciente_completo.get('clasificacion_anemia')
-                icono = paciente_completo.get('icono_anemia')
-                hb = paciente_completo.get('hemoglobina_dl1')
-                
-                if clasificacion == "Severa":
-                    st.error(f"{icono} **ANEMIA SEVERA** - Hemoglobina: {hb} g/dL - **ATENCIÓN INMEDIATA REQUERIDA**")
-                elif clasificacion == "Moderada":
-                    st.warning(f"{icono} **ANEMIA MODERADA** - Hemoglobina: {hb} g/dL - Seguimiento mensual requerido")
-                elif clasificacion == "Leve":
-                    st.info(f"{icono} **ANEMIA LEVE** - Hemoglobina: {hb} g/dL - Seguimiento cada 3 meses")
-                else:
-                    st.success(f"{icono} **SIN ANEMIA** - Hemoglobina: {hb} g/dL")
-                
-                # Formulario de cita ESPECÍFICO para anemia
-                with st.form("form_cita_anemia"):
-                    col1, col2 = st.columns(2)
-                    
-                    with col1:
-                        fecha_cita = st.date_input("📅 Fecha de cita", value=datetime.now())
-                        tipo_consulta = st.selectbox(
-                            "🩺 Tipo de consulta",
-                            ["Control de anemia", "Seguimiento anemia", "Evaluación hematológica",
-                             "Control tratamiento hierro", "Reevaluación anemia", "Urgencia anemia"]
-                        )
-                    
-                    with col2:
-                        hora_cita = st.time_input("⏰ Hora", value=datetime.now().time())
-                        proxima_cita = st.date_input(
-                            "📅 Próximo control sugerido",
-                            value=datetime.now() + timedelta(days=30)
-                        )
-                    
-                    # Campos específicos para anemia
-                    st.markdown("#### 🩺 Datos Clínicos de Anemia")
-                    
-                    evolucion_anemia = st.selectbox(
-                        "📈 Evolución de la anemia",
-                        ["Mejoría", "Estable", "Empeoramiento", "Primera evaluación", "No evaluado"]
-                    )
-                    
-                    col_trat1, col_trat2 = st.columns(2)
-                    with col_trat1:
-                        tratamiento_hierro = st.selectbox(
-                            "💊 Tratamiento con hierro",
-                            ["Sin tratamiento", "Sulfato ferroso", "Gluconato ferroso", 
-                             "Fumarato ferroso", "Hierro intravenoso", "Otro"]
-                        )
-                    
-                    with col_trat2:
-                        dosis_hierro = st.text_input(
-                            "📏 Dosis de hierro",
-                            placeholder="Ej: 3 mg/kg/día"
-                        )
-                    
-                    diagnostico = st.text_area(
-                        "📝 Diagnóstico detallado",
-                        value=f"Paciente con {clasificacion.lower()}. {paciente_completo.get('interpretacion_hematologica', '')}",
-                        height=100
-                    )
-                    
-                    plan_tratamiento = st.text_area(
-                        "💡 Plan de tratamiento",
-                        placeholder="Describa el plan específico para este paciente...",
-                        height=100
-                    )
-                    
-                    observaciones = st.text_area(
-                        "📋 Observaciones específicas",
-                        placeholder="Observaciones sobre respuesta al tratamiento, efectos secundarios, etc.",
-                        height=100
-                    )
-                    
-                    investigador = st.text_input(
-                        "👨‍⚕️ Hematólogo/Responsable",
-                        value="Dr. Hematólogo"
-                    )
-                    
-                    # Botón de guardar
-                    if st.form_submit_button("💾 Guardar Cita de Anemia", type="primary", use_container_width=True):
-                        if not diagnostico.strip():
-                            st.error("❌ Por favor complete el diagnóstico")
-                        else:
-                            nueva_cita = {
-                                "dni_paciente": dni_seleccionado,
-                                "fecha_cita": str(fecha_cita),
-                                "hora_cita": str(hora_cita),
-                                "tipo_consulta": tipo_consulta,
-                                "diagnostico": diagnostico,
-                                "tratamiento": f"{tratamiento_hierro} - {dosis_hierro}" if dosis_hierro else tratamiento_hierro,
-                                "observaciones": f"Evolución: {evolucion_anemia}. {observaciones}",
-                                "investigador_responsable": investigador,
-                                "proxima_cita": str(proxima_cita),
-                                "severidad_anemia": clasificacion,
-                                "hemoglobina_actual": hb,
-                                "evolucion": evolucion_anemia
-                            }
-                            
-                            try:
-                                response = supabase.table("citas").insert(nueva_cita).execute()
-                                
-                                if response.data:
-                                    st.success("✅ Cita de anemia guardada exitosamente!")
-                                    st.balloons()
-                                    
-                                    # Actualizar estado de seguimiento si es necesario
-                                    if clasificacion in ["Moderada", "Severa"]:
-                                        supabase.table("alertas_hemoglobina")\
-                                            .update({"en_seguimiento": True})\
-                                            .eq("dni", dni_seleccionado)\
-                                            .execute()
-                                    
-                                    # Limpiar cache y recargar
-                                    if 'citas_vinculadas' in st.session_state:
-                                        del st.session_state.citas_vinculadas
-                                    
-                                    time.sleep(2)
-                                    st.rerun()
-                                else:
-                                    st.error("❌ Error al guardar la cita")
-                            except Exception as e:
-                                st.error(f"❌ Error: {str(e)}")
-    
-    # ========== SECCIÓN 3: REPORTES DE ANEMIA ==========
-    st.markdown("---")
-    st.subheader("📊 Reportes de Seguimiento de Anemia")
-    
-    col_rep1, col_rep2 = st.columns(2)
-    
-    with col_rep1:
-        if st.button("📋 Generar Reporte Mensual", use_container_width=True):
-            try:
-                # Obtener citas del último mes
-                un_mes_atras = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
-                
-                response = supabase.table("citas")\
-                    .select("*")\
-                    .gte("fecha_cita", un_mes_atras)\
-                    .execute()
-                
-                citas_mes = response.data if response.data else []
-                
-                if citas_mes:
-                    st.success(f"📈 {len(citas_mes)} citas en el último mes")
-                    
-                    # Contar por severidad
-                    severidades = {}
-                    for cita in citas_mes:
-                        # Buscar información de anemia
-                        dni = cita.get('dni_paciente')
-                        if dni:
-                            response_pac = supabase.table("alertas_hemoglobina")\
-                                .select("hemoglobina_dl1, edad_meses")\
-                                .eq("dni", dni)\
-                                .execute()
-                            
-                            if response_pac.data:
-                                paciente = response_pac.data[0]
-                                clasificacion = clasificar_anemia_simple(
-                                    paciente.get('hemoglobina_dl1', 0),
-                                    paciente.get('edad_meses', 0)
-                                )
-                                
-                                severidades[clasificacion] = severidades.get(clasificacion, 0) + 1
-                    
-                    # Mostrar resultados
-                    for severidad, cantidad in severidades.items():
-                        st.write(f"{obtener_color_anemia(severidad)} {severidad}: {cantidad} pacientes")
-                else:
-                    st.info("No hay citas en el último mes")
-                    
-            except Exception as e:
-                st.error(f"Error: {str(e)}")
-    
-    with col_rep2:
-        if st.button("🩺 Pacientes Críticos", use_container_width=True):
-            try:
-                # Buscar pacientes con anemia severa
-                response = supabase.table("alertas_hemoglobina")\
-                    .select("*")\
-                    .execute()
-                
-                pacientes_criticos = []
-                for paciente in response.data:
-                    hb = paciente.get('hemoglobina_dl1', 0)
-                    edad = paciente.get('edad_meses', 0)
-                    
-                    if (edad < 60 and hb < 9.0) or (edad >= 60 and hb < 10.0):
-                        pacientes_criticos.append(paciente)
-                
-                if pacientes_criticos:
-                    st.error(f"🚨 {len(pacientes_criticos)} pacientes con ANEMIA SEVERA")
-                    
-                    for paciente in pacientes_criticos[:5]:  # Mostrar primeros 5
-                        st.write(f"**{paciente.get('nombre_apellido')}** - Hb: {paciente.get('hemoglobina_dl1')} g/dL")
-                else:
-                    st.success("✅ No hay pacientes con anemia severa")
-                    
-            except Exception as e:
-                st.error(f"Error: {str(e)}")
 
-with tab4:
-    # ==================================================
-    # FARMACIA NUTRICIONAL - HEADER
-    # ==================================================
-    st.markdown("""
-        <div style='background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); 
-                    padding: 20px; border-radius: 12px; margin-bottom: 20px;'>
-            <h2 style='color: #2e7d32; margin: 0;'>💊 Farmacia Nutricional</h2>
-            <p style='color: #1b5e20; margin-top: 5px;'>
-            Gestión de suplementos, medicamentos y control nutricional para pacientes con anemia
-            </p>
-        </div>
-    """, unsafe_allow_html=True)
-    
-    # ========== SUBPESTAÑAS DENTRO DE FARMACIA ==========
-    sub_tab1, sub_tab2, sub_tab3, sub_tab4 = st.tabs([
-        "📦 Inventario", 
-        "💊 Prescripciones", 
-        "📊 Control Nutricional", 
-        "📈 Reportes"
-    ])
-    
-    with sub_tab1:
-        # ========== INVENTARIO DE SUPLEMENTOS ==========
-        st.markdown("### 📦 Inventario de Suplementos y Medicamentos")
-        
-        # Inventario de ejemplo
-        inventario = pd.DataFrame({
-            'ID': [1, 2, 3, 4, 5, 6],
-            'Producto': ['Sulfato Ferroso 40mg', 'Gluconato Ferroso 300mg', 
-                        'Hierro Polimaltosado 100mg', 'Ácido Fólico 5mg',
-                        'Vitamina B12 1000mcg', 'Multivitamínico Pediátrico'],
-            'Tipo': ['Suplemento', 'Suplemento', 'Suplemento', 'Vitamina', 
-                    'Vitamina', 'Multivitamínico'],
-            'Cantidad': [150, 85, 120, 200, 95, 180],
-            'Unidad': ['tabletas', 'tabletas', 'ml', 'tabletas', 'inyecciones', 'frascos'],
-            'Lote': ['LOT-2024-001', 'LOT-2024-002', 'LOT-2024-003', 
-                    'LOT-2024-004', 'LOT-2024-005', 'LOT-2024-006'],
-            'Vencimiento': ['2025-06-30', '2025-08-15', '2025-10-20',
-                           '2026-01-31', '2025-12-15', '2025-11-30'],
-            'Proveedor': ['Lab. Nacional', 'Lab. Internacional', 'Lab. Nacional',
-                         'Lab. Farmacéutico', 'Lab. Especializado', 'Lab. Pediátrico'],
-            'Nivel Alerta': ['Normal', 'Normal', 'Bajo', 'Normal', 'Normal', 'Normal']
-        })
-        
-        # Filtrar inventario
-        col_filtro1, col_filtro2 = st.columns(2)
-        with col_filtro1:
-            filtro_tipo = st.multiselect(
-                "Filtrar por tipo:",
-                options=['Todos'] + inventario['Tipo'].unique().tolist(),
-                default=['Todos']
-            )
-        
-        with col_filtro2:
-            filtro_stock = st.selectbox(
-                "Filtrar por nivel de stock:",
-                ['Todos', 'Crítico (<20)', 'Bajo (20-50)', 'Normal (>50)']
-            )
-        
-        # Aplicar filtros
-        inventario_filtrado = inventario.copy()
-        
-        if 'Todos' not in filtro_tipo:
-            inventario_filtrado = inventario_filtrado[inventario_filtrado['Tipo'].isin(filtro_tipo)]
-        
-        if filtro_stock != 'Todos':
-            if filtro_stock == 'Crítico (<20)':
-                inventario_filtrado = inventario_filtrado[inventario_filtrado['Cantidad'] < 20]
-            elif filtro_stock == 'Bajo (20-50)':
-                inventario_filtrado = inventario_filtrado[(inventario_filtrado['Cantidad'] >= 20) & 
-                                                         (inventario_filtrado['Cantidad'] <= 50)]
-            else:
-                inventario_filtrado = inventario_filtrado[inventario_filtrado['Cantidad'] > 50]
-        
-        # Mostrar inventario
-        st.dataframe(
-            inventario_filtrado,
-            use_container_width=True,
-            height=400,
-            column_config={
-                'ID': st.column_config.NumberColumn('ID', width='small'),
-                'Cantidad': st.column_config.ProgressColumn(
-                    'Stock',
-                    help="Nivel de inventario",
-                    format="%d",
-                    min_value=0,
-                    max_value=200
-                )
-            }
-        )
-        
-        # Métricas de inventario
-        col_inv1, col_inv2, col_inv3, col_inv4 = st.columns(4)
-        with col_inv1:
-            total_productos = len(inventario)
-            st.metric("📦 Total Productos", total_productos)
-        with col_inv2:
-            stock_bajo = len(inventario[inventario['Cantidad'] < 30])
-            st.metric("⚠️ Stock Bajo", stock_bajo, delta=f"-{stock_bajo}")
-        with col_inv3:
-            proximos_vencer = len(inventario[pd.to_datetime(inventario['Vencimiento']) < pd.Timestamp.now() + pd.Timedelta(days=90)])
-            st.metric("📅 Próximos a vencer", proximos_vencer)
-        with col_inv4:
-            valor_total = inventario['Cantidad'].sum()
-            st.metric("💰 Unidades totales", f"{valor_total:,}")
-        
-        # Formulario para agregar/actualizar inventario
-        with st.expander("➕ **Agregar/Actualizar Producto**", expanded=False):
-            col_add1, col_add2 = st.columns(2)
-            
-            with col_add1:
-                nuevo_producto = st.text_input("Nombre del producto *")
-                nuevo_tipo = st.selectbox("Tipo *", ["Suplemento", "Medicamento", "Vitamina", "Multivitamínico", "Otro"])
-                nueva_cantidad = st.number_input("Cantidad *", min_value=0, value=100)
-                nueva_unidad = st.selectbox("Unidad *", ["tabletas", "ml", "frascos", "inyecciones", "sobres", "gotas"])
-            
-            with col_add2:
-                nuevo_lote = st.text_input("Número de lote *")
-                nuevo_vencimiento = st.date_input("Fecha de vencimiento *", 
-                                                 min_value=datetime.now().date())
-                nuevo_proveedor = st.text_input("Proveedor")
-                nivel_minimo = st.number_input("Nivel mínimo de alerta", min_value=5, value=20)
-            
-            if st.button("💾 Guardar en Inventario", type="primary"):
-                if nuevo_producto and nuevo_lote:
-                    st.success(f"Producto '{nuevo_producto}' agregado al inventario")
-                else:
-                    st.error("Complete los campos obligatorios (*)")
-    
-    with sub_tab2:
-        # ========== PRESCRIPCIONES MÉDICAS ==========
-        st.markdown("### 💊 Prescripciones Médicas")
-        
-        # Conectar con datos de pacientes y citas
-        if 'datos_estadisticas' in st.session_state and 'datos_citas' in st.session_state:
-            datos_pacientes = st.session_state.datos_estadisticas
-            datos_citas = st.session_state.datos_citas
-            
-            # Crear DataFrame de prescripciones
-            prescripciones = datos_citas[['dni_paciente', 'fecha_cita', 'investigador_responsable', 
-                                         'severidad_anemia', 'suplemento_hierro', 'frecuencia_suplemento']].copy()
-            
-            # Fusionar con datos de pacientes
-            prescripciones = prescripciones.merge(
-                datos_pacientes[['dni', 'nombre_apellido', 'edad_meses']],
-                left_on='dni_paciente',
-                right_on='dni',
-                how='left'
-            )
-            
-            # Filtrar solo las que tienen prescripción
-            prescripciones = prescripciones[prescripciones['suplemento_hierro'].notna()]
-            
-            if not prescripciones.empty:
-                # Mostrar prescripciones
-                st.dataframe(
-                    prescripciones[['nombre_apellido', 'edad_meses', 'fecha_cita', 
-                                   'investigador_responsable', 'suplemento_hierro', 
-                                   'frecuencia_suplemento', 'severidad_anemia']].rename(columns={
-                        'nombre_apellido': 'Paciente',
-                        'edad_meses': 'Edad (meses)',
-                        'fecha_cita': 'Fecha Prescripción',
-                        'investigador_responsable': 'Médico',
-                        'suplemento_hierro': 'Suplemento',
-                        'frecuencia_suplemento': 'Frecuencia',
-                        'severidad_anemia': 'Severidad'
-                    }),
-                    use_container_width=True,
-                    height=300
-                )
-                
-                # Resumen de prescripciones
-                col_pre1, col_pre2, col_pre3 = st.columns(3)
-                with col_pre1:
-                    st.metric("📋 Prescripciones activas", len(prescripciones))
-                with col_pre2:
-                    sulfato = len(prescripciones[prescripciones['suplemento_hierro'].str.contains('Sulfato', na=False)])
-                    st.metric("🧪 Sulfato ferroso", sulfato)
-                with col_pre3:
-                    gluconato = len(prescripciones[prescripciones['suplemento_hierro'].str.contains('Gluconato', na=False)])
-                    st.metric("💊 Gluconato ferroso", gluconato)
-            else:
-                st.info("No hay prescripciones registradas")
-        
-        # Formulario de nueva prescripción
-        with st.expander("➕ **Nueva Prescripción**", expanded=False):
-            col_pre1, col_pre2 = st.columns(2)
-            
-            with col_pre1:
-                presc_dni = st.selectbox(
-                    "DNI del Paciente *",
-                    options=datos_pacientes['dni'].tolist() if 'datos_estadisticas' in st.session_state else [],
-                    key="presc_dni"
-                )
-                
-                presc_medico = st.text_input("Médico prescriptor *", value="Dr. Normaldiego")
-                presc_fecha = st.date_input("Fecha de prescripción *", value=datetime.now().date())
-                
-                # Suplementos disponibles
-                suplementos_disponibles = ["Sulfato ferroso 40mg", "Gluconato ferroso 300mg", 
-                                          "Hierro polimaltosado", "Ácido fólico", 
-                                          "Vitamina B12", "Multivitamínico"]
-                
-                presc_suplemento = st.multiselect(
-                    "Suplementos prescritos *",
-                    options=suplementos_disponibles
-                )
-            
-            with col_pre2:
-                presc_dosis = st.text_input("Dosis diaria *", placeholder="Ej: 1 tableta al día")
-                presc_duracion = st.number_input("Duración (días) *", min_value=1, value=30)
-                presc_indicaciones = st.text_area("Indicaciones especiales", 
-                                                 placeholder="Tome con alimentos, evitar con lácteos...")
-                presc_control = st.date_input("Fecha control", 
-                                            value=datetime.now().date() + timedelta(days=30))
-            
-            if st.button("📄 Generar Prescripción", type="primary"):
-                if presc_dni and presc_medico and presc_suplemento and presc_dosis:
-                    st.success("Prescripción generada exitosamente")
-                    
-                    # Mostrar receta
-                    st.markdown("---")
-                    st.markdown("### 📋 Receta Médica")
-                    st.markdown(f"""
-                    **Paciente:** {presc_dni}  
-                    **Médico:** {presc_medico}  
-                    **Fecha:** {presc_fecha}  
-                    **Suplementos:** {', '.join(presc_suplemento)}  
-                    **Dosis:** {presc_dosis}  
-                    **Duración:** {presc_duracion} días  
-                    **Próximo control:** {presc_control}  
-                    **Indicaciones:** {presc_indicaciones}
-                    """)
-                else:
-                    st.error("Complete los campos obligatorios (*)")
-    
-    with sub_tab3:
-        # ========== CONTROL NUTRICIONAL ==========
-        st.markdown("### 📊 Control Nutricional")
-        
-        # Evaluación nutricional
-        col_nut1, col_nut2 = st.columns([2, 1])
-        
-        with col_nut1:
-            st.markdown("#### 🥦 Evaluación Dietética")
-            
-            # Preguntas de evaluación
-            st.markdown("**1. Consumo de alimentos ricos en hierro:**")
-            col_alim1, col_alim2, col_alim3 = st.columns(3)
-            with col_alim1:
-                carne_roja = st.checkbox("Carne roja", value=True)
-                higado = st.checkbox("Hígado")
-            with col_alim2:
-                legumbres = st.checkbox("Legumbres")
-                espinacas = st.checkbox("Espinacas")
-            with col_alim3:
-                cereales = st.checkbox("Cereales fortificados")
-                frutos_secos = st.checkbox("Frutos secos")
-            
-            st.markdown("**2. Inhibidores de absorción:**")
-            inhibidores = st.multiselect(
-                "Consumo frecuente de:",
-                ["Té/café con las comidas", "Lácteos con las comidas", 
-                 "Alimentos con calcio", "Alimentos con fitatos"]
-            )
-            
-            st.markdown("**3. Facilitadores de absorción:**")
-            facilitadores = st.multiselect(
-                "Consumo de:",
-                ["Vitamina C (cítricos)", "Alimentos ácidos", 
-                 "Carne/pescado con legumbres"]
-            )
-        
-        with col_nut2:
-            st.markdown("#### 📈 Puntuación Nutricional")
-            
-            # Calcular puntuación
-            puntuacion = 0
-            if carne_roja: puntuacion += 2
-            if higado: puntuacion += 3
-            if legumbres: puntuacion += 1
-            if espinacas: puntuacion += 1
-            if cereales: puntuacion += 2
-            if frutos_secos: puntuacion += 1
-            
-            # Restar por inhibidores
-            puntuacion -= len(inhibidores)
-            
-            # Sumar por facilitadores
-            puntuacion += len(facilitadores)
-            
-            # Mostrar resultado
-            st.markdown(f"""
-            <div style='text-align: center; padding: 20px; background: #f3e5f5; border-radius: 10px;'>
-                <div style='font-size: 2rem; color: #7b1fa2; font-weight: bold;'>{puntuacion}/10</div>
-                <div style='color: #4a148c;'>Puntuación Nutricional</div>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            # Interpretación
-            if puntuacion >= 7:
-                st.success("✅ Dieta adecuada en hierro")
-            elif puntuacion >= 4:
-                st.warning("⚠️ Dieta moderada en hierro")
-            else:
-                st.error("❌ Dieta deficiente en hierro")
-        
-        # Recomendaciones nutricionales
-        st.markdown("#### 🍎 Recomendaciones Personalizadas")
-        
-        recomendaciones = []
-        if not carne_roja:
-            recomendaciones.append("Aumentar consumo de carne roja (2-3 veces por semana)")
-        if not legumbres:
-            recomendaciones.append("Incluir legumbres 2-3 veces por semana")
-        if inhibidores:
-            recomendaciones.append("Evitar tomar té/café con las comidas principales")
-        if not facilitadores:
-            recomendaciones.append("Consumir cítricos con las comidas para mejorar absorción")
-        
-        if recomendaciones:
-            for i, rec in enumerate(recomendaciones, 1):
-                st.markdown(f"{i}. {rec}")
-        else:
-            st.success("La dieta actual parece adecuada para la absorción de hierro")
-    
-    with sub_tab4:
-        # ========== REPORTES DE FARMACIA ==========
-        st.markdown("### 📈 Reportes y Estadísticas")
-        
-        col_rep1, col_rep2 = st.columns(2)
-        
-        with col_rep1:
-            st.markdown("#### 📊 Consumo de Suplementos")
-            
-            # Datos de ejemplo para gráfico
-            consumo_data = pd.DataFrame({
-                'Mes': ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun'],
-                'Sulfato Ferroso': [45, 52, 48, 60, 55, 62],
-                'Gluconato Ferroso': [30, 28, 35, 32, 40, 38],
-                'Ácido Fólico': [25, 22, 30, 28, 35, 32]
-            })
-            
-            fig_consumo = go.Figure()
-            
-            fig_consumo.add_trace(go.Bar(
-                x=consumo_data['Mes'],
-                y=consumo_data['Sulfato Ferroso'],
-                name='Sulfato Ferroso',
-                marker_color='#2196f3'
-            ))
-            
-            fig_consumo.add_trace(go.Bar(
-                x=consumo_data['Mes'],
-                y=consumo_data['Gluconato Ferroso'],
-                name='Gluconato Ferroso',
-                marker_color='#4caf50'
-            ))
-            
-            fig_consumo.add_trace(go.Bar(
-                x=consumo_data['Mes'],
-                y=consumo_data['Ácido Fólico'],
-                name='Ácido Fólico',
-                marker_color='#ff9800'
-            ))
-            
-            fig_consumo.update_layout(
-                title='Consumo Mensual de Suplementos',
-                barmode='group',
-                height=300,
-                paper_bgcolor='rgba(0,0,0,0)',
-                plot_bgcolor='rgba(0,0,0,0)'
-            )
-            
-            st.plotly_chart(fig_consumo, use_container_width=True)
-        
-        with col_rep2:
-            st.markdown("#### 📋 Productos por Vencer")
-            
-            # Simular datos de vencimiento
-            vencimientos = pd.DataFrame({
-                'Producto': ['Sulfato Ferroso Lote A', 'Gluconato Lote B', 
-                            'Ácido Fólico Lote C', 'Vitamina B12 Lote D'],
-                'Días para vencer': [15, 45, 90, 120],
-                'Cantidad': [20, 35, 50, 25]
-            })
-            
-            fig_vencimientos = go.Figure(go.Bar(
-                y=vencimientos['Producto'],
-                x=vencimientos['Días para vencer'],
-                orientation='h',
-                marker_color=['#f44336' if x < 30 else '#ff9800' if x < 60 else '#4caf50' 
-                             for x in vencimientos['Días para vencer']]
-            ))
-            
-            fig_vencimientos.update_layout(
-                title='Días para vencimiento',
-                height=300,
-                xaxis_title='Días restantes',
-                paper_bgcolor='rgba(0,0,0,0)',
-                plot_bgcolor='rgba(0,0,0,0)'
-            )
-            
-            st.plotly_chart(fig_vencimientos, use_container_width=True)
-        
-        # Botones de exportación
-        st.markdown("---")
-        col_exp1, col_exp2, col_exp3 = st.columns(3)
-        
-        with col_exp1:
-            if st.button("📄 Generar Reporte PDF", use_container_width=True):
-                st.info("Generando reporte PDF...")
-        
-        with col_exp2:
-            if st.button("📊 Exportar a Excel", use_container_width=True):
-                st.info("Exportando datos a Excel...")
-        
-        with col_exp3:
-            if st.button("🔄 Actualizar Reportes", use_container_width=True):
-                st.success("Reportes actualizados")
 # ==================================================
-# PESTAÑA 5: DASHBOARD NACIONAL
+# PESTAÑA 5: CONFIGURACIÓN
 # ==================================================
 
 with tab5:
-    st.header("📊 Dashboard Nacional de Anemia y Nutrición")
+    st.markdown('<div class="section-title-blue">⚙️ Configuración del Sistema</div>', unsafe_allow_html=True)
     
-    # Botón para cargar datos nacionales
-    if st.button("🔄 Cargar Datos Nacionales", type="primary"):
-        with st.spinner("Cargando datos nacionales..."):
-            datos_nacionales = obtener_datos_supabase()
-            
-            if not datos_nacionales.empty:
-                st.session_state.datos_nacionales = datos_nacionales
-                st.success(f"✅ {len(datos_nacionales)} registros nacionales cargados")
-            else:
-                st.error("❌ No se pudieron cargar datos nacionales")
+    st.markdown('<div class="section-title-blue" style="font-size: 1.2rem;">🛠️ Configuración de Tablas</div>', unsafe_allow_html=True)
     
-    # Verificar si tenemos datos nacionales
-    if 'datos_nacionales' in st.session_state and not st.session_state.datos_nacionales.empty:
-        datos = st.session_state.datos_nacionales
-        
-        # ========== MÉTRICAS NACIONALES ==========
-        st.subheader("🎯 Indicadores Nacionales")
-        
-        col_nac1, col_nac2, col_nac3, col_nac4 = st.columns(4)
-        
-        with col_nac1:
-            total_nacional = len(datos)
-            st.metric("Total Evaluados", total_nacional)
-        
-        with col_nac2:
-            if 'region' in datos.columns:
-                regiones_unicas = datos['region'].nunique()
-                st.metric("Regiones", regiones_unicas)
-        
-        with col_nac3:
-            if 'hemoglobina_dl1' in datos.columns:
-                hb_nacional = datos['hemoglobina_dl1'].mean()
-                st.metric("Hb Nacional", f"{hb_nacional:.1f} g/dL")
-        
-        with col_nac4:
-            if 'en_seguimiento' in datos.columns:
-                seguimiento_nacional = datos['en_seguimiento'].sum()
-                st.metric("Seguimiento", seguimiento_nacional)
-        
-        # ========== MAPA DE CALOR POR REGIÓN ==========
-        st.markdown("---")
-        st.subheader("📍 Mapa de Calor por Región")
-        
-        if 'region' in datos.columns and 'hemoglobina_dl1' in datos.columns:
-            # Calcular estadísticas por región
-            region_stats = datos.groupby('region').agg({
-                'hemoglobina_dl1': ['mean', 'count', 'min', 'max']
-            }).round(2)
-            
-            region_stats.columns = ['hb_promedio', 'casos', 'hb_min', 'hb_max']
-            region_stats = region_stats.reset_index()
-            
-            # Ordenar por hemoglobina promedio
-            region_stats = region_stats.sort_values('hb_promedio', ascending=False)
-            
-            # Mostrar tabla
-            st.dataframe(region_stats, use_container_width=True)
-            
-            # Gráfico de calor
-            fig_region_heat = px.bar(
-                region_stats,
-                y='region',
-                x='hb_promedio',
-                color='hb_promedio',
-                color_continuous_scale='RdYlGn',
-                title='<b>Hemoglobina Promedio por Región</b>',
-                text='hb_promedio',
-                orientation='h',
-                height=500
-            )
-            
-            fig_region_heat.update_traces(
-                texttemplate='%{text:.1f}',
-                textposition='outside'
-            )
-            
-            fig_region_heat.update_layout(
-                xaxis_title="Hemoglobina Promedio (g/dL)",
-                yaxis_title="Región",
-                yaxis={'categoryorder': 'total ascending'}
-            )
-            
-            st.plotly_chart(fig_region_heat, use_container_width=True)
-        
-        # ========== ANÁLISIS DE TENDENCIAS ==========
-        st.markdown("---")
-        st.subheader("📈 Tendencias y Análisis")
-        
-        col_tend1, col_tend2 = st.columns(2)
-        
-        with col_tend1:
-            if 'edad_meses' in datos.columns:
-                # Distribución por edad
-                datos['edad_años'] = datos['edad_meses'] / 12
-                fig_edad_dist = px.histogram(
-                    datos,
-                    x='edad_años',
-                    nbins=10,
-                    title='<b>Distribución por Edad</b>',
-                    color_discrete_sequence=['#3498db'],
-                    height=300
-                )
-                st.plotly_chart(fig_edad_dist, use_container_width=True)
-        
-        with col_tend2:
-            if 'genero' in datos.columns:
-                # Distribución por género
-                genero_counts = datos['genero'].value_counts()
-                fig_genero_dist = px.pie(
-                    values=genero_counts.values,
-                    names=genero_counts.index.map({'M': 'Niños', 'F': 'Niñas'}).fillna('Otro'),
-                    title='<b>Distribución por Género</b>',
-                    color_discrete_sequence=['#e74c3c', '#3498db'],
-                    height=300
-                )
-                st.plotly_chart(fig_genero_dist, use_container_width=True)
-        
-        # ========== ANÁLISIS DE RIESGO ==========
-        st.markdown("---")
-        st.subheader("⚠️ Análisis de Riesgo Nacional")
-        
-        if 'riesgo' in datos.columns:
-            riesgo_counts = datos['riesgo'].value_counts()
-            
-            col_ries1, col_ries2 = st.columns([3, 1])
-            
-            with col_ries1:
-                fig_riesgo = px.bar(
-                    x=riesgo_counts.index,
-                    y=riesgo_counts.values,
-                    title='<b>Distribución de Niveles de Riesgo</b>',
-                    color=riesgo_counts.values,
-                    color_continuous_scale='Reds',
-                    text=riesgo_counts.values,
-                    height=400
-                )
-                
-                fig_riesgo.update_traces(
-                    texttemplate='%{text}',
-                    textposition='outside'
-                )
-                
-                st.plotly_chart(fig_riesgo, use_container_width=True)
-            
-            with col_ries2:
-                for riesgo, count in riesgo_counts.items():
-                    porcentaje = (count / total_nacional) * 100
-                    st.metric(riesgo, f"{count}", f"{porcentaje:.1f}%")
-        
-        # ========== EXPORTAR REPORTE NACIONAL ==========
-        st.markdown("---")
-        with st.expander("📥 Exportar Reporte Nacional"):
-            csv = datos.to_csv(index=False).encode('utf-8')
-            st.download_button(
-                label="📥 Descargar Reporte Nacional (CSV)",
-                data=csv,
-                file_name=f"reporte_nacional_{datetime.now().strftime('%Y%m%d')}.csv",
-                mime="text/csv"
-            )
+    col_config1, col_config2 = st.columns(2)
     
-    else:
-        st.info("👆 Presiona el botón 'Cargar Datos Nacionales' para ver el dashboard nacional")
+    with col_config1:
+        if st.button("📋 Configurar Tabla 'citas'", use_container_width=True, type="primary"):
+            crear_tabla_citas_simple()
+    
+    with col_config2:
+        if st.button("🔍 Verificar Conexión Supabase", use_container_width=True, type="secondary"):
+            try:
+                with st.spinner("Verificando conexión..."):
+                    test = supabase.table("alertas_hemoglobina").select("*").limit(1).execute()
+                    if test.data:
+                        st.success("✅ Conexión a Supabase establecida correctamente")
+                    else:
+                        st.warning("⚠️ Conexión OK pero no hay datos")
+            except Exception as e:
+                st.error(f"❌ Error de conexión: {str(e)}")
+    
+    # Pruebas de guardado
+    st.markdown('<div class="section-title-blue" style="font-size: 1.2rem;">🧪 Pruebas del Sistema</div>', unsafe_allow_html=True)
+    probar_guardado_directo()
+    
+    # Información del sistema
+    st.markdown('<div class="section-title-blue" style="font-size: 1.2rem;">📊 Información del Sistema</div>', unsafe_allow_html=True)
+    
+    col_info1, col_info2 = st.columns(2)
+    
+    with col_info1:
+        try:
+            response = supabase.table("alertas_hemoglobina").select("*").execute()
+            total_pacientes = len(response.data) if response.data else 0
+            
+            st.markdown(f"""
+            <div class="metric-card-blue">
+                <div class="metric-label">PACIENTES REGISTRADOS</div>
+                <div class="highlight-number highlight-blue">{total_pacientes}</div>
+            </div>
+            """, unsafe_allow_html=True)
+        except:
+            st.markdown("""
+            <div class="metric-card-blue">
+                <div class="metric-label">PACIENTES REGISTRADOS</div>
+                <div class="highlight-number highlight-blue">0</div>
+            </div>
+            """, unsafe_allow_html=True)
+    
+    with col_info2:
+        st.markdown(f"""
+        <div class="metric-card-green">
+            <div class="metric-label">VERSIÓN DEL SISTEMA</div>
+            <div class="highlight-number highlight-green">2.0</div>
+            <div style="font-size: 0.9rem; color: #6b7280; margin-top: 5px;">
+            Última actualización: {datetime.now().strftime('%d/%m/%Y')}
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
 # ==================================================
-# PESTAÑA 6: DIAGNÓSTICO COMPLETO (NUEVA PESTAÑA)
-# ==================================================
-
-# Agregar esta nueva pestaña:
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
-    "📋 Registro", 
-    "📅 Citas", 
-    "📊 Dashboard", 
-    "💊 Farmacia",
-    "🩺 Clínico",
-    "🔬 Diagnóstico Completo"  # <-- NUEVA
-])
-
-with tab6:
-    # ========== HEADER CIENTÍFICO ==========
-    st.markdown("""
-    <div style='background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%); 
-                padding: 2rem; border-radius: 15px; color: white; margin-bottom: 2rem;'>
-        <h1 style='margin: 0; color: white;'>🔬 Diagnóstico Integral de Anemia</h1>
-        <p style='opacity: 0.9; margin-top: 10px;'>
-        Basado en evidencia científica: Hemoglobina + Hemograma + Marcadores de Hierro + Inflamación
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # ========== ADVERTENCIA CIENTÍFICA ==========
-    st.warning("""
-    **📚 EVIDENCIA CIENTÍFICA:** 
-    Los programas de lucha contra la anemia deben incluir:
-    1. **Medición de hemoglobina** - Para detectar anemia
-    2. **Hemograma completo** - Para clasificar tipo de anemia
-    3. **Marcador de estatus de hierro** - Para diagnosticar deficiencia de hierro
-    4. **Marcador de inflamación** - Para identificar anemia de enfermedad crónica
-    
-    *Fuente: Revisión científica sobre anemia en poblaciones de altura*
-    """)
-    
-    # ========== FORMULARIO DE DIAGNÓSTICO COMPLETO ==========
-    st.markdown("## 🧪 Formulario de Evaluación Completa")
-    
-    with st.form("form_diagnostico_completo"):
-        col_diag1, col_diag2 = st.columns(2)
-        
-        with col_diag1:
-            # 1. HEMOGLOBINA (ya lo tienes)
-            st.markdown("### 1. Hemoglobina")
-            hb = st.number_input("Hemoglobina (g/dL) *", 
-                                min_value=0.0, max_value=20.0, value=12.0,
-                                help="Valor de hemoglobina en sangre")
-            
-            # 2. HEMOGRAMA COMPLETO
-            st.markdown("### 2. Hemograma Completo")
-            vcm = st.number_input("VCM (fL) *", 
-                                 min_value=50.0, max_value=120.0, value=85.0,
-                                 help="Volumen Corpuscular Medio (80-100 fL)")
-            hcm = st.number_input("HCM (pg) *", 
-                                 min_value=15.0, max_value=40.0, value=28.0,
-                                 help="Hemoglobina Corpuscular Media (27-33 pg)")
-            chcm = st.number_input("CHCM (g/dL) *", 
-                                  min_value=20.0, max_value=40.0, value=32.0,
-                                  help="Concentración de Hb Corpuscular Media (32-36 g/dL)")
-            rdw = st.number_input("RDW (%) *", 
-                                 min_value=10.0, max_value=25.0, value=13.5,
-                                 help="Ancho de distribución eritrocitaria (11.5-14.5%)")
-        
-        with col_diag2:
-            # 3. MARCADORES DE HIERRO
-            st.markdown("### 3. Marcadores de Hierro")
-            ferritina = st.number_input("Ferritina (ng/mL) *", 
-                                       min_value=0.0, max_value=500.0, value=30.0,
-                                       help="<15 ng/mL = deficiencia de hierro")
-            hierro_serico = st.number_input("Hierro sérico (μg/dL)", 
-                                          min_value=0.0, max_value=200.0, value=60.0)
-            tibc = st.number_input("TIBC (μg/dL)", 
-                                  min_value=100.0, max_value=500.0, value=300.0)
-            saturacion = st.number_input("Saturación de transferrina (%)", 
-                                        min_value=0.0, max_value=100.0, value=20.0)
-            
-            # 4. MARCADOR DE INFLAMACIÓN
-            st.markdown("### 4. Marcador de Inflamación")
-            pcr = st.number_input("Proteína C Reactiva (mg/L)", 
-                                 min_value=0.0, max_value=50.0, value=2.0,
-                                 help=">5 mg/L sugiere inflamación")
-            vsg = st.number_input("VSG (mm/h)", 
-                                 min_value=0.0, max_value=100.0, value=15.0)
-        
-        # Información adicional
-        st.markdown("### 📝 Información Clínica Adicional")
-        col_clin1, col_clin2 = st.columns(2)
-        
-        with col_clin1:
-            infeccion_actual = st.checkbox("Infección actual")
-            enfermedad_cronica = st.checkbox("Enfermedad crónica")
-            cirugia_reciente = st.checkbox("Cirugía reciente")
-        
-        with col_clin2:
-            deficit_b12 = st.checkbox("Sospecha deficiencia B12")
-            deficit_folato = st.checkbox("Sospecha deficiencia folato")
-            parasitosis = st.checkbox("Parasitosis intestinal")
-        
-        # Botón de análisis
-        submitted = st.form_submit_button("🔍 Analizar Diagnóstico Completo", type="primary")
-        
-        if submitted:
-            # ========== ANÁLISIS CIENTÍFICO COMPLETO ==========
-            with st.spinner("Realizando análisis diagnóstico integral..."):
-                
-                # 1. Clasificar por Hb (con ajuste por altitud si aplica)
-                diagnostico_hb = clasificar_por_hb(hb, altitud_msnm=0)  # Pasar altitud real
-                
-                # 2. Determinar tipo de anemia por índices eritrocitarios
-                tipo_anemia = determinar_tipo_anemia(vcm, hcm, hb)
-                
-                # 3. Evaluar estatus de hierro
-                estatus_hierro = evaluar_estatus_hierro(ferritina, hierro_serico, saturacion)
-                
-                # 4. Evaluar inflamación
-                inflamacion = evaluar_inflamacion(pcr, vsg)
-                
-                # 5. Diagnóstico diferencial
-                diagnostico_final = generar_diagnostico_diferencial(
-                    hb, vcm, hcm, ferritina, pcr, 
-                    deficit_b12, deficit_folato, parasitosis
-                )
-                
-                # Mostrar resultados
-                mostrar_resultados_completos(
-                    diagnostico_hb, 
-                    tipo_anemia, 
-                    estatus_hierro, 
-                    inflamacion, 
-                    diagnostico_final
-                )
-
-# ==================================================
-# FUNCIONES DE ANÁLISIS CIENTÍFICO
-# ==================================================
-
-def clasificar_por_hb(hb, altitud_msnm=0):
-    """Clasifica anemia con ajuste por altitud según evidencia científica"""
-    
-    # Ajuste por altitud (discutido en el texto)
-    if altitud_msnm > 2500:
-        ajuste = 0.5  # g/dL - Basado en estudios
-        hb_ajustada = hb - ajuste
-    else:
-        hb_ajustada = hb
-    
-    # Clasificación OMS tradicional
-    if hb_ajustada >= 11.0:
-        return {
-            "clasificacion": "NO ANÉMICO",
-            "hb_original": hb,
-            "hb_ajustada": hb_ajustada,
-            "ajuste_altitud": ajuste if altitud_msnm > 2500 else 0,
-            "nota": "Considerar ajuste por altitud según controversia científica"
-        }
-    elif hb_ajustada >= 10.0:
-        return {"clasificacion": "ANEMIA LEVE", "hb_ajustada": hb_ajustada}
-    elif hb_ajustada >= 9.0:
-        return {"clasificacion": "ANEMIA MODERADA", "hb_ajustada": hb_ajustada}
-    else:
-        return {"clasificacion": "ANEMIA SEVERA", "hb_ajustada": hb_ajustada}
-
-def determinar_tipo_anemia(vcm, hcm, hb):
-    """Determina el tipo de anemia según índices eritrocitarios"""
-    
-    if vcm < 80:
-        tipo = "MICROCÍTICA"
-        causas = ["Deficiencia de hierro", "Talasemia", "Anemia de enfermedad crónica"]
-    elif vcm > 100:
-        tipo = "MACROCÍTICA"
-        causas = ["Deficiencia de B12/folato", "Hipotiroidismo", "Enfermedad hepática"]
-    else:
-        tipo = "NORMOCÍTICA"
-        causas = ["Anemia de enfermedad crónica", "Hemólisis", "Insuficiencia renal"]
-    
-    # Hipocromía (baja HCM)
-    hipocromia = "HIPOCRÓMICA" if hcm < 27 else "NORMOCRÓMICA"
-    
-    return {
-        "tipo_morfologia": tipo,
-        "hipocromia": hipocromia,
-        "causas_posibles": causas,
-        "vcm": vcm,
-        "hcm": hcm,
-        "interpretacion": f"Anemia {tipo.lower()} {hipocromia.lower()}"
-    }
-
-def evaluar_estatus_hierro(ferritina, hierro_serico, saturacion):
-    """Evalúa el estatus de hierro corporal"""
-    
-    deficiencia_hierro = ferritina < 15
-    reservas_bajas = ferritina < 30
-    saturacion_baja = saturacion < 20
-    
-    if deficiencia_hierro:
-        estatus = "DEFICIENCIA DE HIERRO CONFIRMADA"
-        severidad = "GRAVE"
-    elif reservas_bajas:
-        estatus = "RESERVAS DE HIERRO BAJAS"
-        severidad = "MODERADA"
-    else:
-        estatus = "RESERVAS DE HIERRO ADECUADAS"
-        severidad = "NORMAL"
-    
-    return {
-        "estatus": estatus,
-        "severidad": severidad,
-        "ferritina": ferritina,
-        "hierro_serico": hierro_serico,
-        "saturacion": saturacion,
-        "deficiencia_confirmada": deficiencia_hierro
-    }
-
-def evaluar_inflamacion(pcr, vsg):
-    """Evalúa presencia de inflamación"""
-    
-    inflamacion_activa = pcr > 5 or vsg > 20
-    inflamacion_leve = pcr > 2 or vsg > 15
-    
-    if inflamacion_activa:
-        resultado = "INFLAMACIÓN ACTIVA"
-        impacto = "Puede causar anemia de enfermedad crónica"
-    elif inflamacion_leve:
-        resultado = "INFLAMACIÓN LEVE/SUBCLÍNICA"
-        impacto = "Puede afectar metabolismo del hierro"
-    else:
-        resultado = "SIN INFLAMACIÓN SIGNIFICATIVA"
-        impacto = "No contribuye a la anemia"
-    
-    return {
-        "resultado": resultado,
-        "pcr": pcr,
-        "vsg": vsg,
-        "impacto_anemia": impacto,
-        "inflamacion_activa": inflamacion_activa
-    }
-
-def generar_diagnostico_diferencial(hb, vcm, hcm, ferritina, pcr, 
-                                    deficit_b12, deficit_folato, parasitosis):
-    """Genera diagnóstico diferencial basado en todos los parámetros"""
-    
-    diagnosticos = []
-    
-    # 1. Anemia ferropénica
-    if ferritina < 15 and vcm < 80 and hcm < 27:
-        diagnosticos.append({
-            "diagnostico": "ANEMIA FERROPÉNICA",
-            "probabilidad": "ALTA",
-            "evidencia": f"Ferritina baja ({ferritina} ng/mL) + microcitosis + hipocromía",
-            "tratamiento": "Suplementación con hierro + control en 1 mes"
-        })
-    
-    # 2. Anemia de enfermedad crónica
-    elif pcr > 5 and ferritina > 15 and vcm < 80:
-        diagnosticos.append({
-            "diagnostico": "ANEMIA DE ENFERMEDAD CRÓNICA",
-            "probabilidad": "ALTA",
-            "evidencia": f"Inflamación (PCR: {pcr} mg/L) + ferritina normal",
-            "tratamiento": "Tratar causa subyacente + evaluación especializada"
-        })
-    
-    # 3. Deficiencia de B12/folato
-    elif deficit_b12 or deficit_folato or vcm > 100:
-        diagnosticos.append({
-            "diagnostico": "ANEMIA MEGALOBLÁSTICA (B12/folato)",
-            "probabilidad": "MODERADA",
-            "evidencia": "Macrocitosis y/o sospecha clínica",
-            "tratamiento": "Suplementación específica + estudio de causa"
-        })
-    
-    # 4. Parasitosis
-    elif parasitosis and ferritina < 30:
-        diagnosticos.append({
-            "diagnostico": "ANEMIA POR PÉRDIDA SANGUÍNEA/PARASITOSIS",
-            "probabilidad": "MODERADA",
-            "evidencia": "Parasitosis intestinal + reservas bajas de hierro",
-            "tratamiento": "Desparasitación + suplemento de hierro"
-        })
-    
-    # 5. Sin causa clara
-    if not diagnosticos and hb < 11:
-        diagnosticos.append({
-            "diagnostico": "ANEMIA DE ETIOLOGÍA NO DETERMINADA",
-            "probabilidad": "POR DEFINIR",
-            "evidencia": "Requiere estudios adicionales",
-            "tratamiento": "Evaluación hematológica completa"
-        })
-    
-    return diagnosticos
-
-def mostrar_resultados_completos(diagnostico_hb, tipo_anemia, estatus_hierro, 
-                                inflamacion, diagnosticos_finales):
-    """Muestra los resultados del análisis completo"""
-    
-    st.success("✅ Análisis diagnóstico completo generado")
-    
-    # Panel de resultados
-    st.markdown("## 📋 Resultados del Diagnóstico Integral")
-    
-    # Tarjeta 1: Hemoglobina
-    with st.expander("🔴 **1. HEMOGLOBINA Y CLASIFICACIÓN**", expanded=True):
-        col_hb1, col_hb2 = st.columns(2)
-        with col_hb1:
-            st.metric("Hemoglobina", f"{diagnostico_hb['hb_original']} g/dL")
-            st.metric("Clasificación", diagnostico_hb['clasificacion'])
-        with col_hb2:
-            if diagnostico_hb.get('ajuste_altitud', 0) > 0:
-                st.info(f"📐 Ajuste por altitud: +{diagnostico_hb['ajuste_altitud']} g/dL")
-                st.metric("Hb ajustada", f"{diagnostico_hb['hb_ajustada']} g/dL")
-    
-    # Tarjeta 2: Tipo de anemia
-    with st.expander("🔬 **2. TIPO DE ANEMIA (HEMOGRAMA)**", expanded=True):
-        st.markdown(f"**Morfología:** {tipo_anemia['tipo_morfologia']}")
-        st.markdown(f"**Hipocromía:** {tipo_anemia['hipocromia']}")
-        st.markdown(f"**VCM:** {tipo_anemia['vcm']} fL | **HCM:** {tipo_anemia['hcm']} pg")
-        
-        st.markdown("**Causas posibles:**")
-        for causa in tipo_anemia['causas_posibles']:
-            st.markdown(f"- {causa}")
-    
-    # Tarjeta 3: Estatus de hierro
-    with st.expander("🧲 **3. ESTATUS DE HIERRO**", expanded=True):
-        color = "red" if estatus_hierro['severidad'] == "GRAVE" else "orange" if estatus_hierro['severidad'] == "MODERADA" else "green"
-        
-        st.markdown(f"**Estatus:** <span style='color:{color}; font-weight:bold;'>{estatus_hierro['estatus']}</span>", 
-                   unsafe_allow_html=True)
-        
-        col_fe1, col_fe2, col_fe3 = st.columns(3)
-        with col_fe1:
-            st.metric("Ferritina", f"{estatus_hierro['ferritina']} ng/mL", 
-                     delta="BAJA" if estatus_hierro['ferritina'] < 15 else None)
-        with col_fe2:
-            st.metric("Hierro sérico", f"{estatus_hierro['hierro_serico']} μg/dL")
-        with col_fe3:
-            st.metric("Saturación", f"{estatus_hierro['saturacion']}%")
-    
-    # Tarjeta 4: Inflamación
-    with st.expander("🔥 **4. MARCADORES DE INFLAMACIÓN**", expanded=True):
-        st.markdown(f"**Resultado:** {inflamacion['resultado']}")
-        st.markdown(f"**Impacto en anemia:** {inflamacion['impacto_anemia']}")
-        
-        col_inf1, col_inf2 = st.columns(2)
-        with col_inf1:
-            st.metric("PCR", f"{inflamacion['pcr']} mg/L", 
-                     delta="ELEVADO" if inflamacion['pcr'] > 5 else None)
-        with col_inf2:
-            st.metric("VSG", f"{inflamacion['vsg']} mm/h", 
-                     delta="ELEVADO" if inflamacion['vsg'] > 20 else None)
-    
-    # Tarjeta 5: Diagnóstico diferencial
-    with st.expander("🎯 **5. DIAGNÓSTICO DIFERENCIAL Y PLAN**", expanded=True):
-        if diagnosticos_finales:
-            for i, diag in enumerate(diagnosticos_finales, 1):
-                st.markdown(f"**{i}. {diag['diagnostico']}**")
-                st.markdown(f"   *Probabilidad:* {diag['probabilidad']}")
-                st.markdown(f"   *Evidencia:* {diag['evidencia']}")
-                st.markdown(f"   *Tratamiento sugerido:* {diag['tratamiento']}")
-                st.markdown("---")
-        else:
-            st.info("No se identificaron diagnósticos específicos. Considerar evaluación especializada.")
-    
-    # Resumen ejecutivo
-    st.markdown("## 📄 RESUMEN EJECUTIVO")
-    
-    resumen_html = f"""
-    <div style='background: #f8f9fa; padding: 20px; border-radius: 10px; border-left: 5px solid #3498db;'>
-        <h4 style='color: #2c3e50; margin-top: 0;'>📋 Resumen Diagnóstico:</h4>
-        <p><strong>Clasificación por Hb:</strong> {diagnostico_hb['clasificacion']}</p>
-        <p><strong>Tipo de anemia:</strong> {tipo_anemia['interpretacion']}</p>
-        <p><strong>Estatus de hierro:</strong> {estatus_hierro['estatus']}</p>
-        <p><strong>Inflamación:</strong> {inflamacion['resultado']}</p>
-        <p><strong>Diagnóstico principal:</strong> {diagnosticos_finales[0]['diagnostico'] if diagnosticos_finales else 'Por determinar'}</p>
-    </div>
-    """
-    
-    st.markdown(resumen_html, unsafe_allow_html=True)
-    
-    # Botón para guardar informe
-    if st.button("💾 Guardar Informe Diagnóstico", type="secondary"):
-        st.success("Informe guardado en la base de datos")
-
-# ==================================================
-# SIDEBAR
+# SIDEBAR CON TÍTULOS MEJORADOS
 # ==================================================
 
 with st.sidebar:
-    st.header("📋 Sistema de Referencia")
+    st.markdown('<div class="section-title-blue" style="font-size: 1.4rem;">📋 Sistema de Referencia</div>', unsafe_allow_html=True)
     
-    tab_sidebar1, tab_sidebar2, tab_sidebar3 = st.tabs(["🎯 Ajustes Altitud", "📊 Tablas Crecimiento", "🔬 Criterios Hematológicos"])
+    tab_sidebar1, tab_sidebar2, tab_sidebar3 = st.tabs(["🎯 Ajustes Altitud", "📊 Crecimiento", "🔬 Hematología"])
     
     with tab_sidebar1:
-        st.markdown("**Tabla de Ajustes por Altitud:**")
+        st.markdown('<div style="color: #1e40af; font-weight: 600; margin-bottom: 10px;">Tabla de Ajustes por Altitud</div>', unsafe_allow_html=True)
         ajustes_df = pd.DataFrame(AJUSTE_HEMOGLOBINA)
         st.dataframe(
             ajustes_df.style.format({
@@ -3659,7 +1872,7 @@ with st.sidebar:
         )
     
     with tab_sidebar2:
-        st.markdown("**Tablas de Crecimiento OMS:**")
+        st.markdown('<div style="color: #1e40af; font-weight: 600; margin-bottom: 10px;">Tablas de Crecimiento OMS</div>', unsafe_allow_html=True)
         referencia_df = obtener_referencia_crecimiento()
         if not referencia_df.empty:
             st.dataframe(referencia_df, use_container_width=True, height=300)
@@ -3667,7 +1880,7 @@ with st.sidebar:
             st.info("Cargando tablas de referencia...")
     
     with tab_sidebar3:
-        st.markdown("**Criterios de Interpretación:**")
+        st.markdown('<div style="color: #1e40af; font-weight: 600; margin-bottom: 10px;">Criterios de Interpretación</div>', unsafe_allow_html=True)
         
         st.markdown("""
         ### 🩺 FERRITINA (Reservas)
@@ -3685,17 +1898,12 @@ with st.sidebar:
         - **< 0.5%**: ⚠️ Hipoproliferación
         - **0.5-1.5%**: ✅ Normal
         - **> 1.5%**: 🔄 Hiperproducción
-        
-        ### 🚨 NIVELES DE SEVERIDAD
-        - **CRÍTICO**: Intervención inmediata
-        - **MODERADO**: Acción prioritaria  
-        - **LEVE**: Vigilancia activa
-        - **NORMAL**: Seguimiento rutinario
         """)
     
     st.markdown("---")
-    st.info("""
-    **💡 Sistema Integrado:**
+    
+    st.markdown('<div style="color: #1e40af; font-weight: 600; margin-bottom: 10px;">💡 Sistema Integrado</div>', unsafe_allow_html=True)
+    st.markdown("""
     - ✅ Ajuste automático por altitud
     - ✅ Clasificación OMS de anemia
     - ✅ Seguimiento por gravedad
@@ -3704,70 +1912,69 @@ with st.sidebar:
     - ✅ Interpretación automática
     - ✅ Manejo de duplicados
     """)
+    
+    # Inicialización de datos de prueba
+    if supabase:
+        try:
+            response = supabase.table(TABLE_NAME).select("*").limit(1).execute()
+            if not response.data:
+                st.info("🔄 Base de datos vacía. Ingrese pacientes desde 'Registro Completo'")
+                
+                if st.button("➕ Insertar paciente de prueba", use_container_width=True):
+                    with st.spinner("Insertando..."):
+                        paciente_prueba = {
+                            "dni": "87654321",
+                            "nombre_apellido": "Carlos López Díaz",
+                            "edad_meses": 36,
+                            "peso_kg": 14.5,
+                            "talla_cm": 95.0,
+                            "genero": "M",
+                            "telefono": "987123456",
+                            "estado_paciente": "Activo",
+                            "region": "LIMA",
+                            "departamento": "Lima Centro",
+                            "altitud_msnm": 150,
+                            "nivel_educativo": "Secundaria",
+                            "acceso_agua_potable": True,
+                            "tiene_servicio_salud": True,
+                            "hemoglobina_dl1": 10.5,
+                            "en_seguimiento": True,
+                            "consumir_hierro": True,
+                            "tipo_suplemento_hierro": "Sulfato ferroso",
+                            "frecuencia_suplemento": "Diario",
+                            "antecedentes_anemia": False,
+                            "enfermedades_cronicas": "Ninguna",
+                            "interpretacion_hematologica": "Anemia leve por deficiencia de hierro",
+                            "politicas_de_ris": "LIMA",
+                            "riesgo": "RIESGO MODERADO",
+                            "fecha_alerta": datetime.now().strftime("%Y-%m-%d"),
+                            "estado_alerta": "EN SEGUIMIENTO",
+                            "sugerencias": "Suplementación con hierro y control mensual",
+                            "severidad_interpretacion": "LEVE"
+                        }
+                        
+                        resultado = insertar_datos_supabase(paciente_prueba)
+                        if resultado:
+                            st.success("✅ Paciente de prueba insertado")
+                            time.sleep(2)
+                            st.rerun()
+                        else:
+                            st.error("❌ Error al insertar paciente de prueba")
+        except Exception as e:
+            st.warning(f"⚠️ Error verificando datos: {e}")
 
 # ==================================================
-# INICIALIZACIÓN DE DATOS DE PRUEBA (OPCIONAL)
-# ==================================================
-
-if supabase:
-    try:
-        response = supabase.table(TABLE_NAME).select("*").limit(1).execute()
-        if not response.data:
-            st.sidebar.info("🔄 Base de datos vacía. Puede ingresar pacientes desde la pestaña 'Registro Completo'")
-            
-            # Opcional: Insertar un paciente de prueba automáticamente
-            if st.sidebar.button("➕ Insertar paciente de prueba"):
-                with st.sidebar.spinner("Insertando..."):
-                    paciente_prueba = {
-                        "dni": "87654321",
-                        "nombre_apellido": "Carlos López Díaz",
-                        "edad_meses": 36,
-                        "peso_kg": 14.5,
-                        "talla_cm": 95.0,
-                        "genero": "M",
-                        "telefono": "987123456",
-                        "estado_paciente": "Activo",
-                        "region": "LIMA",
-                        "departamento": "Lima Centro",
-                        "altitud_msnm": 150,
-                        "nivel_educativo": "Secundaria",
-                        "acceso_agua_potable": True,
-                        "tiene_servicio_salud": True,
-                        "hemoglobina_dl1": 10.5,
-                        "en_seguimiento": True,
-                        "consumir_hierro": True,
-                        "tipo_suplemento_hierro": "Sulfato ferroso",
-                        "frecuencia_suplemento": "Diario",
-                        "antecedentes_anemia": False,
-                        "enfermedades_cronicas": "Ninguna",
-                        "interpretacion_hematologica": "Anemia leve por deficiencia de hierro",
-                        "politicas_de_ris": "LIMA",
-                        "riesgo": "RIESGO MODERADO",
-                        "fecha_alerta": datetime.now().strftime("%Y-%m-%d"),
-                        "estado_alerta": "EN SEGUIMIENTO",
-                        "sugerencias": "Suplementación con hierro y control mensual",
-                        "severidad_interpretacion": "LEVE"
-                    }
-                    
-                    resultado = insertar_datos_supabase(paciente_prueba)
-                    if resultado:
-                        st.sidebar.success("✅ Paciente de prueba insertado")
-                        time.sleep(2)
-                        st.rerun()
-                    else:
-                        st.sidebar.error("❌ Error al insertar paciente de prueba")
-    except Exception as e:
-        st.sidebar.warning(f"⚠️ Error verificando datos: {e}")
-
-# ==================================================
-# PIE DE PÁGINA
+# PIE DE PÁGINA CON ESTILO MEJORADO
 # ==================================================
 
 st.markdown("---")
 st.markdown("""
-<div style="text-align: center; padding: 2rem; color: #666;">
-    <p>🏥 <strong>Sistema Nixon</strong> - Control de Anemia y Nutrición Infantil</p>
-    <p>📅 Versión 2.0 | Última actualización: """ + datetime.now().strftime("%d/%m/%Y") + """</p>
-    <p>⚠️ <em>Para uso médico profesional. Consulte siempre con especialistas.</em></p>
+<div style="text-align: center; padding: 2rem; background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-radius: 10px;">
+    <h4 style="color: #1e3a8a; margin: 0 0 10px 0;">🏥 SISTEMA NIXON</h4>
+    <p style="color: #475569; margin: 5px 0;">Control de Anemia y Nutrición Infantil</p>
+    <p style="color: #64748b; font-size: 0.9rem; margin: 5px 0;">Versión 2.0 | {}</p>
+    <p style="color: #94a3b8; font-size: 0.8rem; margin-top: 15px;">
+    ⚠️ <em>Para uso médico profesional. Consulte siempre con especialistas.</em>
+    </p>
 </div>
-""", unsafe_allow_html=True)
+""".format(datetime.now().strftime("%d/%m/%Y")), unsafe_allow_html=True)
