@@ -170,52 +170,125 @@ def init_supabase():
 supabase = init_supabase()
 
 # ==================================================
-# OPCIÓN 2: CREACIÓN SIMPLE DE TABLA CON RLS
+# OPCIÓN 2: CREACIÓN SIMPLE DE TABLA CON RLS - VERSIÓN CORREGIDA
 # ==================================================
 def crear_tabla_citas_simple():
-    """Crea la tabla citas con RLS básico - VERSIÓN SIMPLIFICADA"""
+    """Crea la tabla citas con RLS básico - VERSIÓN CORREGIDA"""
     
     try:
-        st.sidebar.info("🛠️ Creando tabla 'citas'...")
+        st.sidebar.info("🛠️ Configurando tabla 'citas'...")
         
-        # PRIMERO: Intentar crear la tabla directamente con una consulta
+        # Método 1: Intentar crear directamente con Supabase
         try:
-            # Intento 1: Usar el cliente Supabase directamente
+            # Primero verificar si ya existe
+            test_check = supabase.table("citas").select("id").limit(1).execute()
             
-            # Crear una cita de prueba - esto creará la tabla si no existe en algunos casos
+            if not hasattr(test_check, 'error') or test_check.error is None:
+                st.sidebar.success("✅ Tabla 'citas' ya existe")
+                
+                # Probar si podemos insertar
+                test_data = {
+                    "dni_paciente": "99988877",
+                    "fecha_cita": "2024-01-01",
+                    "hora_cita": "10:00:00",
+                    "tipo_consulta": "Prueba",
+                    "diagnostico": "Prueba de conexión"
+                }
+                
+                test_insert = supabase.table("citas").insert(test_data).execute()
+                
+                if test_insert.data:
+                    st.sidebar.success("✅ RLS configurado correctamente")
+                    # Limpiar
+                    supabase.table("citas").delete().eq("dni_paciente", "99988877").execute()
+                    return True
+                else:
+                    st.sidebar.warning("⚠️ Tabla existe pero RLS no configurado")
+                    return False
+                    
+        except Exception as check_error:
+            st.sidebar.info(f"ℹ️ {str(check_error)[:100]}")
+        
+        # Método 2: Crear tabla usando SQL directo (simplificado)
+        try:
+            import requests
+            
+            st.sidebar.write("📋 Creando tabla...")
+            
+            # 1. Primero intentar crear con un INSERT simple
             test_data = {
-                "dni_paciente": "00000001",
+                "dni_paciente": "11111111",
                 "fecha_cita": "2024-01-01",
                 "hora_cita": "10:00:00",
-                "tipo_consulta": "Prueba creación tabla",
-                "diagnostico": "Prueba inicial"
+                "tipo_consulta": "Prueba creación"
             }
             
-            result = supabase.table("citas").insert(test_data).execute()
+            headers = {
+                "apikey": SUPABASE_KEY,
+                "Authorization": f"Bearer {SUPABASE_KEY}",
+                "Content-Type": "application/json"
+            }
             
-            if result.data:
-                st.sidebar.success("✅ Tabla existe y RLS configurado")
-                
-                # Limpiar
-                supabase.table("citas").delete().eq("dni_paciente", "00000001").execute()
-                return True
-                
-        except Exception as insert_error:
-            # Si falla, probablemente la tabla no existe
-            st.sidebar.warning(f"Tabla no existe o error: {str(insert_error)}")
+            response = requests.post(
+                f"{SUPABASE_URL}/rest/v1/citas",
+                headers=headers,
+                json=test_data
+            )
             
-            # SEGUNDO: Crear tabla usando SQL directo
-            try:
-                import requests
+            if response.status_code in [200, 201, 409]:
+                st.sidebar.success("✅ Tabla accesible")
                 
-                # SQL MÁS SIMPLE
-                simple_sql = """
-                -- 1. Crear tabla
-                CREATE TABLE IF NOT EXISTS citas (
+                # 2. Configurar RLS si es necesario
+                st.sidebar.write("🔐 Configurando RLS...")
+                
+                # Política para INSERT
+                try:
+                    # Verificar si podemos hacer un segundo insert
+                    test_data2 = {
+                        "dni_paciente": "22222222",
+                        "fecha_cita": "2024-01-02",
+                        "hora_cita": "11:00:00",
+                        "tipo_consulta": "Prueba RLS"
+                    }
+                    
+                    response2 = requests.post(
+                        f"{SUPABASE_URL}/rest/v1/citas",
+                        headers=headers,
+                        json=test_data2
+                    )
+                    
+                    if response2.status_code in [200, 201]:
+                        st.sidebar.success("✅ RLS funciona correctamente")
+                        
+                        # Limpiar
+                        requests.delete(f"{SUPABASE_URL}/rest/v1/citas?dni_paciente=eq.11111111", headers=headers)
+                        requests.delete(f"{SUPABASE_URL}/rest/v1/citas?dni_paciente=eq.22222222", headers=headers)
+                        
+                        return True
+                    else:
+                        st.sidebar.warning(f"⚠️ Error RLS: {response2.status_code}")
+                        return False
+                        
+                except Exception as rls_error:
+                    st.sidebar.error(f"❌ Error RLS: {str(rls_error)[:100]}")
+                    return False
+                    
+            else:
+                st.sidebar.error(f"❌ No se pudo crear tabla: {response.status_code}")
+                
+                # Mostrar instrucciones para crear manualmente
+                st.sidebar.markdown("""
+                **📝 Para crear la tabla manualmente:**
+                
+                1. **Ve a Supabase → SQL Editor**
+                2. **Ejecuta este SQL:**
+                
+                ```sql
+                CREATE TABLE citas (
                     id BIGSERIAL PRIMARY KEY,
-                    dni_paciente TEXT,
-                    fecha_cita DATE,
-                    hora_cita TIME,
+                    dni_paciente TEXT NOT NULL,
+                    fecha_cita DATE NOT NULL,
+                    hora_cita TIME NOT NULL,
                     tipo_consulta TEXT,
                     diagnostico TEXT,
                     tratamiento TEXT,
@@ -225,66 +298,153 @@ def crear_tabla_citas_simple():
                     created_at TIMESTAMPTZ DEFAULT NOW()
                 );
                 
-                -- 2. Habilitar RLS
                 ALTER TABLE citas ENABLE ROW LEVEL SECURITY;
                 
-                -- 3. Crear política simple
-                CREATE POLICY "Enable all for citas" ON citas
+                CREATE POLICY "allow_all_citas" ON citas
                 FOR ALL USING (true) WITH CHECK (true);
-                """
+                ```
+                """)
                 
-                # Enviar SQL
-                headers = {
-                    "apikey": SUPABASE_KEY,
-                    "Authorization": f"Bearer {SUPABASE_KEY}",
-                    "Content-Type": "application/json",
-                    "Prefer": "return=minimal"
-                }
-                
-                # Usar endpoint diferente
-                sql_url = f"{SUPABASE_URL}/rest/v1/rpc/exec_sql"
-                
-                response = requests.post(
-                    sql_url,
-                    headers=headers,
-                    json={"query": simple_sql}
-                )
-                
-                st.sidebar.write(f"📤 SQL enviado, status: {response.status_code}")
-                
-                if response.status_code in [200, 201, 204]:
-                    st.sidebar.success("✅ Tabla creada exitosamente")
-                    
-                    # Probar que funciona
-                    test_data = {
-                        "dni_paciente": "00000002",
-                        "fecha_cita": "2024-01-02",
-                        "hora_cita": "11:00:00",
-                        "tipo_consulta": "Prueba después de crear"
-                    }
-                    
-                    test_result = supabase.table("citas").insert(test_data).execute()
-                    
-                    if test_result.data:
-                        st.sidebar.success("✅ ¡RLS configurado correctamente!")
-                        # Limpiar
-                        supabase.table("citas").delete().eq("dni_paciente", "00000002").execute()
-                        return True
-                    else:
-                        st.sidebar.warning("Tabla creada pero error en RLS")
-                        return False
-                        
-                else:
-                    st.sidebar.error(f"❌ Error SQL: {response.text[:200]}")
-                    return False
-                    
-            except Exception as sql_error:
-                st.sidebar.error(f"🔥 Error en SQL: {str(sql_error)}")
                 return False
                 
+        except Exception as e:
+            st.sidebar.error(f"🔥 Error: {str(e)[:200]}")
+            return False
+            
     except Exception as e:
-        st.sidebar.error(f"💥 Error general: {str(e)}")
+        st.sidebar.error(f"💥 Error general: {str(e)[:200]}")
         return False
+
+# ==================================================
+# FUNCIÓN ALTERNATIVA: PRUEBA DIRECTA - VERSIÓN CORREGIDA
+# ==================================================
+def probar_guardado_directo():
+    """Prueba directa de guardado - VERSIÓN CORREGIDA"""
+    
+    with st.sidebar:
+        st.markdown("### 🧪 Prueba Directa")
+        
+        # Obtener un DNI real que exista en alertas_hemoglobina
+        try:
+            # Buscar un paciente real para probar
+            pacientes = supabase.table("alertas_hemoglobina").select("dni").limit(5).execute()
+            
+            if pacientes.data and len(pacientes.data) > 0:
+                dni_real = pacientes.data[0]["dni"]
+                st.info(f"📋 Usando DNI real: {dni_real}")
+            else:
+                dni_real = "12345678"  # DNI por defecto
+                st.warning("⚠️ No hay pacientes, usando DNI de prueba")
+                
+        except:
+            dni_real = "12345678"
+        
+        # Datos de prueba CON DNI REAL
+        test_cita = {
+            "dni_paciente": dni_real,
+            "fecha_cita": "2024-12-14",
+            "hora_cita": "09:00:00",
+            "tipo_consulta": "Consulta de prueba",
+            "diagnostico": "Paciente de prueba para verificar sistema",
+            "tratamiento": "Observación",
+            "observaciones": "Esta es una prueba del sistema de citas",
+            "investigador_responsable": "Dr. Prueba"
+        }
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            if st.button("📤 Enviar prueba", type="primary", key="enviar_prueba"):
+                try:
+                    with st.spinner("Enviando a Supabase..."):
+                        result = supabase.table("citas").insert(test_cita).execute()
+                    
+                    if result.data:
+                        st.success(f"✅ ¡ÉXITO! Guardado correctamente")
+                        st.info(f"ID generado: {result.data[0].get('id', 'N/A')}")
+                        
+                        # Guardar el ID para poder limpiar después
+                        if 'pruebas_ids' not in st.session_state:
+                            st.session_state.pruebas_ids = []
+                        st.session_state.pruebas_ids.append(result.data[0].get('id'))
+                        
+                    elif hasattr(result, 'error'):
+                        error_msg = result.error.message
+                        st.error(f"❌ Error: {error_msg}")
+                        
+                        # Si es error de foreign key, mostrar solución
+                        if "foreign key constraint" in error_msg:
+                            st.info("💡 Solución: El DNI debe existir en la tabla 'alertas_hemoglobina'")
+                    else:
+                        st.warning("⚠️ Respuesta inesperada del servidor")
+                        
+                except Exception as e:
+                    st.error(f"🔥 Error: {str(e)[:200]}")
+        
+        with col2:
+            if st.button("🗑️ Limpiar pruebas", key="limpiar_pruebas"):
+                try:
+                    # Limpiar por DNI
+                    supabase.table("citas").delete().eq("dni_paciente", dni_real).execute()
+                    
+                    # También limpiar otros DNIs de prueba comunes
+                    for dni_prueba in ["87654321", "00000001", "00000002", "99988877", "11111111", "22222222"]:
+                        try:
+                            supabase.table("citas").delete().eq("dni_paciente", dni_prueba).execute()
+                        except:
+                            pass
+                    
+                    # Limpiar por IDs guardados
+                    if 'pruebas_ids' in st.session_state:
+                        for prueba_id in st.session_state.pruebas_ids:
+                            try:
+                                supabase.table("citas").delete().eq("id", prueba_id).execute()
+                            except:
+                                pass
+                        st.session_state.pruebas_ids = []
+                    
+                    st.success("✅ Todas las pruebas limpiadas")
+                    
+                except Exception as e:
+                    st.info(f"ℹ️ {str(e)[:100]}")
+
+# ==================================================
+# BOTONES MEJORADOS EN BARRA LATERAL - VERSIÓN FINAL
+# ==================================================
+with st.sidebar:
+    st.markdown("---")
+    st.markdown("### 📅 Configuración de Citas")
+    
+    # Opción 1: Configurar tabla
+    if st.button("🛠️ Configurar tabla 'citas'", 
+                 type="primary", 
+                 use_container_width=True,
+                 key="configurar_tabla"):
+        crear_tabla_citas_simple()
+    
+    # Opción 2: Prueba directa
+    probar_guardado_directo()
+    
+    # Opción 3: Verificar conexión
+    if st.button("🔍 Verificar conexión", 
+                 type="secondary",
+                 key="verificar_conexion"):
+        try:
+            with st.spinner("Verificando..."):
+                # Probar lectura de tabla principal
+                test = supabase.table("alertas_hemoglobina").select("dni").limit(3).execute()
+                
+                if test.data:
+                    st.success(f"✅ Conexión OK - {len(test.data)} pacientes encontrados")
+                    
+                    # Mostrar algunos DNIs disponibles
+                    dnis = [p["dni"] for p in test.data[:3]]
+                    st.info(f"📋 DNIs disponibles: {', '.join(dnis)}")
+                else:
+                    st.warning("⚠️ Conexión OK pero tabla vacía")
+                    
+        except Exception as e:
+            st.error(f"❌ Error de conexión: {str(e)[:200]}")
 
 # ==================================================
 # FUNCIÓN ALTERNATIVA: PRUEBA DIRECTA SIN CREAR TABLA
