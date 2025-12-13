@@ -2021,7 +2021,7 @@ with tab3:
             st.info("👆 Presiona el botón 'INICIAR ANÁLISIS COMPLETO' para comenzar")
 
 # ==================================================
-# PESTAÑA 4: SEGUIMIENTO Y REGISTRO DE CITAS
+# PESTAÑA 4: SEGUIMIENTO Y REGISTRO DE CITAS - VERSIÓN CORREGIDA
 # ==================================================
 
 with tab4:
@@ -2033,224 +2033,343 @@ with tab4:
     
     metodo_busqueda = st.selectbox(
         "Método de búsqueda:",
-        ["Por DNI", "Por Nombre y Apellido", "Por Código de Paciente"]
+        ["Por DNI", "Por Nombre", "Ver todos los pacientes"]
     )
+    
+    valor_busqueda = None
+    paciente_encontrado = None
     
     col_buscar1, col_buscar2 = st.columns(2)
     
     with col_buscar1:
         if metodo_busqueda == "Por DNI":
-            dni_buscar = st.text_input("Ingrese DNI del paciente:", placeholder="Ej: 45258525")
-            valor_busqueda = dni_buscar
-        elif metodo_busqueda == "Por Nombre y Apellido":
-            nombre_buscar = st.text_input("Ingrese nombre del paciente:", placeholder="Ej: Maria Gonzales")
-            valor_busqueda = nombre_buscar
-        else:
-            codigo_buscar = st.text_input("Ingrese código del paciente:", placeholder="Ej: P-001")
-            valor_busqueda = codigo_buscar
+            dni_buscar = st.text_input("Ingrese DNI del paciente:", placeholder="Ej: 11111111")
+            valor_busqueda = dni_buscar.strip() if dni_buscar else None
+            
+        elif metodo_busqueda == "Por Nombre":
+            nombre_buscar = st.text_input("Ingrese nombre del paciente:", placeholder="Ej: Juan")
+            valor_busqueda = nombre_buscar.strip() if nombre_buscar else None
     
     with col_buscar2:
         st.write("")  # Espaciador
         st.write("")  # Espaciador
-        buscar_paciente = st.button("🔍 Buscar Paciente", use_container_width=True)
+        if metodo_busqueda != "Ver todos los pacientes":
+            buscar_paciente = st.button("🔍 Buscar Paciente", use_container_width=True, type="primary")
+        else:
+            buscar_paciente = True  # Auto-buscar para ver todos
     
-    # ========== FUNCIÓN PARA BUSCAR PACIENTE ==========
-    def buscar_paciente_db(metodo, valor):
-        """Busca paciente en la base de datos"""
+    # ========== FUNCIÓN MEJORADA PARA BUSCAR PACIENTE ==========
+    def buscar_pacientes_db(metodo=None, valor=None):
+        """Busca paciente(s) en la base de datos de Supabase"""
         try:
-            datos_completos = obtener_datos_supabase()
-            
-            if datos_completos.empty:
-                return None
-            
+            # Conectar a Supabase directamente para búsquedas específicas
             if metodo == "Por DNI" and valor:
-                if 'dni' in datos_completos.columns:
-                    paciente = datos_completos[datos_completos['dni'] == valor]
-                    if not paciente.empty:
-                        return paciente.iloc[0].to_dict()
+                response = supabase.table("alertas_hemoglobina")\
+                    .select("*")\
+                    .eq("dni", valor)\
+                    .execute()
+                return response.data if response.data else []
             
-            elif metodo == "Por Nombre y Apellido" and valor:
-                if 'nombre_apellido' in datos_completos.columns:
-                    paciente = datos_completos[datos_completos['nombre_apellido'].str.contains(valor, case=False, na=False)]
-                    if not paciente.empty:
-                        return paciente.iloc[0].to_dict()
+            elif metodo == "Por Nombre" and valor:
+                response = supabase.table("alertas_hemoglobina")\
+                    .select("*")\
+                    .ilike("nombre_apellido", f"%{valor}%")\
+                    .execute()
+                return response.data if response.data else []
             
-            elif metodo == "Por Código de Paciente" and valor:
-                if 'codigo_paciente' in datos_completos.columns:
-                    paciente = datos_completos[datos_completos['codigo_paciente'] == valor]
-                    if not paciente.empty:
-                        return paciente.iloc[0].to_dict()
+            elif metodo == "Ver todos los pacientes" or not metodo:
+                # Obtener todos los pacientes (limitado a 50)
+                response = supabase.table("alertas_hemoglobina")\
+                    .select("*")\
+                    .limit(50)\
+                    .execute()
+                return response.data if response.data else []
             
-            return None
+            return []
         
         except Exception as e:
-            st.error(f"Error al buscar paciente: {e}")
+            st.error(f"❌ Error al buscar pacientes: {str(e)}")
+            return []
+    
+    # ========== FUNCIÓN PARA OBTENER CITAS DEL PACIENTE ==========
+    def obtener_citas_paciente(dni):
+        """Obtiene el historial de citas de un paciente"""
+        try:
+            response = supabase.table("citas")\
+                .select("*")\
+                .eq("dni_paciente", dni)\
+                .order("fecha_cita", desc=True)\
+                .execute()
+            return response.data if response.data else []
+        except Exception as e:
+            st.warning(f"No se pudieron cargar las citas: {str(e)}")
+            return []
+    
+    # ========== FUNCIÓN PARA AGREGAR NUEVA CITA ==========
+    def agregar_cita(datos_cita):
+        """Agrega una nueva cita a la base de datos"""
+        try:
+            response = supabase.table("citas").insert(datos_cita).execute()
+            return response.data if response.data else None
+        except Exception as e:
+            st.error(f"❌ Error al guardar cita: {str(e)}")
             return None
     
-    # ========== MOSTRAR RESULTADO DE BÚSQUEDA ==========
-    paciente_encontrado = None
+    # ========== EJECUTAR BÚSQUEDA ==========
+    pacientes_encontrados = []
     
-    if buscar_paciente and valor_busqueda:
-        with st.spinner("Buscando paciente..."):
-            paciente_encontrado = buscar_paciente_db(metodo_busqueda, valor_busqueda)
+    if buscar_paciente:
+        with st.spinner("🔍 Buscando pacientes..."):
+            pacientes_encontrados = buscar_pacientes_db(metodo_busqueda, valor_busqueda)
     
-    # ========== MOSTRAR INFORMACIÓN DEL PACIENTE ENCONTRADO ==========
+    # ========== MOSTRAR RESULTADOS ==========
+    if pacientes_encontrados:
+        if metodo_busqueda == "Ver todos los pacientes" or len(pacientes_encontrados) > 1:
+            st.success(f"✅ Se encontraron {len(pacientes_encontrados)} paciente(s)")
+            
+            # Mostrar lista de pacientes en un selectbox
+            opciones_pacientes = [f"{p['dni']} - {p['nombre_apellido']}" for p in pacientes_encontrados]
+            seleccion = st.selectbox("Seleccione un paciente:", opciones_pacientes)
+            
+            if seleccion:
+                dni_seleccionado = seleccion.split(" - ")[0]
+                paciente_encontrado = next((p for p in pacientes_encontrados if p['dni'] == dni_seleccionado), None)
+        else:
+            paciente_encontrado = pacientes_encontrados[0]
+    
+    # ========== MOSTRAR INFORMACIÓN DEL PACIENTE SELECCIONADO ==========
     if paciente_encontrado:
-        st.success(f"✅ Paciente encontrado: {paciente_encontrado.get('nombre_apellido', 'No disponible')}")
+        st.markdown(f"### 👤 Paciente: **{paciente_encontrado.get('nombre_apellido', 'N/A')}**")
         
-        # Mostrar información básica
-        with st.expander("📋 **Información del Paciente**", expanded=True):
+        # Tarjetas de información
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            st.metric("DNI", paciente_encontrado.get('dni', 'N/A'))
+        with col2:
+            edad = paciente_encontrado.get('edad_meses', 'N/A')
+            st.metric("Edad", f"{edad} meses" if edad != 'N/A' else 'N/A')
+        with col3:
+            st.metric("Hemoglobina", f"{paciente_encontrado.get('hemoglobina_dl1', 'N/A')} g/dL")
+        with col4:
+            riesgo = paciente_encontrado.get('riesgo', 'N/A')
+            color = {
+                'BAJO RIESGO': 'green',
+                'MODERADO': 'orange',
+                'ALTO RIESGO': 'red',
+                'ALTÍSIMO RIESGO': 'darkred'
+            }.get(riesgo, 'gray')
+            st.markdown(f"**Riesgo:** <span style='color:{color}; font-weight:bold'>{riesgo}</span>", unsafe_allow_html=True)
+        
+        # Pestañas para información detallada
+        tab_info, tab_historial, tab_nueva_cita = st.tabs(["📋 Información", "📅 Historial", "➕ Nueva Cita"])
+        
+        with tab_info:
+            # Información detallada del paciente
             col_info1, col_info2 = st.columns(2)
             
             with col_info1:
-                st.markdown(f"""
-                **👤 Datos Personales:**
-                - **Nombre:** {paciente_encontrado.get('nombre_apellido', 'No disponible')}
-                - **DNI:** {paciente_encontrado.get('dni', 'No disponible')}
-                - **Edad:** {paciente_encontrado.get('edad_meses', paciente_encontrado.get('edad', 'No disponible'))} meses
-                - **Género:** {paciente_encontrado.get('genero', 'No disponible')}
-                """)
+                st.markdown("#### Datos Personales")
+                st.write(f"**Nombre completo:** {paciente_encontrado.get('nombre_apellido', 'N/A')}")
+                st.write(f"**Género:** {paciente_encontrado.get('genero', 'N/A')}")
+                st.write(f"**Teléfono:** {paciente_encontrado.get('telefono', 'N/A')}")
+                st.write(f"**Región:** {paciente_encontrado.get('region', 'N/A')}")
+                st.write(f"**Departamento:** {paciente_encontrado.get('departamento', 'N/A')}")
             
             with col_info2:
-                st.markdown(f"""
-                **📍 Datos Clínicos:**
-                - **Hemoglobina:** {paciente_encontrado.get('hemoglobina_dl1', 'No disponible')} g/dL
-                - **Riesgo:** {paciente_encontrado.get('riesgo', 'No disponible')}
-                - **Región:** {paciente_encontrado.get('region', 'No disponible')}
-                - **Seguimiento:** {'Sí' if paciente_encontrado.get('en_seguimiento') else 'No'}
-                """)
+                st.markdown("#### Datos Clínicos")
+                st.write(f"**Estado:** {paciente_encontrado.get('estado_paciente', 'N/A')}")
+                st.write(f"**En seguimiento:** {'✅ Sí' if paciente_encontrado.get('en_seguimiento') else '❌ No'}")
+                st.write(f"**Consume hierro:** {'✅ Sí' if paciente_encontrado.get('consumir_hierro') else '❌ No'}")
+                st.write(f"**Antecedentes anemia:** {'✅ Sí' if paciente_encontrado.get('antecedentes_anemia') else '❌ No'}")
+                st.write(f"**Fecha última alerta:** {paciente_encontrado.get('fecha_alerta', 'N/A')}")
         
-        # ========== HISTORIAL CLÍNICO REAL (CONEXIÓN CON SUPABASE) ==========
-        st.subheader("📋 Historial Clínico")
-        
-        try:
-            # Verificar si tabla citas existe
-            historial = supabase.table("citas")\
-                .select("*")\
-                .eq("dni_paciente", paciente_encontrado.get('dni'))\
-                .order("fecha_cita", desc=True)\
-                .execute()
+        with tab_historial:
+            st.markdown("#### 📋 Historial de Citas")
             
-            if historial.data:
-                # Convertir a DataFrame para mostrar mejor
-                df_historial = pd.DataFrame(historial.data)
-                st.dataframe(df_historial[['fecha_cita', 'diagnostico', 'tratamiento', 'investigador_responsable']])
-            else:
-                st.info("No hay citas registradas para este paciente")
-                st.info("💡 Para crear citas reales, primero ejecuta el SQL de creación de tabla 'citas' en Supabase")
+            # Obtener citas del paciente
+            citas_paciente = obtener_citas_paciente(paciente_encontrado['dni'])
+            
+            if citas_paciente:
+                # Convertir a DataFrame para mejor visualización
+                df_citas = pd.DataFrame(citas_paciente)
                 
-        except Exception as e:
-            st.warning(f"Tabla 'citas' no encontrada en Supabase: {e}")
-            st.info("""
-            **Para habilitar el registro de citas reales:**
-            
-            1. Ejecuta este SQL en Supabase:
-            ```sql
-            CREATE TABLE citas (
-                id SERIAL PRIMARY KEY,
-                dni_paciente TEXT NOT NULL,
-                fecha_cita DATE NOT NULL,
-                hora_cita TIME,
-                diagnostico TEXT,
-                tratamiento TEXT,
-                investigador_responsable TEXT,
-                created_at TIMESTAMP DEFAULT NOW()
-            );
-            ```
-            
-            2. Configura permisos RLS
-            3. Vuelve a cargar la aplicación
-            """)
-        
-        # ========== FORMULARIO PARA NUEVA CITA ==========
-        st.subheader("➕ Registrar Nueva Cita")
-        
-        with st.form("nueva_cita"):
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                fecha_cita = st.date_input("Fecha de cita")
-                hora_cita = st.time_input("Hora")
-                tipo_consulta = st.selectbox("Tipo de consulta", 
-                                             ["Control", "Evaluación", "Emergencia", "Seguimiento"])
-                
-            with col2:
-                diagnostico = st.text_area("Diagnóstico", placeholder="Ej: Anemia moderada")
-                tratamiento = st.text_area("Tratamiento", placeholder="Ej: Suplemento de hierro")
-                proxima_cita = st.date_input("Próxima cita", value=datetime.now() + timedelta(days=30))
-            
-            submit_cita = st.form_submit_button("💾 Guardar Cita")
-            
-            if submit_cita:
-                try:
-                    nueva_cita = {
-                        "dni_paciente": paciente_encontrado.get('dni'),
-                        "fecha_cita": str(fecha_cita),
-                        "hora_cita": str(hora_cita),
-                        "tipo_consulta": tipo_consulta,
-                        "diagnostico": diagnostico,
-                        "tratamiento": tratamiento,
-                        "proxima_cita": str(proxima_cita),
-                        "investigador_responsable": "Dr. Responsable"  # Puedes hacerlo dinámico
-                    }
-                    
-                    # Intentar insertar en Supabase
-                    response = supabase.table("citas").insert(nueva_cita).execute()
-                    st.success("✅ Cita guardada correctamente en la base de datos")
-                    st.rerun()  # Recargar para mostrar la nueva cita
-                    
-                except Exception as e:
-                    st.error(f"❌ Error al guardar cita: {e}")
-                    st.info("Verifica que la tabla 'citas' exista en Supabase")
-    
-    elif buscar_paciente and not paciente_encontrado:
-        st.error("❌ Paciente no encontrado. Verifique los datos ingresados.")
-    
-    # ========== LISTA DE PACIENTES EN SEGUIMIENTO ==========
-    st.markdown("---")
-    st.subheader("📋 Pacientes en Seguimiento Activo")
-    
-    try:
-        datos_completos = obtener_datos_supabase()
-        
-        if not datos_completos.empty:
-            # Filtrar pacientes en seguimiento
-            if 'en_seguimiento' in datos_completos.columns:
-                pacientes_seguimiento = datos_completos[datos_completos['en_seguimiento'] == True]
-                
-                if not pacientes_seguimiento.empty:
+                # Formatear columnas para mostrar
+                if not df_citas.empty:
                     # Seleccionar columnas relevantes
-                    columnas_relevantes = ['nombre_apellido', 'dni', 'edad_meses', 'hemoglobina_dl1', 'riesgo']
-                    columnas_disponibles = [col for col in columnas_relevantes if col in pacientes_seguimiento.columns]
+                    columnas_mostrar = ['fecha_cita', 'hora_cita', 'tipo_consulta', 
+                                       'diagnostico', 'tratamiento', 'investigador_responsable']
+                    columnas_disponibles = [c for c in columnas_mostrar if c in df_citas.columns]
                     
                     if columnas_disponibles:
+                        df_display = df_citas[columnas_disponibles].copy()
+                        
+                        # Ordenar por fecha
+                        if 'fecha_cita' in df_display.columns:
+                            df_display = df_display.sort_values('fecha_cita', ascending=False)
+                        
+                        # Mostrar tabla
                         st.dataframe(
-                            pacientes_seguimiento[columnas_disponibles].head(20),
+                            df_display,
                             use_container_width=True,
-                            height=300,
-                            hide_index=True
+                            hide_index=True,
+                            column_config={
+                                "fecha_cita": st.column_config.DateColumn("Fecha"),
+                                "hora_cita": st.column_config.TimeColumn("Hora"),
+                                "diagnostico": st.column_config.TextColumn("Diagnóstico", width="medium"),
+                                "tratamiento": st.column_config.TextColumn("Tratamiento", width="medium")
+                            }
                         )
                         
-                        # Métricas resumen
-                        col_met1, col_met2 = st.columns(2)
-                        with col_met1:
-                            st.metric("Total en seguimiento", len(pacientes_seguimiento))
-                        with col_met2:
-                            # Promedio de hemoglobina
-                            if 'hemoglobina_dl1' in pacientes_seguimiento.columns:
-                                hb_promedio = pacientes_seguimiento['hemoglobina_dl1'].mean()
-                                st.metric("HB Promedio", f"{hb_promedio:.1f} g/dL")
-                    else:
-                        st.info("No hay columnas de seguimiento disponibles")
-                else:
-                    st.info("No hay pacientes en seguimiento activo")
+                        # Métricas del historial
+                        col_hist1, col_hist2 = st.columns(2)
+                        with col_hist1:
+                            st.metric("Total de citas", len(citas_paciente))
+                        with col_hist2:
+                            if 'fecha_cita' in df_citas.columns:
+                                ultima_cita = df_citas['fecha_cita'].max()
+                                st.metric("Última cita", ultima_cita)
             else:
-                st.info("La columna 'en_seguimiento' no está disponible en los datos")
-        else:
-            st.info("No hay datos disponibles para mostrar")
+                st.info("📭 No hay citas registradas para este paciente")
+        
+        with tab_nueva_cita:
+            st.markdown("#### Registrar Nueva Cita")
+            
+            with st.form("form_nueva_cita"):
+                col_fecha, col_hora = st.columns(2)
+                with col_fecha:
+                    fecha_cita = st.date_input("📅 Fecha de cita", value=datetime.now())
+                with col_hora:
+                    hora_cita = st.time_input("⏰ Hora", value=datetime.now().time())
+                
+                tipo_consulta = st.selectbox(
+                    "🩺 Tipo de consulta",
+                    ["Consulta inicial", "Control mensual", "Control escolar", 
+                     "Seguimiento", "Urgencia", "Reevaluación"]
+                )
+                
+                diagnostico = st.text_area(
+                    "📝 Diagnóstico",
+                    placeholder="Ej: Anemia moderada controlada, mejora en niveles de hemoglobina..."
+                )
+                
+                tratamiento = st.text_area(
+                    "💊 Tratamiento indicado",
+                    placeholder="Ej: Continuar con suplemento de hierro, dieta rica en..."
+                )
+                
+                observaciones = st.text_area(
+                    "📋 Observaciones adicionales",
+                    placeholder="Notas importantes sobre el estado del paciente..."
+                )
+                
+                col_responsable, col_proxima = st.columns(2)
+                with col_responsable:
+                    investigador = st.text_input("👨‍⚕️ Investigador responsable", value="Dr. Responsable")
+                with col_proxima:
+                    proxima_cita = st.date_input("📅 Próxima cita", 
+                                                value=datetime.now() + timedelta(days=30))
+                
+                # Botones de acción
+                col_btn1, col_btn2, col_btn3 = st.columns(3)
+                with col_btn2:
+                    guardar_cita = st.form_submit_button("💾 Guardar Cita", type="primary")
+                
+                if guardar_cita:
+                    if not diagnostico.strip() or not tratamiento.strip():
+                        st.error("⚠️ Por favor complete el diagnóstico y tratamiento")
+                    else:
+                        nueva_cita = {
+                            "dni_paciente": paciente_encontrado['dni'],
+                            "fecha_cita": str(fecha_cita),
+                            "hora_cita": str(hora_cita),
+                            "tipo_consulta": tipo_consulta,
+                            "diagnostico": diagnostico,
+                            "tratamiento": tratamiento,
+                            "observaciones": observaciones,
+                            "investigador_responsable": investigador,
+                            "proxima_cita": str(proxima_cita)
+                        }
+                        
+                        resultado = agregar_cita(nueva_cita)
+                        if resultado:
+                            st.success("✅ Cita registrada exitosamente!")
+                            st.balloons()
+                            st.rerun()
     
+    elif buscar_paciente and not pacientes_encontrados:
+        st.error("❌ No se encontraron pacientes con los criterios de búsqueda")
+    
+    # ========== SECCIÓN: PACIENTES EN SEGUIMIENTO ==========
+    st.markdown("---")
+    st.subheader("📊 Pacientes en Seguimiento Activo")
+    
+    try:
+        # Obtener pacientes en seguimiento
+        response = supabase.table("alertas_hemoglobina")\
+            .select("*")\
+            .eq("en_seguimiento", True)\
+            .execute()
+        
+        pacientes_seguimiento = response.data if response.data else []
+        
+        if pacientes_seguimiento:
+            df_seguimiento = pd.DataFrame(pacientes_seguimiento)
+            
+            # Mostrar métricas
+            col_met1, col_met2, col_met3 = st.columns(3)
+            with col_met1:
+                st.metric("Total en seguimiento", len(pacientes_seguimiento))
+            with col_met2:
+                if 'hemoglobina_dl1' in df_seguimiento.columns:
+                    hb_promedio = df_seguimiento['hemoglobina_dl1'].mean()
+                    st.metric("HB promedio", f"{hb_promedio:.1f} g/dL")
+            with col_met3:
+                if 'edad_meses' in df_seguimiento.columns:
+                    edad_promedio = df_seguimiento['edad_meses'].mean()
+                    st.metric("Edad promedio", f"{edad_promedio:.0f} meses")
+            
+            # Mostrar tabla de pacientes en seguimiento
+            columnas_relevantes = ['nombre_apellido', 'dni', 'edad_meses', 
+                                  'hemoglobina_dl1', 'riesgo', 'estado_alerta']
+            columnas_disponibles = [c for c in columnas_relevantes if c in df_seguimiento.columns]
+            
+            if columnas_disponibles:
+                st.dataframe(
+                    df_seguimiento[columnas_disponibles],
+                    use_container_width=True,
+                    height=300,
+                    hide_index=True,
+                    column_config={
+                        "nombre_apellido": "Paciente",
+                        "dni": "DNI",
+                        "edad_meses": "Edad (meses)",
+                        "hemoglobina_dl1": "HB (g/dL)",
+                        "riesgo": "Nivel de riesgo",
+                        "estado_alerta": "Estado"
+                    }
+                )
+        else:
+            st.info("📭 No hay pacientes en seguimiento activo")
+            
     except Exception as e:
-        st.error(f"Error al cargar datos de seguimiento: {e}")
+        st.error(f"❌ Error al cargar pacientes en seguimiento: {str(e)}")
+    
+    # ========== INFORMACIÓN ADICIONAL ==========
+    with st.expander("ℹ️ Información sobre el sistema de citas"):
+        st.markdown("""
+        **Funcionalidades del sistema:**
+        
+        1. **Búsqueda de pacientes:** Por DNI, nombre o lista completa
+        2. **Historial clínico:** Visualización de todas las citas previas
+        3. **Registro de citas:** Formulario completo para nuevas consultas
+        4. **Seguimiento activo:** Lista de pacientes que requieren monitoreo continuo
+        
+        **💡 Recomendaciones:**
+        - Verifique siempre el DNI del paciente antes de registrar una cita
+        - Complete todos los campos del formulario para un registro adecuado
+        - Revise el historial clínico antes de cada nueva consulta
+        """)
 
 # ==================================================
 # PESTAÑA 5: EVALUACIÓN NUTRICIONAL
