@@ -2127,200 +2127,743 @@ with tab3:
         st.info("👆 Presiona el botón 'Cargar Datos Nacionales' para ver el dashboard nacional")
 
 # ==================================================
-# PESTAÑA 4: SISTEMA DE CITAS
+# PESTAÑA 4: SISTEMA DE CITAS MEJORADO
 # ==================================================
 
 with tab4:
-    st.markdown('<div class="section-title-blue">📋 Sistema de Seguimiento y Citas</div>', unsafe_allow_html=True)
+    st.markdown("""
+    <div class="main-title" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); padding: 2rem;">
+        <h2 style="margin: 0; color: white;">📅 SISTEMA DE CITAS Y RECORDATORIOS</h2>
+        <p style="margin: 10px 0 0 0; color: rgba(255,255,255,0.9);">
+        Citas automáticas según nivel de anemia + Recordatorios + Calendario de seguimiento
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
     
-    # Funciones auxiliares para citas
-    def obtener_citas_con_info_anemia():
+    # ============================================
+    # FUNCIONES ESPECÍFICAS PARA CITAS AUTOMÁTICAS
+    # ============================================
+    
+    def calcular_frecuencia_cita(hemoglobina, edad_meses):
+        """Calcula la frecuencia de citas según nivel de anemia"""
+        if hemoglobina < 7:
+            return "MENSUAL", 30  # Anemia severa
+        elif hemoglobina < 10:
+            return "TRIMESTRAL", 90  # Anemia moderada
+        elif hemoglobina < 11:
+            return "SEMESTRAL", 180  # Anemia leve
+        else:
+            return "ANUAL", 365  # Normal
+    
+    def crear_cita_automatica(dni_paciente, hemoglobina, edad_meses, tipo="CONTROL"):
+        """Crea una cita automática según el nivel de anemia"""
         try:
-            response_citas = supabase.table("citas").select("*").order("fecha_cita", desc=True).execute()
-            citas = response_citas.data if response_citas.data else []
+            # Obtener información del paciente
+            response = supabase.table("alertas_hemoglobina")\
+                .select("*")\
+                .eq("dni", dni_paciente)\
+                .execute()
             
-            if not citas:
-                return []
+            if not response.data:
+                return False, "Paciente no encontrado"
             
-            citas_con_info = []
+            paciente = response.data[0]
             
-            for cita in citas:
-                dni = cita.get('dni_paciente')
-                if dni:
-                    response_paciente = supabase.table("alertas_hemoglobina")\
-                        .select("*")\
-                        .eq("dni", dni)\
-                        .execute()
+            # Calcular fecha de próxima cita
+            frecuencia, dias = calcular_frecuencia_cita(hemoglobina, edad_meses)
+            fecha_cita = datetime.now() + timedelta(days=dias)
+            
+            # Determinar tipo de consulta según gravedad
+            if hemoglobina < 7:
+                tipo_consulta = "URGENCIA - Anemia Severa"
+                diagnostico = "Anemia severa requiere seguimiento intensivo"
+                tratamiento = "Suplementación inmediata + Control semanal"
+            elif hemoglobina < 10:
+                tipo_consulta = "SEGUIMIENTO - Anemia Moderada"
+                diagnostico = "Anemia moderada en tratamiento"
+                tratamiento = "Suplementación continua + Control mensual"
+            elif hemoglobina < 11:
+                tipo_consulta = "CONTROL - Anemia Leve"
+                diagnostico = "Anemia leve en vigilancia"
+                tratamiento = "Suplementación preventiva"
+            else:
+                tipo_consulta = "CONTROL PREVENTIVO"
+                diagnostico = "Estado normal, seguimiento preventivo"
+                tratamiento = "Mantenimiento nutricional"
+            
+            # Crear datos de la cita
+            cita_data = {
+                "dni_paciente": dni_paciente,
+                "fecha_cita": fecha_cita.strftime('%Y-%m-%d'),
+                "hora_cita": "09:00:00",
+                "tipo_consulta": tipo_consulta,
+                "diagnostico": diagnostico,
+                "tratamiento": tratamiento,
+                "observaciones": f"Cita automática generada por sistema. Frecuencia: {frecuencia}",
+                "investigador_responsable": "Sistema Automático",
+                "severidad_anemia": "SEVERA" if hemoglobina < 7 else "MODERADA" if hemoglobina < 10 else "LEVE" if hemoglobina < 11 else "NORMAL",
+                "suplemento_hierro": paciente.get('tipo_suplemento_hierro', 'Sulfato ferroso'),
+                "frecuencia_suplemento": paciente.get('frecuencia_suplemento', 'Diario'),
+                "proxima_cita": (fecha_cita + timedelta(days=dias)).strftime('%Y-%m-%d'),
+                "created_at": datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            }
+            
+            # Insertar en Supabase
+            response = supabase.table("citas").insert(cita_data).execute()
+            
+            if response.data:
+                return True, f"Cita creada para {fecha_cita.strftime('%d/%m/%Y')} - Frecuencia: {frecuencia}"
+            else:
+                return False, "Error al crear cita"
+                
+        except Exception as e:
+            return False, f"Error: {str(e)}"
+    
+    def obtener_recordatorios_pendientes():
+        """Obtiene recordatorios de citas próximas"""
+        try:
+            hoy = datetime.now().date()
+            proxima_semana = hoy + timedelta(days=7)
+            
+            response = supabase.table("citas")\
+                .select("*, alertas_hemoglobina(*)")\
+                .eq("alertas_hemoglobina.estado_paciente", "Activo")\
+                .gte("fecha_cita", hoy.strftime('%Y-%m-%d'))\
+                .lte("fecha_cita", proxima_semana.strftime('%Y-%m-%d'))\
+                .execute()
+            
+            if response.data:
+                recordatorios = []
+                for cita in response.data:
+                    paciente_info = cita.get('alertas_hemoglobina', {})
+                    dias_restantes = (datetime.strptime(cita['fecha_cita'], '%Y-%m-%d').date() - hoy).days
                     
-                    info_anemia = response_paciente.data[0] if response_paciente.data else {}
-                    
-                    cita_completa = {
-                        **cita,
-                        "info_anemia": info_anemia,
-                        "nombre_paciente": info_anemia.get('nombre_apellido', 'Desconocido'),
-                        "hemoglobina": info_anemia.get('hemoglobina_dl1', 'N/A'),
-                        "clasificacion_anemia": clasificar_anemia_simple(
-                            info_anemia.get('hemoglobina_dl1', 0),
-                            info_anemia.get('edad_meses', 0)
-                        ),
-                        "riesgo": info_anemia.get('riesgo', 'N/A'),
-                        "en_seguimiento": info_anemia.get('en_seguimiento', False)
-                    }
-                    citas_con_info.append(cita_completa)
-                else:
-                    citas_con_info.append({
-                        **cita,
-                        "nombre_paciente": "Sin información",
-                        "hemoglobina": "N/A",
-                        "clasificacion_anemia": "N/A",
-                        "riesgo": "N/A",
-                        "en_seguimiento": False
+                    recordatorios.append({
+                        'dni': paciente_info.get('dni', 'N/A'),
+                        'nombre': paciente_info.get('nombre_apellido', 'Desconocido'),
+                        'telefono': paciente_info.get('telefono', 'Sin teléfono'),
+                        'fecha_cita': cita['fecha_cita'],
+                        'hora_cita': cita.get('hora_cita', '09:00'),
+                        'tipo_consulta': cita['tipo_consulta'],
+                        'dias_restantes': dias_restantes,
+                        'hemoglobina': paciente_info.get('hemoglobina_dl1', 'N/A'),
+                        'prioridad': 'URGENTE' if dias_restantes <= 2 else 'PRÓXIMO' if dias_restantes <= 5 else 'PROGRAMADO'
                     })
-            
-            return citas_con_info
+                
+                return recordatorios
+            return []
             
         except Exception as e:
-            st.error(f"❌ Error al obtener citas: {str(e)}")
+            st.error(f"Error obteniendo recordatorios: {str(e)}")
             return []
     
-    def clasificar_anemia_simple(hemoglobina, edad_meses):
-        if hemoglobina == 'N/A' or not hemoglobina:
-            return "Sin datos"
+    def obtener_calendario_seguimiento():
+        """Obtiene el calendario de seguimiento organizado por nivel de anemia"""
+        try:
+            # Obtener pacientes con anemia
+            response = supabase.table("alertas_hemoglobina")\
+                .select("*")\
+                .or_("hemoglobina_dl1.lt.11,en_seguimiento.eq.true")\
+                .execute()
+            
+            if not response.data:
+                return []
+            
+            calendario = []
+            
+            for paciente in response.data:
+                hemoglobina = paciente['hemoglobina_dl1']
+                edad_meses = paciente['edad_meses']
+                
+                # Clasificar anemia
+                if hemoglobina < 7:
+                    nivel = "SEVERA"
+                    frecuencia, dias = "MENSUAL", 30
+                    emoji = "🔴"
+                elif hemoglobina < 10:
+                    nivel = "MODERADA"
+                    frecuencia, dias = "TRIMESTRAL", 90
+                    emoji = "🟡"
+                elif hemoglobina < 11:
+                    nivel = "LEVE"
+                    frecuencia, dias = "SEMESTRAL", 180
+                    emoji = "🟢"
+                else:
+                    nivel = "NORMAL"
+                    frecuencia, dias = "ANUAL", 365
+                    emoji = "✅"
+                
+                # Obtener última cita
+                citas_response = supabase.table("citas")\
+                    .select("fecha_cita, proxima_cita")\
+                    .eq("dni_paciente", paciente['dni'])\
+                    .order("fecha_cita", desc=True)\
+                    .limit(1)\
+                    .execute()
+                
+                ultima_cita = None
+                proxima_cita = None
+                
+                if citas_response.data:
+                    ultima_cita = citas_response.data[0].get('fecha_cita')
+                    proxima_cita = citas_response.data[0].get('proxima_cita')
+                
+                # Si no tiene próxima cita, calcular automáticamente
+                if not proxima_cita and paciente['en_seguimiento']:
+                    if ultima_cita:
+                        ultima_fecha = datetime.strptime(ultima_cita, '%Y-%m-%d')
+                        proxima_fecha = ultima_fecha + timedelta(days=dias)
+                    else:
+                        proxima_fecha = datetime.now() + timedelta(days=30)
+                    
+                    proxima_cita = proxima_fecha.strftime('%Y-%m-%d')
+                
+                if proxima_cita:
+                    dias_restantes = (datetime.strptime(proxima_cita, '%Y-%m-%d').date() - datetime.now().date()).days
+                    
+                    calendario.append({
+                        'dni': paciente['dni'],
+                        'nombre': paciente['nombre_apellido'],
+                        'nivel_anemia': nivel,
+                        'emoji': emoji,
+                        'hemoglobina': hemoglobina,
+                        'frecuencia': frecuencia,
+                        'proxima_cita': proxima_cita,
+                        'dias_restantes': dias_restantes,
+                        'telefono': paciente.get('telefono', 'Sin teléfono'),
+                        'prioridad': '🚨 URGENTE' if dias_restantes <= 7 else '⚠️ PRÓXIMO' if dias_restantes <= 30 else '📅 PROGRAMADO'
+                    })
+            
+            # Ordenar por prioridad y fecha
+            calendario.sort(key=lambda x: (x['dias_restantes'], -x['hemoglobina']))
+            return calendario
+            
+        except Exception as e:
+            st.error(f"Error obteniendo calendario: {str(e)}")
+            return []
+    
+    # ============================================
+    # INTERFAZ PRINCIPAL DEL SISTEMA DE CITAS
+    # ============================================
+    
+    # Crear pestañas dentro de Sistema de Citas
+    tab_citas1, tab_citas2, tab_citas3, tab_citas4 = st.tabs([
+        "📅 Calendario de Seguimiento",
+        "🔄 Generar Citas Automáticas",
+        "🔔 Recordatorios Próximos",
+        "📋 Historial de Citas"
+    ])
+    
+    # ============================================
+    # TAB 1: CALENDARIO DE SEGUIMIENTO
+    # ============================================
+    with tab_citas1:
+        st.markdown('<div class="section-title-purple">📅 CALENDARIO DE SEGUIMIENTO POR NIVEL DE ANEMIA</div>', unsafe_allow_html=True)
         
-        if edad_meses < 60:
-            if hemoglobina >= 11.0:
-                return "Normal"
-            elif hemoglobina >= 10.0:
-                return "Leve"
-            elif hemoglobina >= 9.0:
-                return "Moderada"
-            else:
-                return "Severa"
+        if st.button("🔄 Actualizar Calendario", key="actualizar_calendario"):
+            with st.spinner("Cargando calendario..."):
+                calendario = obtener_calendario_seguimiento()
+                st.session_state.calendario_seguimiento = calendario
+        
+        if 'calendario_seguimiento' in st.session_state and st.session_state.calendario_seguimiento:
+            calendario_df = pd.DataFrame(st.session_state.calendario_seguimiento)
+            
+            # Mostrar por nivel de anemia
+            niveles = ["SEVERA", "MODERADA", "LEVE", "NORMAL"]
+            
+            for nivel in niveles:
+                pacientes_nivel = calendario_df[calendario_df['nivel_anemia'] == nivel]
+                
+                if not pacientes_nivel.empty:
+                    emoji = {"SEVERA": "🔴", "MODERADA": "🟡", "LEVE": "🟢", "NORMAL": "✅"}[nivel]
+                    frecuencia = {"SEVERA": "MENSUAL", "MODERADA": "TRIMESTRAL", "LEVE": "SEMESTRAL", "NORMAL": "ANUAL"}[nivel]
+                    
+                    st.markdown(f"""
+                    <div class="section-title-purple" style="font-size: 1.4rem; margin-top: 1.5rem;">
+                        {emoji} ANEMIA {nivel} - Control {frecuencia}
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
+                    for _, paciente in pacientes_nivel.iterrows():
+                        col1, col2, col3, col4 = st.columns([3, 2, 2, 1])
+                        
+                        with col1:
+                            st.markdown(f"**{paciente['nombre']}**")
+                            st.caption(f"DNI: {paciente['dni']} | Tel: {paciente['telefono']}")
+                        
+                        with col2:
+                            st.markdown(f"**{paciente['hemoglobina']} g/dL**")
+                            st.caption(f"Próxima: {paciente['proxima_cita']}")
+                        
+                        with col3:
+                            if paciente['dias_restantes'] <= 0:
+                                st.error(f"⚠️ VENCIDO {abs(paciente['dias_restantes'])} días")
+                            elif paciente['dias_restantes'] <= 7:
+                                st.warning(f"⏰ {paciente['dias_restantes']} días")
+                            else:
+                                st.info(f"📅 {paciente['dias_restantes']} días")
+                        
+                        with col4:
+                            if st.button("📝", key=f"cita_{paciente['dni']}"):
+                                st.session_state.crear_cita_paciente = paciente['dni']
+                                st.rerun()
         else:
-            if hemoglobina >= 12.0:
-                return "Normal"
-            elif hemoglobina >= 11.0:
-                return "Leve"
-            elif hemoglobina >= 10.0:
-                return "Moderada"
-            else:
-                return "Severa"
+            st.info("👆 Presiona 'Actualizar Calendario' para cargar el calendario de seguimiento")
     
-    def obtener_color_anemia(clasificacion):
-        colores = {
-            "Normal": "🟢",
-            "Leve": "🟡",
-            "Moderada": "🟠",
-            "Severa": "🔴",
-            "Sin datos": "⚪"
-        }
-        return colores.get(clasificacion, "⚪")
-    
-    # Mostrar citas existentes
-    st.markdown('<div class="section-title-blue" style="font-size: 1.2rem;">🩺 Citas con Estado de Anemia</div>', unsafe_allow_html=True)
-    
-    if st.button("🔄 Cargar citas con información de anemia", key="cargar_citas_anemia"):
-        with st.spinner("Vinculando citas con diagnóstico de anemia..."):
-            citas_vinculadas = obtener_citas_con_info_anemia()
-            st.session_state.citas_vinculadas = citas_vinculadas
-            
-            if citas_vinculadas:
-                st.success(f"✅ {len(citas_vinculadas)} citas vinculadas con información de anemia")
-            else:
-                st.warning("⚠️ No hay citas registradas")
-    
-    if 'citas_vinculadas' in st.session_state and st.session_state.citas_vinculadas:
-        citas_df = pd.DataFrame(st.session_state.citas_vinculadas)
-        citas_df['anemia_icono'] = citas_df['clasificacion_anemia'].apply(obtener_color_anemia)
-        citas_df['anemia_mostrar'] = citas_df['anemia_icono'] + " " + citas_df['clasificacion_anemia']
+    # ============================================
+    # TAB 2: GENERAR CITAS AUTOMÁTICAS
+    # ============================================
+    with tab_citas2:
+        st.markdown('<div class="section-title-purple">🔄 GENERAR CITAS AUTOMÁTICAS POR NIVEL DE ANEMIA</div>', unsafe_allow_html=True)
         
-        st.dataframe(
-            citas_df[['fecha_cita', 'hora_cita', 'nombre_paciente', 'dni_paciente',
-                     'anemia_mostrar', 'hemoglobina', 'tipo_consulta', 'diagnostico', 'riesgo']],
-            use_container_width=True,
-            height=400,
-            column_config={
-                "fecha_cita": "Fecha",
-                "hora_cita": "Hora",
-                "nombre_paciente": "Paciente",
-                "dni_paciente": "DNI",
-                "anemia_mostrar": st.column_config.TextColumn("Estado Anemia", width="small"),
-                "hemoglobina": st.column_config.NumberColumn("Hb (g/dL)", format="%.1f"),
-                "tipo_consulta": "Tipo Consulta",
-                "diagnostico": st.column_config.TextColumn("Diagnóstico", width="large"),
-                "riesgo": "Riesgo"
+        # Obtener pacientes que necesitan citas
+        try:
+            response = supabase.table("alertas_hemoglobina")\
+                .select("*")\
+                .or_("hemoglobina_dl1.lt.11,en_seguimiento.eq.true")\
+                .execute()
+            
+            if response.data:
+                pacientes_necesitan = []
+                
+                for paciente in response.data:
+                    # Verificar si ya tiene cita próxima
+                    citas_response = supabase.table("citas")\
+                        .select("proxima_cita")\
+                        .eq("dni_paciente", paciente['dni'])\
+                        .gte("proxima_cita", datetime.now().strftime('%Y-%m-%d'))\
+                        .execute()
+                    
+                    if not citas_response.data:
+                        pacientes_necesitan.append({
+                            'dni': paciente['dni'],
+                            'nombre': paciente['nombre_apellido'],
+                            'hemoglobina': paciente['hemoglobina_dl1'],
+                            'edad_meses': paciente['edad_meses'],
+                            'en_seguimiento': paciente['en_seguimiento'],
+                            'riesgo': paciente.get('riesgo', 'N/A')
+                        })
+                
+                if pacientes_necesitan:
+                    st.info(f"📋 **{len(pacientes_necesitan)} pacientes necesitan cita programada**")
+                    
+                    # Crear tabla de pacientes
+                    df_pacientes_citas = pd.DataFrame(pacientes_necesitan)
+                    df_pacientes_citas['frecuencia'] = df_pacientes_citas['hemoglobina'].apply(
+                        lambda x: "MENSUAL" if x < 7 else "TRIMESTRAL" if x < 10 else "SEMESTRAL" if x < 11 else "ANUAL"
+                    )
+                    
+                    # Mostrar tabla
+                    edited_df = st.data_editor(
+                        df_pacientes_citas[['nombre', 'dni', 'hemoglobina', 'frecuencia', 'riesgo']],
+                        column_config={
+                            "nombre": "Paciente",
+                            "dni": "DNI",
+                            "hemoglobina": st.column_config.NumberColumn("Hb (g/dL)", format="%.1f"),
+                            "frecuencia": "Frecuencia",
+                            "riesgo": "Riesgo"
+                        },
+                        use_container_width=True
+                    )
+                    
+                    # Botón para generar citas automáticas
+                    col_gen1, col_gen2 = st.columns(2)
+                    
+                    with col_gen1:
+                        if st.button("🎯 Generar Citas Seleccionadas", type="primary", use_container_width=True):
+                            with st.spinner("Generando citas..."):
+                                resultados = []
+                                for _, paciente in df_pacientes_citas.iterrows():
+                                    success, message = crear_cita_automatica(
+                                        paciente['dni'],
+                                        paciente['hemoglobina'],
+                                        paciente['edad_meses']
+                                    )
+                                    resultados.append({
+                                        'paciente': paciente['nombre'],
+                                        'exito': success,
+                                        'mensaje': message
+                                    })
+                                
+                                # Mostrar resultados
+                                st.success(f"✅ Citas generadas: {len([r for r in resultados if r['exito']])}/{len(resultados)}")
+                                
+                                for resultado in resultados:
+                                    if resultado['exito']:
+                                        st.info(f"✅ {resultado['paciente']}: {resultado['mensaje']}")
+                                    else:
+                                        st.error(f"❌ {resultado['paciente']}: {resultado['mensaje']}")
+                    
+                    with col_gen2:
+                        if st.button("📋 Generar Todas las Citas", type="secondary", use_container_width=True):
+                            with st.spinner("Generando todas las citas..."):
+                                contador = 0
+                                for _, paciente in df_pacientes_citas.iterrows():
+                                    success, _ = crear_cita_automatica(
+                                        paciente['dni'],
+                                        paciente['hemoglobina'],
+                                        paciente['edad_meses']
+                                    )
+                                    if success:
+                                        contador += 1
+                                
+                                st.success(f"✅ {contador} citas generadas automáticamente")
+                                time.sleep(2)
+                                st.rerun()
+                else:
+                    st.success("🎉 Todos los pacientes ya tienen citas programadas")
+                    
+            else:
+                st.info("📝 No hay pacientes que requieran seguimiento")
+                
+        except Exception as e:
+            st.error(f"❌ Error: {str(e)}")
+        
+        # Sección para crear cita manual
+        st.markdown("---")
+        st.markdown('<div class="section-title-purple" style="font-size: 1.2rem;">➕ CREAR CITA MANUAL</div>', unsafe_allow_html=True)
+        
+        with st.form("form_cita_manual"):
+            col_man1, col_man2 = st.columns(2)
+            
+            with col_man1:
+                # Buscar paciente
+                pacientes_response = supabase.table("alertas_hemoglobina").select("dni, nombre_apellido").execute()
+                
+                if pacientes_response.data:
+                    opciones_pacientes = {f"{p['nombre_apellido']} (DNI: {p['dni']})": p['dni'] 
+                                         for p in pacientes_response.data}
+                    
+                    paciente_seleccionado = st.selectbox("Seleccionar paciente:", list(opciones_pacientes.keys()))
+                    dni_paciente = opciones_pacientes[paciente_seleccionado]
+                    
+                    # Obtener datos del paciente
+                    paciente_data_response = supabase.table("alertas_hemoglobina")\
+                        .select("*")\
+                        .eq("dni", dni_paciente)\
+                        .execute()
+                    
+                    if paciente_data_response.data:
+                        paciente_data = paciente_data_response.data[0]
+                        st.info(f"**Hb actual:** {paciente_data['hemoglobina_dl1']} g/dL")
+                        st.info(f"**Riesgo:** {paciente_data.get('riesgo', 'N/A')}")
+            
+            with col_man2:
+                fecha_cita = st.date_input("Fecha de la cita", min_value=datetime.now())
+                hora_cita = st.time_input("Hora de la cita", value=datetime.now().time())
+                tipo_consulta = st.selectbox("Tipo de consulta", 
+                                            ["Control", "Seguimiento", "Urgencia", "Reevaluación", "Vacunación"])
+                
+                # Sugerir frecuencia según hemoglobina
+                if 'paciente_data' in locals():
+                    hemoglobina = paciente_data['hemoglobina_dl1']
+                    frecuencia_sugerida = "MENSUAL" if hemoglobina < 7 else "TRIMESTRAL" if hemoglobina < 10 else "SEMESTRAL" if hemoglobina < 11 else "ANUAL"
+                    st.info(f"**Frecuencia sugerida:** {frecuencia_sugerida}")
+            
+            diagnostico = st.text_area("Diagnóstico", placeholder="Ej: Anemia leve por deficiencia de hierro")
+            tratamiento = st.text_area("Tratamiento prescrito", placeholder="Ej: Sulfato ferroso 15 mg/día")
+            observaciones = st.text_area("Observaciones", placeholder="Observaciones adicionales...")
+            
+            submit_cita = st.form_submit_button("💾 GUARDAR CITA MANUAL", use_container_width=True)
+            
+            if submit_cita and 'dni_paciente' in locals():
+                try:
+                    cita_data = {
+                        "dni_paciente": dni_paciente,
+                        "fecha_cita": fecha_cita.strftime('%Y-%m-%d'),
+                        "hora_cita": hora_cita.strftime('%H:%M:%S'),
+                        "tipo_consulta": tipo_consulta,
+                        "diagnostico": diagnostico,
+                        "tratamiento": tratamiento,
+                        "observaciones": observaciones,
+                        "investigador_responsable": "Usuario Manual",
+                        "proxima_cita": (fecha_cita + timedelta(days=30)).strftime('%Y-%m-%d'),
+                        "created_at": datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                    }
+                    
+                    response = supabase.table("citas").insert(cita_data).execute()
+                    
+                    if response.data:
+                        st.success("✅ Cita manual guardada exitosamente")
+                        time.sleep(1)
+                        st.rerun()
+                    else:
+                        st.error("❌ Error al guardar la cita")
+                        
+                except Exception as e:
+                    st.error(f"❌ Error: {str(e)}")
+    
+    # ============================================
+    # TAB 3: RECORDATORIOS PRÓXIMOS
+    # ============================================
+    with tab_citas3:
+        st.markdown('<div class="section-title-purple">🔔 RECORDATORIOS DE CITAS PRÓXIMAS</div>', unsafe_allow_html=True)
+        
+        if st.button("🔄 Cargar Recordatorios", key="cargar_recordatorios"):
+            with st.spinner("Buscando citas próximas..."):
+                recordatorios = obtener_recordatorios_pendientes()
+                st.session_state.recordatorios_pendientes = recordatorios
+        
+        if 'recordatorios_pendientes' in st.session_state:
+            recordatorios_df = pd.DataFrame(st.session_state.recordatorios_pendientes)
+            
+            if not recordatorios_df.empty:
+                # Mostrar por prioridad
+                for prioridad in ['URGENTE', 'PRÓXIMO', 'PROGRAMADO']:
+                    recordatorios_prioridad = recordatorios_df[recordatorios_df['prioridad'] == prioridad]
+                    
+                    if not recordatorios_prioridad.empty:
+                        color = {
+                            'URGENTE': '#dc2626',
+                            'PRÓXIMO': '#d97706', 
+                            'PROGRAMADO': '#2563eb'
+                        }[prioridad]
+                        
+                        emoji = {
+                            'URGENTE': '🚨',
+                            'PRÓXIMO': '⚠️',
+                            'PROGRAMADO': '📅'
+                        }[prioridad]
+                        
+                        st.markdown(f"""
+                        <div style="background: linear-gradient(135deg, {color}10 0%, {color}20 100%); 
+                                 padding: 1rem; border-radius: 10px; border-left: 5px solid {color}; 
+                                 margin: 1rem 0;">
+                            <h4 style="margin: 0 0 10px 0; color: {color};">
+                                {emoji} {prioridad} ({len(recordatorios_prioridad)} citas)
+                            </h4>
+                        </div>
+                        """, unsafe_allow_html=True)
+                        
+                        for _, recordatorio in recordatorios_prioridad.iterrows():
+                            col_rec1, col_rec2, col_rec3, col_rec4 = st.columns([3, 2, 2, 1])
+                            
+                            with col_rec1:
+                                st.markdown(f"**{recordatorio['nombre']}**")
+                                st.caption(f"DNI: {recordatorio['dni']}")
+                            
+                            with col_rec2:
+                                st.markdown(f"**{recordatorio['fecha_cita']}**")
+                                st.caption(f"Hora: {recordatorio['hora_cita']}")
+                            
+                            with col_rec3:
+                                st.markdown(f"**{recordatorio['tipo_consulta']}**")
+                                st.caption(f"Hb: {recordatorio['hemoglobina']} g/dL")
+                            
+                            with col_rec4:
+                                if st.button("📞", key=f"llamar_{recordatorio['dni']}"):
+                                    st.info(f"📞 Llamar al: {recordatorio['telefono']}")
+                                    # En una implementación real, aquí iría la lógica para enviar SMS/email
+                
+                # Botones de acción
+                st.markdown("---")
+                col_acc1, col_acc2, col_acc3 = st.columns(3)
+                
+                with col_acc1:
+                    if st.button("📧 Enviar recordatorios por email", use_container_width=True):
+                        st.info("Funcionalidad de email en desarrollo")
+                        # Aquí integrarías con servicio de email
+                
+                with col_acc2:
+                    if st.button("📱 Enviar recordatorios por SMS", use_container_width=True):
+                        st.info("Funcionalidad de SMS en desarrollo")
+                        # Aquí integrarías con servicio SMS
+                
+                with col_acc3:
+                    if st.button("📄 Generar lista de llamadas", use_container_width=True):
+                        csv = recordatorios_df[['nombre', 'telefono', 'fecha_cita', 'hora_cita']].to_csv(index=False)
+                        st.download_button(
+                            label="📥 Descargar lista",
+                            data=csv,
+                            file_name=f"recordatorios_{datetime.now().strftime('%Y%m%d')}.csv",
+                            mime="text/csv",
+                            use_container_width=True
+                        )
+                        
+            else:
+                st.success("🎉 No hay recordatorios pendientes para la próxima semana")
+        else:
+            st.info("👆 Presiona 'Cargar Recordatorios' para ver citas próximas")
+    
+    # ============================================
+    # TAB 4: HISTORIAL DE CITAS (TU CÓDIGO ORIGINAL)
+    # ============================================
+    with tab_citas4:
+        st.markdown('<div class="section-title-purple">📋 HISTORIAL COMPLETO DE CITAS</div>', unsafe_allow_html=True)
+        
+        # Tu código original para mostrar citas existentes
+        def obtener_citas_con_info_anemia():
+            try:
+                response_citas = supabase.table("citas").select("*").order("fecha_cita", desc=True).execute()
+                citas = response_citas.data if response_citas.data else []
+                
+                if not citas:
+                    return []
+                
+                citas_con_info = []
+                
+                for cita in citas:
+                    dni = cita.get('dni_paciente')
+                    if dni:
+                        response_paciente = supabase.table("alertas_hemoglobina")\
+                            .select("*")\
+                            .eq("dni", dni)\
+                            .execute()
+                        
+                        info_anemia = response_paciente.data[0] if response_paciente.data else {}
+                        
+                        cita_completa = {
+                            **cita,
+                            "info_anemia": info_anemia,
+                            "nombre_paciente": info_anemia.get('nombre_apellido', 'Desconocido'),
+                            "hemoglobina": info_anemia.get('hemoglobina_dl1', 'N/A'),
+                            "clasificacion_anemia": clasificar_anemia_simple(
+                                info_anemia.get('hemoglobina_dl1', 0),
+                                info_anemia.get('edad_meses', 0)
+                            ),
+                            "riesgo": info_anemia.get('riesgo', 'N/A'),
+                            "en_seguimiento": info_anemia.get('en_seguimiento', False)
+                        }
+                        citas_con_info.append(cita_completa)
+                    else:
+                        citas_con_info.append({
+                            **cita,
+                            "nombre_paciente": "Sin información",
+                            "hemoglobina": "N/A",
+                            "clasificacion_anemia": "N/A",
+                            "riesgo": "N/A",
+                            "en_seguimiento": False
+                        })
+                
+                return citas_con_info
+                
+            except Exception as e:
+                st.error(f"❌ Error al obtener citas: {str(e)}")
+                return []
+        
+        def clasificar_anemia_simple(hemoglobina, edad_meses):
+            if hemoglobina == 'N/A' or not hemoglobina:
+                return "Sin datos"
+            
+            if edad_meses < 60:
+                if hemoglobina >= 11.0:
+                    return "Normal"
+                elif hemoglobina >= 10.0:
+                    return "Leve"
+                elif hemoglobina >= 9.0:
+                    return "Moderada"
+                else:
+                    return "Severa"
+            else:
+                if hemoglobina >= 12.0:
+                    return "Normal"
+                elif hemoglobina >= 11.0:
+                    return "Leve"
+                elif hemoglobina >= 10.0:
+                    return "Moderada"
+                else:
+                    return "Severa"
+        
+        def obtener_color_anemia(clasificacion):
+            colores = {
+                "Normal": "🟢",
+                "Leve": "🟡",
+                "Moderada": "🟠",
+                "Severa": "🔴",
+                "Sin datos": "⚪"
             }
-        )
+            return colores.get(clasificacion, "⚪")
         
-        # Estadísticas
-        st.markdown('<div class="section-title-blue" style="font-size: 1.2rem;">📊 Estadísticas de Anemia en Citas</div>', unsafe_allow_html=True)
+        # Mostrar citas existentes
+        if st.button("🔄 Cargar historial completo", key="cargar_historial"):
+            with st.spinner("Cargando historial..."):
+                citas_vinculadas = obtener_citas_con_info_anemia()
+                st.session_state.citas_historial = citas_vinculadas
         
-        col_est1, col_est2, col_est3, col_est4 = st.columns(4)
-        
-        with col_est1:
-            total_citas = len(citas_df)
-            st.markdown(f"""
-            <div class="metric-card-blue">
-                <div class="metric-label">TOTAL CITAS</div>
-                <div class="highlight-number highlight-blue">{total_citas}</div>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        with col_est2:
-            con_anemia = len(citas_df[citas_df['clasificacion_anemia'].isin(["Leve", "Moderada", "Severa"])])
-            porcentaje = (con_anemia / total_citas * 100) if total_citas > 0 else 0
-            st.markdown(f"""
-            <div class="metric-card-yellow">
-                <div class="metric-label">CON ANEMIA</div>
-                <div class="highlight-number highlight-yellow">{con_anemia}</div>
-                <div style="font-size: 0.9rem; color: #6b7280;">{porcentaje:.1f}%</div>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        with col_est3:
-            severas = len(citas_df[citas_df['clasificacion_anemia'] == "Severa"])
-            st.markdown(f"""
-            <div class="metric-card-red">
-                <div class="metric-label">ANEMIA SEVERA</div>
-                <div class="highlight-number highlight-red">{severas}</div>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        with col_est4:
-            seguimiento = len(citas_df[citas_df['en_seguimiento'] == True])
-            st.markdown(f"""
-            <div class="metric-card-green">
-                <div class="metric-label">EN SEGUIMIENTO</div>
-                <div class="highlight-number highlight-green">{seguimiento}</div>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        # Gráfico de distribución
-        if 'clasificacion_anemia' in citas_df.columns:
-            distribucion = citas_df['clasificacion_anemia'].value_counts()
+        if 'citas_historial' in st.session_state and st.session_state.citas_historial:
+            citas_df = pd.DataFrame(st.session_state.citas_historial)
+            citas_df['anemia_icono'] = citas_df['clasificacion_anemia'].apply(obtener_color_anemia)
+            citas_df['anemia_mostrar'] = citas_df['anemia_icono'] + " " + citas_df['clasificacion_anemia']
             
-            fig = px.bar(
-                x=distribucion.index,
-                y=distribucion.values,
-                title="Casos por Nivel de Anemia",
-                color=distribucion.values,
-                color_continuous_scale='RdYlGn_r',
-                text=distribucion.values,
-                height=300
+            # Filtros
+            col_filt1, col_filt2, col_filt3 = st.columns(3)
+            
+            with col_filt1:
+                filtro_tipo = st.multiselect(
+                    "Filtrar por tipo",
+                    citas_df['tipo_consulta'].unique(),
+                    default=citas_df['tipo_consulta'].unique()
+                )
+            
+            with col_filt2:
+                filtro_anemia = st.multiselect(
+                    "Filtrar por anemia",
+                    citas_df['clasificacion_anemia'].unique(),
+                    default=citas_df['clasificacion_anemia'].unique()
+                )
+            
+            with col_filt3:
+                fecha_min = st.date_input("Desde", value=datetime.now() - timedelta(days=30))
+                fecha_max = st.date_input("Hasta", value=datetime.now())
+            
+            # Aplicar filtros
+            citas_filtradas = citas_df[
+                (citas_df['tipo_consulta'].isin(filtro_tipo)) &
+                (citas_df['clasificacion_anemia'].isin(filtro_anemia)) &
+                (pd.to_datetime(citas_df['fecha_cita']).dt.date >= fecha_min) &
+                (pd.to_datetime(citas_df['fecha_cita']).dt.date <= fecha_max)
+            ]
+            
+            st.dataframe(
+                citas_filtradas[['fecha_cita', 'hora_cita', 'nombre_paciente', 'dni_paciente',
+                               'anemia_mostrar', 'hemoglobina', 'tipo_consulta', 'diagnostico', 'riesgo']],
+                use_container_width=True,
+                height=400,
+                column_config={
+                    "fecha_cita": "Fecha",
+                    "hora_cita": "Hora",
+                    "nombre_paciente": "Paciente",
+                    "dni_paciente": "DNI",
+                    "anemia_mostrar": st.column_config.TextColumn("Estado Anemia", width="small"),
+                    "hemoglobina": st.column_config.NumberColumn("Hb (g/dL)", format="%.1f"),
+                    "tipo_consulta": "Tipo Consulta",
+                    "diagnostico": st.column_config.TextColumn("Diagnóstico", width="large"),
+                    "riesgo": "Riesgo"
+                }
             )
             
-            fig.update_layout(
-                xaxis_title="Clasificación de Anemia",
-                yaxis_title="Número de Citas",
-                showlegend=False
-            )
+            # Estadísticas del historial
+            st.markdown('<div class="section-title-purple" style="font-size: 1.2rem;">📊 ESTADÍSTICAS DEL HISTORIAL</div>', unsafe_allow_html=True)
             
-            fig.update_traces(
-                texttemplate='%{text}',
-                textposition='outside'
-            )
+            col_stat1, col_stat2, col_stat3, col_stat4 = st.columns(4)
             
-            st.plotly_chart(fig, use_container_width=True)
+            with col_stat1:
+                total_citas = len(citas_filtradas)
+                st.metric("Total citas", total_citas)
+            
+            with col_stat2:
+                con_anemia = len(citas_filtradas[citas_filtradas['clasificacion_anemia'].isin(["Leve", "Moderada", "Severa"])])
+                st.metric("Con anemia", con_anaemia)
+            
+            with col_stat3:
+                severas = len(citas_filtradas[citas_filtradas['clasificacion_anemia'] == "Severa"])
+                st.metric("Anemia severa", severas)
+            
+            with col_stat4:
+                ultima_cita = citas_filtradas['fecha_cita'].max() if not citas_filtradas.empty else "N/A"
+                st.metric("Última cita", ultima_cita)
+            
+            # Exportar
+            st.markdown("---")
+            if st.button("📥 Exportar historial completo", use_container_width=True):
+                csv = citas_df.to_csv(index=False)
+                st.download_button(
+                    label="📊 Descargar CSV",
+                    data=csv,
+                    file_name=f"historial_citas_{datetime.now().strftime('%Y%m%d')}.csv",
+                    mime="text/csv",
+                    use_container_width=True
+                )
 
 # ==================================================
 # PESTAÑA 5: CONFIGURACIÓN
