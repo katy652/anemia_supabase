@@ -2660,6 +2660,428 @@ with tab4:
                     
             except Exception as e:
                 st.error(f"Error: {str(e)}")
+
+with tab4:
+    # ==================================================
+    # FARMACIA NUTRICIONAL - HEADER
+    # ==================================================
+    st.markdown("""
+        <div style='background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); 
+                    padding: 20px; border-radius: 12px; margin-bottom: 20px;'>
+            <h2 style='color: #2e7d32; margin: 0;'>💊 Farmacia Nutricional</h2>
+            <p style='color: #1b5e20; margin-top: 5px;'>
+            Gestión de suplementos, medicamentos y control nutricional para pacientes con anemia
+            </p>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    # ========== SUBPESTAÑAS DENTRO DE FARMACIA ==========
+    sub_tab1, sub_tab2, sub_tab3, sub_tab4 = st.tabs([
+        "📦 Inventario", 
+        "💊 Prescripciones", 
+        "📊 Control Nutricional", 
+        "📈 Reportes"
+    ])
+    
+    with sub_tab1:
+        # ========== INVENTARIO DE SUPLEMENTOS ==========
+        st.markdown("### 📦 Inventario de Suplementos y Medicamentos")
+        
+        # Inventario de ejemplo
+        inventario = pd.DataFrame({
+            'ID': [1, 2, 3, 4, 5, 6],
+            'Producto': ['Sulfato Ferroso 40mg', 'Gluconato Ferroso 300mg', 
+                        'Hierro Polimaltosado 100mg', 'Ácido Fólico 5mg',
+                        'Vitamina B12 1000mcg', 'Multivitamínico Pediátrico'],
+            'Tipo': ['Suplemento', 'Suplemento', 'Suplemento', 'Vitamina', 
+                    'Vitamina', 'Multivitamínico'],
+            'Cantidad': [150, 85, 120, 200, 95, 180],
+            'Unidad': ['tabletas', 'tabletas', 'ml', 'tabletas', 'inyecciones', 'frascos'],
+            'Lote': ['LOT-2024-001', 'LOT-2024-002', 'LOT-2024-003', 
+                    'LOT-2024-004', 'LOT-2024-005', 'LOT-2024-006'],
+            'Vencimiento': ['2025-06-30', '2025-08-15', '2025-10-20',
+                           '2026-01-31', '2025-12-15', '2025-11-30'],
+            'Proveedor': ['Lab. Nacional', 'Lab. Internacional', 'Lab. Nacional',
+                         'Lab. Farmacéutico', 'Lab. Especializado', 'Lab. Pediátrico'],
+            'Nivel Alerta': ['Normal', 'Normal', 'Bajo', 'Normal', 'Normal', 'Normal']
+        })
+        
+        # Filtrar inventario
+        col_filtro1, col_filtro2 = st.columns(2)
+        with col_filtro1:
+            filtro_tipo = st.multiselect(
+                "Filtrar por tipo:",
+                options=['Todos'] + inventario['Tipo'].unique().tolist(),
+                default=['Todos']
+            )
+        
+        with col_filtro2:
+            filtro_stock = st.selectbox(
+                "Filtrar por nivel de stock:",
+                ['Todos', 'Crítico (<20)', 'Bajo (20-50)', 'Normal (>50)']
+            )
+        
+        # Aplicar filtros
+        inventario_filtrado = inventario.copy()
+        
+        if 'Todos' not in filtro_tipo:
+            inventario_filtrado = inventario_filtrado[inventario_filtrado['Tipo'].isin(filtro_tipo)]
+        
+        if filtro_stock != 'Todos':
+            if filtro_stock == 'Crítico (<20)':
+                inventario_filtrado = inventario_filtrado[inventario_filtrado['Cantidad'] < 20]
+            elif filtro_stock == 'Bajo (20-50)':
+                inventario_filtrado = inventario_filtrado[(inventario_filtrado['Cantidad'] >= 20) & 
+                                                         (inventario_filtrado['Cantidad'] <= 50)]
+            else:
+                inventario_filtrado = inventario_filtrado[inventario_filtrado['Cantidad'] > 50]
+        
+        # Mostrar inventario
+        st.dataframe(
+            inventario_filtrado,
+            use_container_width=True,
+            height=400,
+            column_config={
+                'ID': st.column_config.NumberColumn('ID', width='small'),
+                'Cantidad': st.column_config.ProgressColumn(
+                    'Stock',
+                    help="Nivel de inventario",
+                    format="%d",
+                    min_value=0,
+                    max_value=200
+                )
+            }
+        )
+        
+        # Métricas de inventario
+        col_inv1, col_inv2, col_inv3, col_inv4 = st.columns(4)
+        with col_inv1:
+            total_productos = len(inventario)
+            st.metric("📦 Total Productos", total_productos)
+        with col_inv2:
+            stock_bajo = len(inventario[inventario['Cantidad'] < 30])
+            st.metric("⚠️ Stock Bajo", stock_bajo, delta=f"-{stock_bajo}")
+        with col_inv3:
+            proximos_vencer = len(inventario[pd.to_datetime(inventario['Vencimiento']) < pd.Timestamp.now() + pd.Timedelta(days=90)])
+            st.metric("📅 Próximos a vencer", proximos_vencer)
+        with col_inv4:
+            valor_total = inventario['Cantidad'].sum()
+            st.metric("💰 Unidades totales", f"{valor_total:,}")
+        
+        # Formulario para agregar/actualizar inventario
+        with st.expander("➕ **Agregar/Actualizar Producto**", expanded=False):
+            col_add1, col_add2 = st.columns(2)
+            
+            with col_add1:
+                nuevo_producto = st.text_input("Nombre del producto *")
+                nuevo_tipo = st.selectbox("Tipo *", ["Suplemento", "Medicamento", "Vitamina", "Multivitamínico", "Otro"])
+                nueva_cantidad = st.number_input("Cantidad *", min_value=0, value=100)
+                nueva_unidad = st.selectbox("Unidad *", ["tabletas", "ml", "frascos", "inyecciones", "sobres", "gotas"])
+            
+            with col_add2:
+                nuevo_lote = st.text_input("Número de lote *")
+                nuevo_vencimiento = st.date_input("Fecha de vencimiento *", 
+                                                 min_value=datetime.now().date())
+                nuevo_proveedor = st.text_input("Proveedor")
+                nivel_minimo = st.number_input("Nivel mínimo de alerta", min_value=5, value=20)
+            
+            if st.button("💾 Guardar en Inventario", type="primary"):
+                if nuevo_producto and nuevo_lote:
+                    st.success(f"Producto '{nuevo_producto}' agregado al inventario")
+                else:
+                    st.error("Complete los campos obligatorios (*)")
+    
+    with sub_tab2:
+        # ========== PRESCRIPCIONES MÉDICAS ==========
+        st.markdown("### 💊 Prescripciones Médicas")
+        
+        # Conectar con datos de pacientes y citas
+        if 'datos_estadisticas' in st.session_state and 'datos_citas' in st.session_state:
+            datos_pacientes = st.session_state.datos_estadisticas
+            datos_citas = st.session_state.datos_citas
+            
+            # Crear DataFrame de prescripciones
+            prescripciones = datos_citas[['dni_paciente', 'fecha_cita', 'investigador_responsable', 
+                                         'severidad_anemia', 'suplemento_hierro', 'frecuencia_suplemento']].copy()
+            
+            # Fusionar con datos de pacientes
+            prescripciones = prescripciones.merge(
+                datos_pacientes[['dni', 'nombre_apellido', 'edad_meses']],
+                left_on='dni_paciente',
+                right_on='dni',
+                how='left'
+            )
+            
+            # Filtrar solo las que tienen prescripción
+            prescripciones = prescripciones[prescripciones['suplemento_hierro'].notna()]
+            
+            if not prescripciones.empty:
+                # Mostrar prescripciones
+                st.dataframe(
+                    prescripciones[['nombre_apellido', 'edad_meses', 'fecha_cita', 
+                                   'investigador_responsable', 'suplemento_hierro', 
+                                   'frecuencia_suplemento', 'severidad_anemia']].rename(columns={
+                        'nombre_apellido': 'Paciente',
+                        'edad_meses': 'Edad (meses)',
+                        'fecha_cita': 'Fecha Prescripción',
+                        'investigador_responsable': 'Médico',
+                        'suplemento_hierro': 'Suplemento',
+                        'frecuencia_suplemento': 'Frecuencia',
+                        'severidad_anemia': 'Severidad'
+                    }),
+                    use_container_width=True,
+                    height=300
+                )
+                
+                # Resumen de prescripciones
+                col_pre1, col_pre2, col_pre3 = st.columns(3)
+                with col_pre1:
+                    st.metric("📋 Prescripciones activas", len(prescripciones))
+                with col_pre2:
+                    sulfato = len(prescripciones[prescripciones['suplemento_hierro'].str.contains('Sulfato', na=False)])
+                    st.metric("🧪 Sulfato ferroso", sulfato)
+                with col_pre3:
+                    gluconato = len(prescripciones[prescripciones['suplemento_hierro'].str.contains('Gluconato', na=False)])
+                    st.metric("💊 Gluconato ferroso", gluconato)
+            else:
+                st.info("No hay prescripciones registradas")
+        
+        # Formulario de nueva prescripción
+        with st.expander("➕ **Nueva Prescripción**", expanded=False):
+            col_pre1, col_pre2 = st.columns(2)
+            
+            with col_pre1:
+                presc_dni = st.selectbox(
+                    "DNI del Paciente *",
+                    options=datos_pacientes['dni'].tolist() if 'datos_estadisticas' in st.session_state else [],
+                    key="presc_dni"
+                )
+                
+                presc_medico = st.text_input("Médico prescriptor *", value="Dr. Normaldiego")
+                presc_fecha = st.date_input("Fecha de prescripción *", value=datetime.now().date())
+                
+                # Suplementos disponibles
+                suplementos_disponibles = ["Sulfato ferroso 40mg", "Gluconato ferroso 300mg", 
+                                          "Hierro polimaltosado", "Ácido fólico", 
+                                          "Vitamina B12", "Multivitamínico"]
+                
+                presc_suplemento = st.multiselect(
+                    "Suplementos prescritos *",
+                    options=suplementos_disponibles
+                )
+            
+            with col_pre2:
+                presc_dosis = st.text_input("Dosis diaria *", placeholder="Ej: 1 tableta al día")
+                presc_duracion = st.number_input("Duración (días) *", min_value=1, value=30)
+                presc_indicaciones = st.text_area("Indicaciones especiales", 
+                                                 placeholder="Tome con alimentos, evitar con lácteos...")
+                presc_control = st.date_input("Fecha control", 
+                                            value=datetime.now().date() + timedelta(days=30))
+            
+            if st.button("📄 Generar Prescripción", type="primary"):
+                if presc_dni and presc_medico and presc_suplemento and presc_dosis:
+                    st.success("Prescripción generada exitosamente")
+                    
+                    # Mostrar receta
+                    st.markdown("---")
+                    st.markdown("### 📋 Receta Médica")
+                    st.markdown(f"""
+                    **Paciente:** {presc_dni}  
+                    **Médico:** {presc_medico}  
+                    **Fecha:** {presc_fecha}  
+                    **Suplementos:** {', '.join(presc_suplemento)}  
+                    **Dosis:** {presc_dosis}  
+                    **Duración:** {presc_duracion} días  
+                    **Próximo control:** {presc_control}  
+                    **Indicaciones:** {presc_indicaciones}
+                    """)
+                else:
+                    st.error("Complete los campos obligatorios (*)")
+    
+    with sub_tab3:
+        # ========== CONTROL NUTRICIONAL ==========
+        st.markdown("### 📊 Control Nutricional")
+        
+        # Evaluación nutricional
+        col_nut1, col_nut2 = st.columns([2, 1])
+        
+        with col_nut1:
+            st.markdown("#### 🥦 Evaluación Dietética")
+            
+            # Preguntas de evaluación
+            st.markdown("**1. Consumo de alimentos ricos en hierro:**")
+            col_alim1, col_alim2, col_alim3 = st.columns(3)
+            with col_alim1:
+                carne_roja = st.checkbox("Carne roja", value=True)
+                higado = st.checkbox("Hígado")
+            with col_alim2:
+                legumbres = st.checkbox("Legumbres")
+                espinacas = st.checkbox("Espinacas")
+            with col_alim3:
+                cereales = st.checkbox("Cereales fortificados")
+                frutos_secos = st.checkbox("Frutos secos")
+            
+            st.markdown("**2. Inhibidores de absorción:**")
+            inhibidores = st.multiselect(
+                "Consumo frecuente de:",
+                ["Té/café con las comidas", "Lácteos con las comidas", 
+                 "Alimentos con calcio", "Alimentos con fitatos"]
+            )
+            
+            st.markdown("**3. Facilitadores de absorción:**")
+            facilitadores = st.multiselect(
+                "Consumo de:",
+                ["Vitamina C (cítricos)", "Alimentos ácidos", 
+                 "Carne/pescado con legumbres"]
+            )
+        
+        with col_nut2:
+            st.markdown("#### 📈 Puntuación Nutricional")
+            
+            # Calcular puntuación
+            puntuacion = 0
+            if carne_roja: puntuacion += 2
+            if higado: puntuacion += 3
+            if legumbres: puntuacion += 1
+            if espinacas: puntuacion += 1
+            if cereales: puntuacion += 2
+            if frutos_secos: puntuacion += 1
+            
+            # Restar por inhibidores
+            puntuacion -= len(inhibidores)
+            
+            # Sumar por facilitadores
+            puntuacion += len(facilitadores)
+            
+            # Mostrar resultado
+            st.markdown(f"""
+            <div style='text-align: center; padding: 20px; background: #f3e5f5; border-radius: 10px;'>
+                <div style='font-size: 2rem; color: #7b1fa2; font-weight: bold;'>{puntuacion}/10</div>
+                <div style='color: #4a148c;'>Puntuación Nutricional</div>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # Interpretación
+            if puntuacion >= 7:
+                st.success("✅ Dieta adecuada en hierro")
+            elif puntuacion >= 4:
+                st.warning("⚠️ Dieta moderada en hierro")
+            else:
+                st.error("❌ Dieta deficiente en hierro")
+        
+        # Recomendaciones nutricionales
+        st.markdown("#### 🍎 Recomendaciones Personalizadas")
+        
+        recomendaciones = []
+        if not carne_roja:
+            recomendaciones.append("Aumentar consumo de carne roja (2-3 veces por semana)")
+        if not legumbres:
+            recomendaciones.append("Incluir legumbres 2-3 veces por semana")
+        if inhibidores:
+            recomendaciones.append("Evitar tomar té/café con las comidas principales")
+        if not facilitadores:
+            recomendaciones.append("Consumir cítricos con las comidas para mejorar absorción")
+        
+        if recomendaciones:
+            for i, rec in enumerate(recomendaciones, 1):
+                st.markdown(f"{i}. {rec}")
+        else:
+            st.success("La dieta actual parece adecuada para la absorción de hierro")
+    
+    with sub_tab4:
+        # ========== REPORTES DE FARMACIA ==========
+        st.markdown("### 📈 Reportes y Estadísticas")
+        
+        col_rep1, col_rep2 = st.columns(2)
+        
+        with col_rep1:
+            st.markdown("#### 📊 Consumo de Suplementos")
+            
+            # Datos de ejemplo para gráfico
+            consumo_data = pd.DataFrame({
+                'Mes': ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun'],
+                'Sulfato Ferroso': [45, 52, 48, 60, 55, 62],
+                'Gluconato Ferroso': [30, 28, 35, 32, 40, 38],
+                'Ácido Fólico': [25, 22, 30, 28, 35, 32]
+            })
+            
+            fig_consumo = go.Figure()
+            
+            fig_consumo.add_trace(go.Bar(
+                x=consumo_data['Mes'],
+                y=consumo_data['Sulfato Ferroso'],
+                name='Sulfato Ferroso',
+                marker_color='#2196f3'
+            ))
+            
+            fig_consumo.add_trace(go.Bar(
+                x=consumo_data['Mes'],
+                y=consumo_data['Gluconato Ferroso'],
+                name='Gluconato Ferroso',
+                marker_color='#4caf50'
+            ))
+            
+            fig_consumo.add_trace(go.Bar(
+                x=consumo_data['Mes'],
+                y=consumo_data['Ácido Fólico'],
+                name='Ácido Fólico',
+                marker_color='#ff9800'
+            ))
+            
+            fig_consumo.update_layout(
+                title='Consumo Mensual de Suplementos',
+                barmode='group',
+                height=300,
+                paper_bgcolor='rgba(0,0,0,0)',
+                plot_bgcolor='rgba(0,0,0,0)'
+            )
+            
+            st.plotly_chart(fig_consumo, use_container_width=True)
+        
+        with col_rep2:
+            st.markdown("#### 📋 Productos por Vencer")
+            
+            # Simular datos de vencimiento
+            vencimientos = pd.DataFrame({
+                'Producto': ['Sulfato Ferroso Lote A', 'Gluconato Lote B', 
+                            'Ácido Fólico Lote C', 'Vitamina B12 Lote D'],
+                'Días para vencer': [15, 45, 90, 120],
+                'Cantidad': [20, 35, 50, 25]
+            })
+            
+            fig_vencimientos = go.Figure(go.Bar(
+                y=vencimientos['Producto'],
+                x=vencimientos['Días para vencer'],
+                orientation='h',
+                marker_color=['#f44336' if x < 30 else '#ff9800' if x < 60 else '#4caf50' 
+                             for x in vencimientos['Días para vencer']]
+            ))
+            
+            fig_vencimientos.update_layout(
+                title='Días para vencimiento',
+                height=300,
+                xaxis_title='Días restantes',
+                paper_bgcolor='rgba(0,0,0,0)',
+                plot_bgcolor='rgba(0,0,0,0)'
+            )
+            
+            st.plotly_chart(fig_vencimientos, use_container_width=True)
+        
+        # Botones de exportación
+        st.markdown("---")
+        col_exp1, col_exp2, col_exp3 = st.columns(3)
+        
+        with col_exp1:
+            if st.button("📄 Generar Reporte PDF", use_container_width=True):
+                st.info("Generando reporte PDF...")
+        
+        with col_exp2:
+            if st.button("📊 Exportar a Excel", use_container_width=True):
+                st.info("Exportando datos a Excel...")
+        
+        with col_exp3:
+            if st.button("🔄 Actualizar Reportes", use_container_width=True):
+                st.success("Reportes actualizados")
 # ==================================================
 # PESTAÑA 5: DASHBOARD NACIONAL
 # ==================================================
