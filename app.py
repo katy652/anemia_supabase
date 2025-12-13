@@ -1566,66 +1566,154 @@ with tab2:
                 st.info("📝 No hay pacientes registrados para análisis")
 
 # ==================================================
-# PESTAÑA 3: ESTADÍSTICAS - VERSIÓN MEJORADA CON INTERFAZ MODERNA
+# PESTAÑA 3: ESTADÍSTICAS - VERSIÓN ELEGANTE AZUL/PASTEL
 # ==================================================
 
 with tab3:
+    # ========== HEADER ELEGANTE CON GRADIENTE AZUL ==========
     st.markdown("""
-    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-                padding: 2rem; 
-                border-radius: 15px; 
-                color: white;
-                margin-bottom: 2rem;
-                text-align: center;">
-        <h1 style="margin: 0; font-size: 2.5rem;">📊 Dashboard de Monitoreo de Anemia</h1>
-        <p style="font-size: 1.2rem; opacity: 0.9;">Sistema de análisis integral para la prevención de anemia infantil</p>
+    <style>
+    .dashboard-header {
+        background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+        padding: 2.5rem;
+        border-radius: 20px;
+        color: white;
+        margin-bottom: 2rem;
+        text-align: center;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    }
+    .dashboard-title {
+        font-size: 2.8rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        letter-spacing: -0.5px;
+    }
+    .dashboard-subtitle {
+        font-size: 1.2rem;
+        opacity: 0.9;
+        font-weight: 300;
+        max-width: 800px;
+        margin: 0 auto;
+        line-height: 1.6;
+    }
+    .welcome-card {
+        background: linear-gradient(135deg, #f8f9ff 0%, #e8eeff 100%);
+        padding: 2rem;
+        border-radius: 15px;
+        border-left: 5px solid #2a5298;
+        margin-bottom: 2rem;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+    }
+    .metric-card {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 12px;
+        text-align: center;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        border-top: 4px solid;
+        transition: transform 0.3s ease;
+    }
+    .metric-card:hover {
+        transform: translateY(-5px);
+    }
+    .analysis-section {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 12px;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+        border: 1px solid #eef2ff;
+    }
+    .section-title {
+        color: #2a5298;
+        font-size: 1.4rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .highlight-box {
+        background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+        padding: 1.5rem;
+        border-radius: 12px;
+        border-left: 4px solid #2196f3;
+    }
+    .stat-badge {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        margin: 2px;
+    }
+    </style>
+    
+    <div class="dashboard-header">
+        <div class="dashboard-title">📊 Dashboard de Monitoreo de Anemia</div>
+        <div class="dashboard-subtitle">
+            Sistema de análisis integral para la prevención de anemia infantil
+        </div>
     </div>
     """, unsafe_allow_html=True)
     
+    # ========== TARJETA DE BIENVENIDA ==========
     st.markdown("""
-    <div style="background-color: #f8f9fa; padding: 1.5rem; border-radius: 10px; margin-bottom: 2rem;">
-        <h3 style="color: #2c3e50; margin-top: 0;">¡Bienvenido al Sistema de Monitoreo de Anemia Infantil!</h3>
-        <p style="color: #34495e;">
-        Este dashboard está diseñado para la detección temprana y monitoreo de anemia en niños menores de 5 años. 
-        Proporciona análisis en tiempo real, visualizaciones interactivas y recomendaciones personalizadas.
+    <div class="welcome-card">
+        <h3 style="color: #2a5298; margin-top: 0;">👋 Bienvenido al Sistema de Monitoreo de Anemia Infantil</h3>
+        <p style="color: #546e7a; line-height: 1.6; font-size: 1.05rem;">
+        Este dashboard está diseñado para la <strong>detección temprana</strong> y <strong>monitoreo continuo</strong> 
+        de anemia en niños menores de 5 años. Proporciona análisis en tiempo real, visualizaciones interactivas 
+        y recomendaciones personalizadas para la prevención y tratamiento.
         </p>
     </div>
     """, unsafe_allow_html=True)
     
-    # ========== BOTÓN PRINCIPAL PARA CARGAR DATOS ==========
-    col_btn_principal, col_info = st.columns([1, 2])
+    # ========== BOTÓN PRINCIPAL ==========
+    col_btn, col_status = st.columns([1, 2])
     
-    with col_btn_principal:
-        if st.button("🔄 Cargar Datos para Análisis", 
+    with col_btn:
+        if st.button("🔄 **Cargar Datos de Análisis**", 
                     type="primary", 
                     use_container_width=True,
-                    key="cargar_datos_principal"):
-            with st.spinner("Analizando datos de anemia..."):
+                    help="Carga y analiza los datos actuales de anemia"):
+            with st.spinner("Analizando datos de anemia infantil..."):
                 datos_completos = obtener_datos_supabase()
                 
                 if not datos_completos.empty:
                     st.session_state.datos_estadisticas = datos_completos
-                    st.success(f"✅ {len(datos_completos)} registros cargados")
+                    st.success(f"✅ {len(datos_completos)} registros analizados")
                 else:
-                    st.error("❌ No se pudieron cargar datos")
+                    st.error("❌ No se pudieron cargar datos desde la base de datos")
     
-    with col_info:
+    with col_status:
         if 'datos_estadisticas' in st.session_state:
             datos = st.session_state.datos_estadisticas
-            st.info(f"📋 **Datos actuales:** {len(datos)} pacientes registrados")
+            st.markdown(f"""
+            <div style="background: #e8f5e9; padding: 1rem; border-radius: 10px; border-left: 4px solid #4caf50;">
+                <p style="margin: 0; color: #2e7d32; font-weight: 500;">
+                📋 <strong>Datos actualizados:</strong> {len(datos)} pacientes registrados | Última actualización: {datetime.now().strftime('%H:%M')}
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
     
-    # ========== VERIFICAR SI HAY DATOS ==========
+    # ========== VERIFICAR DATOS ==========
     if 'datos_estadisticas' not in st.session_state or st.session_state.datos_estadisticas.empty:
         st.markdown("""
-        <div style="text-align: center; padding: 3rem; background-color: #f0f2f6; border-radius: 10px;">
-            <h3 style="color: #7f8c8d;">👆 Presiona el botón para cargar datos</h3>
-            <p style="color: #95a5a6;">El sistema analizará automáticamente los patrones de anemia en tu población</p>
+        <div style="text-align: center; padding: 4rem 2rem; background: linear-gradient(135deg, #f5f7ff 0%, #eef2ff 100%); 
+                    border-radius: 15px; border: 2px dashed #c5cae9; margin: 2rem 0;">
+            <div style="font-size: 4rem; margin-bottom: 1rem; color: #7986cb;">📊</div>
+            <h3 style="color: #3f51b5; margin-bottom: 1rem;">Listo para analizar datos</h3>
+            <p style="color: #5c6bc0; max-width: 500px; margin: 0 auto; line-height: 1.6;">
+            Presiona el botón <strong>"Cargar Datos de Análisis"</strong> para comenzar el monitoreo 
+            de anemia en tu población infantil.
+            </p>
         </div>
         """, unsafe_allow_html=True)
     else:
         datos = st.session_state.datos_estadisticas
         
-        # ========== MÉTRICAS PRINCIPALES CON TARJETAS MODERNAS ==========
+        # ========== MÉTRICAS PRINCIPALES CON TARJETAS DE COLORES PASTEL ==========
         st.markdown("## 📈 Métricas Principales")
         
         col1, col2, col3, col4 = st.columns(4)
@@ -1633,13 +1721,12 @@ with tab3:
         with col1:
             total_pacientes = len(datos)
             st.markdown(f"""
-            <div style="background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); 
-                        padding: 1.5rem; 
-                        border-radius: 10px; 
-                        color: white;
-                        text-align: center;">
-                <h3 style="margin: 0; font-size: 2rem;">{total_pacientes}</h3>
-                <p style="margin: 0; opacity: 0.9;">Total de Pacientes</p>
+            <div class="metric-card" style="border-top-color: #2196f3;">
+                <div style="font-size: 2.5rem; color: #2196f3; font-weight: 700;">{total_pacientes}</div>
+                <div style="color: #546e7a; font-size: 0.9rem; margin-top: 0.5rem;">TOTAL PACIENTES</div>
+                <div style="font-size: 0.8rem; color: #78909c; margin-top: 0.5rem;">
+                <span style="background: #e3f2fd; padding: 2px 8px; border-radius: 10px;">📊 Monitoreados</span>
+                </div>
             </div>
             """, unsafe_allow_html=True)
         
@@ -1647,13 +1734,12 @@ with tab3:
             if 'hemoglobina_dl1' in datos.columns:
                 hb_promedio = datos['hemoglobina_dl1'].mean()
                 st.markdown(f"""
-                <div style="background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%); 
-                            padding: 1.5rem; 
-                            border-radius: 10px; 
-                            color: white;
-                            text-align: center;">
-                    <h3 style="margin: 0; font-size: 2rem;">{hb_promedio:.1f}</h3>
-                    <p style="margin: 0; opacity: 0.9;">Hb Promedio (g/dL)</p>
+                <div class="metric-card" style="border-top-color: #4caf50;">
+                    <div style="font-size: 2.5rem; color: #4caf50; font-weight: 700;">{hb_promedio:.1f}</div>
+                    <div style="color: #546e7a; font-size: 0.9rem; margin-top: 0.5rem;">HEMOGLOBINA PROMEDIO</div>
+                    <div style="font-size: 0.8rem; color: #78909c; margin-top: 0.5rem;">
+                    <span style="background: #e8f5e9; padding: 2px 8px; border-radius: 10px;">🩺 g/dL</span>
+                    </div>
                 </div>
                 """, unsafe_allow_html=True)
         
@@ -1661,13 +1747,12 @@ with tab3:
             if 'edad_meses' in datos.columns:
                 edad_promedio = datos['edad_meses'].mean() / 12
                 st.markdown(f"""
-                <div style="background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%); 
-                            padding: 1.5rem; 
-                            border-radius: 10px; 
-                            color: white;
-                            text-align: center;">
-                    <h3 style="margin: 0; font-size: 2rem;">{edad_promedio:.1f}</h3>
-                    <p style="margin: 0; opacity: 0.9;">Edad Promedio (años)</p>
+                <div class="metric-card" style="border-top-color: #ff9800;">
+                    <div style="font-size: 2.5rem; color: #ff9800; font-weight: 700;">{edad_promedio:.1f}</div>
+                    <div style="color: #546e7a; font-size: 0.9rem; margin-top: 0.5rem;">EDAD PROMEDIO</div>
+                    <div style="font-size: 0.8rem; color: #78909c; margin-top: 0.5rem;">
+                    <span style="background: #fff3e0; padding: 2px 8px; border-radius: 10px;">👶 años</span>
+                    </div>
                 </div>
                 """, unsafe_allow_html=True)
         
@@ -1676,61 +1761,70 @@ with tab3:
                 seguimiento = datos['en_seguimiento'].sum()
                 porcentaje = (seguimiento / total_pacientes * 100) if total_pacientes > 0 else 0
                 st.markdown(f"""
-                <div style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); 
-                            padding: 1.5rem; 
-                            border-radius: 10px; 
-                            color: white;
-                            text-align: center;">
-                    <h3 style="margin: 0; font-size: 2rem;">{seguimiento}</h3>
-                    <p style="margin: 0; opacity: 0.9;">En Seguimiento ({porcentaje:.1f}%)</p>
+                <div class="metric-card" style="border-top-color: #9c27b0;">
+                    <div style="font-size: 2.5rem; color: #9c27b0; font-weight: 700;">{seguimiento}</div>
+                    <div style="color: #546e7a; font-size: 0.9rem; margin-top: 0.5rem;">EN SEGUIMIENTO</div>
+                    <div style="font-size: 0.8rem; color: #78909c; margin-top: 0.5rem;">
+                    <span style="background: #f3e5f5; padding: 2px 8px; border-radius: 10px;">📋 {porcentaje:.1f}%</span>
+                    </div>
                 </div>
                 """, unsafe_allow_html=True)
         
         # ========== ANÁLISIS POR CATEGORÍAS ==========
         st.markdown("---")
-        st.markdown("## 🎯 Análisis por Categorías")
+        st.markdown("""
+        <div class="section-title">
+            <span>🎯 Análisis por Categorías</span>
+        </div>
+        """, unsafe_allow_html=True)
         
         # Fila 1: Análisis demográficos
-        st.markdown("### 📋 Análisis Demográficos")
-        
         col_demo1, col_demo2, col_demo3 = st.columns(3)
         
         with col_demo1:
             st.markdown("""
-            <div style="background: white; padding: 1.5rem; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-                <h4 style="color: #2c3e50; margin-top: 0;">👦👧 Análisis por Género</h4>
+            <div class="analysis-section">
+                <h4 style="color: #2a5298; margin-top: 0; display: flex; align-items: center; gap: 10px;">
+                    <span>👦👧</span> Análisis por Género
+                </h4>
             </div>
             """, unsafe_allow_html=True)
             
             if 'genero' in datos.columns:
                 genero_counts = datos['genero'].value_counts()
                 
-                # Crear gráfico circular moderno
+                # Gráfico circular elegante
                 fig_genero = px.pie(
                     values=genero_counts.values,
-                    names=genero_counts.index.map({'M': 'Niños 👦', 'F': 'Niñas 👧', 'Masculino': 'Niños 👦', 'Femenino': 'Niñas 👧'}).fillna('Otro'),
+                    names=genero_counts.index.map({'M': 'Niños', 'F': 'Niñas', 'Masculino': 'Niños', 'Femenino': 'Niñas'}).fillna('Otro'),
                     title='',
-                    color_discrete_sequence=['#3498db', '#e74c3c'],
-                    hole=0.4
+                    color_discrete_sequence=['#64b5f6', '#f48fb1', '#ce93d8'],
+                    hole=0.5
                 )
                 
                 fig_genero.update_layout(
                     showlegend=True,
-                    margin=dict(t=0, b=0, l=0, r=0),
-                    height=250
+                    margin=dict(t=20, b=20, l=20, r=20),
+                    height=300,
+                    paper_bgcolor='rgba(0,0,0,0)',
+                    plot_bgcolor='rgba(0,0,0,0)',
+                    font=dict(color="#2a5298")
+                )
+                
+                fig_genero.update_traces(
+                    textposition='inside',
+                    textinfo='percent+label',
+                    marker=dict(line=dict(color='#fff', width=2))
                 )
                 
                 st.plotly_chart(fig_genero, use_container_width=True, config={'displayModeBar': False})
-                
-                # Métricas rápidas
-                for genero, count in genero_counts.items():
-                    genero_nombre = 'Niños' if genero in ['M', 'Masculino'] else 'Niñas' if genero in ['F', 'Femenino'] else genero
-                    st.metric(genero_nombre, count)
         
         with col_demo2:
             st.markdown("""
-            <div style="background: white; padding: 1.5rem; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-                <h4 style="color: #2c3e50; margin-top: 0;">🏔️ Riesgo por Altitud</h4>
+            <div class="analysis-section">
+                <h4 style="color: #2a5298; margin-top: 0; display: flex; align-items: center; gap: 10px;">
+                    <span>🏔️</span> Riesgo por Altitud
+                </h4>
             </div>
             """, unsafe_allow_html=True)
             
@@ -1739,7 +1833,7 @@ with tab3:
                 datos['categoria_altitud'] = pd.cut(
                     datos['altitud_msnm'],
                     bins=[0, 1000, 2000, 3000, 5000],
-                    labels=['Baja (<1000m)', 'Media (1000-2000m)', 'Alta (2000-3000m)', 'Muy Alta (>3000m)']
+                    labels=['<1000m', '1000-2000m', '2000-3000m', '>3000m']
                 )
                 
                 altitud_counts = datos['categoria_altitud'].value_counts().sort_index()
@@ -1749,34 +1843,40 @@ with tab3:
                     y=altitud_counts.values,
                     title='',
                     color=altitud_counts.values,
-                    color_continuous_scale='Viridis',
+                    color_continuous_scale='Blues',
                     text=altitud_counts.values,
-                    height=250
+                    height=300
                 )
                 
                 fig_altitud.update_layout(
-                    xaxis_title="",
+                    xaxis_title="Altitud (msnm)",
                     yaxis_title="Pacientes",
                     showlegend=False,
-                    margin=dict(t=0, b=0, l=0, r=0)
+                    margin=dict(t=30, b=30, l=30, r=30),
+                    paper_bgcolor='rgba(0,0,0,0)',
+                    plot_bgcolor='rgba(0,0,0,0)',
+                    font=dict(color="#2a5298")
                 )
                 
                 fig_altitud.update_traces(
                     texttemplate='%{text}',
-                    textposition='outside'
+                    textposition='outside',
+                    marker=dict(line=dict(color='#e3f2fd', width=1))
                 )
                 
                 st.plotly_chart(fig_altitud, use_container_width=True, config={'displayModeBar': False})
         
         with col_demo3:
             st.markdown("""
-            <div style="background: white; padding: 1.5rem; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-                <h4 style="color: #2c3e50; margin-top: 0;">📍 Riesgo por Región</h4>
+            <div class="analysis-section">
+                <h4 style="color: #2a5298; margin-top: 0; display: flex; align-items: center; gap: 10px;">
+                    <span>📍</span> Distribución por Región
+                </h4>
             </div>
             """, unsafe_allow_html=True)
             
             if 'region' in datos.columns:
-                region_counts = datos['region'].value_counts().head(10)  # Top 10 regiones
+                region_counts = datos['region'].value_counts().head(8)
                 
                 fig_region = px.bar(
                     y=region_counts.index,
@@ -1784,91 +1884,118 @@ with tab3:
                     title='',
                     orientation='h',
                     color=region_counts.values,
-                    color_continuous_scale='Blues',
+                    color_continuous_scale=['#bbdefb', '#90caf9', '#64b5f6', '#42a5f5', '#2196f3', '#1e88e5', '#1976d2', '#1565c0'],
                     text=region_counts.values,
-                    height=250
+                    height=300
                 )
                 
                 fig_region.update_layout(
                     yaxis_title="",
                     xaxis_title="Pacientes",
                     showlegend=False,
-                    margin=dict(t=0, b=0, l=0, r=0)
+                    margin=dict(t=30, b=30, l=30, r=30),
+                    paper_bgcolor='rgba(0,0,0,0)',
+                    plot_bgcolor='rgba(0,0,0,0)',
+                    font=dict(color="#2a5298")
                 )
                 
                 fig_region.update_traces(
                     texttemplate='%{text}',
-                    textposition='outside'
+                    textposition='outside',
+                    marker=dict(line=dict(color='#e3f2fd', width=1))
                 )
                 
                 st.plotly_chart(fig_region, use_container_width=True, config={'displayModeBar': False})
         
         # ========== ANÁLISIS DE ANEMIA ==========
         st.markdown("---")
-        st.markdown("## 🩺 Análisis de Prevalencia de Anemia")
+        st.markdown("""
+        <div class="section-title">
+            <span>🩺 Análisis de Prevalencia de Anemia</span>
+        </div>
+        """, unsafe_allow_html=True)
         
         col_anemia1, col_anemia2 = st.columns([2, 1])
         
         with col_anemia1:
             st.markdown("""
-            <div style="background: white; padding: 1.5rem; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-                <h4 style="color: #2c3e50; margin-top: 0;">📊 Distribución de Hemoglobina</h4>
+            <div class="analysis-section">
+                <h4 style="color: #2a5298; margin-top: 0;">📊 Distribución de Hemoglobina</h4>
             </div>
             """, unsafe_allow_html=True)
             
             if 'hemoglobina_dl1' in datos.columns:
-                # Histograma con zonas de riesgo
+                # Histograma elegante
                 fig_hb = px.histogram(
                     datos,
                     x='hemoglobina_dl1',
-                    nbins=20,
+                    nbins=25,
                     title='',
-                    color_discrete_sequence=['#ff6b6b'],
-                    height=300
+                    color_discrete_sequence=['#2196f3'],
+                    opacity=0.8,
+                    height=350
                 )
                 
-                # Añadir zonas de anemia
+                # Añadir zonas con colores pastel
                 fig_hb.add_vrect(
                     x0=0, x1=9.0,
-                    fillcolor="red", opacity=0.2,
+                    fillcolor="#ffcdd2", opacity=0.3,
                     layer="below", line_width=0,
-                    annotation_text="Severa", annotation_position="top"
+                    annotation_text="<b>SEVERA</b>", 
+                    annotation_position="top",
+                    annotation_font_color="#d32f2f"
                 )
                 
                 fig_hb.add_vrect(
                     x0=9.0, x1=10.0,
-                    fillcolor="orange", opacity=0.2,
+                    fillcolor="#ffecb3", opacity=0.3,
                     layer="below", line_width=0,
-                    annotation_text="Moderada", annotation_position="top"
+                    annotation_text="<b>MODERADA</b>", 
+                    annotation_position="top",
+                    annotation_font_color="#ff8f00"
                 )
                 
                 fig_hb.add_vrect(
                     x0=10.0, x1=11.0,
-                    fillcolor="yellow", opacity=0.2,
+                    fillcolor="#fff9c4", opacity=0.3,
                     layer="below", line_width=0,
-                    annotation_text="Leve", annotation_position="top"
+                    annotation_text="<b>LEVE</b>", 
+                    annotation_position="top",
+                    annotation_font_color="#f9a825"
                 )
                 
                 fig_hb.add_vrect(
                     x0=11.0, x1=20,
-                    fillcolor="green", opacity=0.2,
+                    fillcolor="#c8e6c9", opacity=0.3,
                     layer="below", line_width=0,
-                    annotation_text="Normal", annotation_position="top"
+                    annotation_text="<b>NORMAL</b>", 
+                    annotation_position="top",
+                    annotation_font_color="#388e3c"
                 )
                 
                 fig_hb.update_layout(
                     xaxis_title="Hemoglobina (g/dL)",
                     yaxis_title="Número de Pacientes",
-                    showlegend=False
+                    showlegend=False,
+                    margin=dict(t=50, b=50, l=50, r=50),
+                    paper_bgcolor='rgba(0,0,0,0)',
+                    plot_bgcolor='rgba(0,0,0,0)',
+                    font=dict(color="#2a5298")
+                )
+                
+                fig_hb.update_traces(
+                    marker=dict(line=dict(color='#fff', width=1))
                 )
                 
                 st.plotly_chart(fig_hb, use_container_width=True)
         
         with col_anemia2:
             st.markdown("""
-            <div style="background: white; padding: 1.5rem; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-                <h4 style="color: #2c3e50; margin-top: 0;">📈 Prevalencia de Anemia</h4>
-            </div>
+            <div class="highlight-box" style="height: 100%;">
+                <h4 style="color: #1565c0; margin-top: 0;">📈 Prevalencia de Anemia</h4>
+                <p style="color: #546e7a; font-size: 0.95rem;">
+                Distribución de pacientes según clasificación OMS de anemia
+                </p>
             """, unsafe_allow_html=True)
             
             if 'hemoglobina_dl1' in datos.columns and 'edad_meses' in datos.columns:
@@ -1880,182 +2007,131 @@ with tab3:
                 
                 total = sin_anemia + leve + moderada + severa
                 
-                # Crear DataFrame para gráfico
-                anemia_data = pd.DataFrame({
-                    'Categoría': ['Normal', 'Leve', 'Moderada', 'Severa'],
-                    'Pacientes': [sin_anemia, leve, moderada, severa],
-                    'Color': ['#2ecc71', '#f1c40f', '#e67e22', '#e74c3c']
-                })
+                # Barras horizontales
+                fig_prevalencia = go.Figure()
                 
-                fig_prevalencia = px.bar(
-                    anemia_data,
-                    x='Categoría',
-                    y='Pacientes',
-                    color='Categoría',
-                    color_discrete_map={
-                        'Normal': '#2ecc71',
-                        'Leve': '#f1c40f',
-                        'Moderada': '#e67e22',
-                        'Severa': '#e74c3c'
-                    },
-                    text='Pacientes',
-                    height=300
-                )
+                # Agregar barras
+                fig_prevalencia.add_trace(go.Bar(
+                    y=['Normal', 'Leve', 'Moderada', 'Severa'],
+                    x=[sin_anemia, leve, moderada, severa],
+                    orientation='h',
+                    marker_color=['#4caf50', '#ffeb3b', '#ff9800', '#f44336'],
+                    text=[sin_anemia, leve, moderada, severa],
+                    textposition='auto',
+                ))
                 
                 fig_prevalencia.update_layout(
+                    height=300,
                     showlegend=False,
-                    xaxis_title="",
-                    yaxis_title="Pacientes",
-                    margin=dict(t=0, b=0, l=0, r=0)
-                )
-                
-                fig_prevalencia.update_traces(
-                    texttemplate='%{text}',
-                    textposition='outside'
+                    margin=dict(t=30, b=30, l=100, r=30),
+                    paper_bgcolor='rgba(0,0,0,0)',
+                    plot_bgcolor='rgba(0,0,0,0)',
+                    font=dict(color="#2a5298"),
+                    xaxis_title="Número de Pacientes"
                 )
                 
                 st.plotly_chart(fig_prevalencia, use_container_width=True, config={'displayModeBar': False})
                 
-                # Mostrar porcentajes
-                st.markdown("**📊 Porcentajes:**")
-                col_p1, col_p2 = st.columns(2)
-                with col_p1:
-                    st.metric("Normal", f"{(sin_anemia/total*100):.1f}%")
-                    st.metric("Leve", f"{(leve/total*100):.1f}%")
-                with col_p2:
-                    st.metric("Moderada", f"{(moderada/total*100):.1f}%")
-                    st.metric("Severa", f"{(severa/total*100):.1f}%")
+                # Estadísticas rápidas
+                st.markdown("""
+                <div style="margin-top: 1rem;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div style="background: #e8f5e9; padding: 10px; border-radius: 8px;">
+                            <div style="font-size: 1.2rem; color: #2e7d32; font-weight: 600;">{(sin_anemia/total*100):.1f}%</div>
+                            <div style="font-size: 0.8rem; color: #546e7a;">Normal</div>
+                        </div>
+                        <div style="background: #fffde7; padding: 10px; border-radius: 8px;">
+                            <div style="font-size: 1.2rem; color: #f9a825; font-weight: 600;">{(leve/total*100):.1f}%</div>
+                            <div style="font-size: 0.8rem; color: #546e7a;">Leve</div>
+                        </div>
+                        <div style="background: #fff3e0; padding: 10px; border-radius: 8px;">
+                            <div style="font-size: 1.2rem; color: #ef6c00; font-weight: 600;">{(moderada/total*100):.1f}%</div>
+                            <div style="font-size: 0.8rem; color: #546e7a;">Moderada</div>
+                        </div>
+                        <div style="background: #ffebee; padding: 10px; border-radius: 8px;">
+                            <div style="font-size: 1.2rem; color: #d32f2f; font-weight: 600;">{(severa/total*100):.1f}%</div>
+                            <div style="font-size: 0.8rem; color: #546e7a;">Severa</div>
+                        </div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            st.markdown("</div>", unsafe_allow_html=True)
         
-        # ========== ANÁLISIS POR EDAD ==========
+        # ========== FOCO EN MENORES DE 5 AÑOS ==========
         st.markdown("---")
-        st.markdown("## 👶 Distribución por Edad")
+        st.markdown("""
+        <div class="section-title">
+            <span>👶 Enfoque en Niños Menores de 5 Años</span>
+        </div>
+        """, unsafe_allow_html=True)
         
         col_edad1, col_edad2 = st.columns([3, 1])
         
         with col_edad1:
             if 'edad_meses' in datos.columns:
-                # Crear grupos de edad
-                datos['edad_años'] = datos['edad_meses'] / 12
-                bins = [0, 1, 2, 3, 4, 5, 10, 15, 20]
-                labels = ['0-1 año', '1-2 años', '2-3 años', '3-4 años', '4-5 años', '5-10 años', '10-15 años', '15-20 años']
+                # Filtrar menores de 5 años
+                menores_5 = datos[datos['edad_meses'] < 60]
                 
-                datos['grupo_edad'] = pd.cut(datos['edad_años'], bins=bins, labels=labels, right=False)
-                edad_counts = datos['grupo_edad'].value_counts().sort_index()
-                
-                fig_edad = px.bar(
-                    x=edad_counts.index,
-                    y=edad_counts.values,
-                    title='Distribución de Pacientes por Grupos de Edad',
-                    color=edad_counts.values,
-                    color_continuous_scale='Viridis',
-                    text=edad_counts.values,
-                    height=350
-                )
-                
-                fig_edad.update_layout(
-                    xaxis_title="Grupo de Edad",
-                    yaxis_title="Número de Pacientes",
-                    showlegend=False
-                )
-                
-                fig_edad.update_traces(
-                    texttemplate='%{text}',
-                    textposition='outside'
-                )
-                
-                st.plotly_chart(fig_edad, use_container_width=True)
+                if not menores_5.empty:
+                    # Crear histograma por edad
+                    fig_menores = px.histogram(
+                        menores_5,
+                        x='edad_meses',
+                        nbins=12,
+                        title='Distribución por Edad (0-5 años)',
+                        color_discrete_sequence=['#64b5f6'],
+                        height=300
+                    )
+                    
+                    fig_menores.update_layout(
+                        xaxis_title="Edad (meses)",
+                        yaxis_title="Número de Niños",
+                        showlegend=False,
+                        margin=dict(t=50, b=50, l=50, r=50),
+                        paper_bgcolor='rgba(0,0,0,0)',
+                        plot_bgcolor='rgba(0,0,0,0)',
+                        font=dict(color="#2a5298")
+                    )
+                    
+                    st.plotly_chart(fig_menores, use_container_width=True)
         
         with col_edad2:
-            st.markdown("""
-            <div style="background: white; padding: 1.5rem; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); height: 350px;">
-                <h4 style="color: #2c3e50; margin-top: 0;">🎯 Enfoque en <5 años</h4>
-                <p style="color: #7f8c8d;">
-                <strong>Objetivo principal:</strong><br>
-                Monitoreo de anemia en niños menores de 5 años
-                </p>
-                <div style="margin-top: 2rem;">
-            """, unsafe_allow_html=True)
-            
             if 'edad_meses' in datos.columns:
                 menores_5 = len(datos[datos['edad_meses'] < 60])
                 mayores_5 = len(datos) - menores_5
                 
                 porcentaje_menores = (menores_5 / len(datos) * 100) if len(datos) > 0 else 0
                 
-                st.metric("Menores de 5 años", menores_5, f"{porcentaje_menores:.1f}%")
-                st.metric("Mayores de 5 años", mayores_5)
-            
-            st.markdown("</div></div>", unsafe_allow_html=True)
-        
-        # ========== ANÁLISIS DE SEGUIMIENTO ==========
-        st.markdown("---")
-        st.markdown("## 📋 Estado de Seguimiento")
-        
-        col_seg1, col_seg2 = st.columns(2)
-        
-        with col_seg1:
-            if 'en_seguimiento' in datos.columns:
-                seguimiento_counts = datos['en_seguimiento'].value_counts()
-                
-                fig_seguimiento = px.pie(
-                    values=seguimiento_counts.values,
-                    names=['En Seguimiento' if x else 'Sin Seguimiento' for x in seguimiento_counts.index],
-                    title='Distribución de Seguimiento',
-                    color=['En Seguimiento' if x else 'Sin Seguimiento' for x in seguimiento_counts.index],
-                    color_discrete_map={
-                        'En Seguimiento': '#e74c3c',
-                        'Sin Seguimiento': '#2ecc71'
-                    },
-                    hole=0.5
-                )
-                
-                fig_seguimiento.update_layout(
-                    height=300,
-                    showlegend=True,
-                    legend=dict(
-                        orientation="h",
-                        yanchor="bottom",
-                        y=1.02,
-                        xanchor="right",
-                        x=1
-                    )
-                )
-                
-                st.plotly_chart(fig_seguimiento, use_container_width=True)
-        
-        with col_seg2:
-            st.markdown("""
-            <div style="background: white; padding: 1.5rem; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); height: 300px;">
-                <h4 style="color: #2c3e50; margin-top: 0;">📈 Eficiencia del Seguimiento</h4>
-                <p style="color: #7f8c8d;">
-                <strong>Meta ideal:</strong><br>
-                100% de pacientes con anemia moderada/severa en seguimiento activo
-                </p>
-            """, unsafe_allow_html=True)
-            
-            if 'en_seguimiento' in datos.columns and 'hemoglobina_dl1' in datos.columns:
-                # Calcular pacientes que DEBERÍAN estar en seguimiento
-                pacientes_prioritarios = datos[
-                    (datos['hemoglobina_dl1'] < 11.0) | 
-                    (datos['en_seguimiento'] == True)
-                ]
-                
-                en_seguimiento_real = datos['en_seguimiento'].sum()
-                deberian_seguimiento = len(pacientes_prioritarios)
-                
-                eficiencia = (en_seguimiento_real / deberian_seguimiento * 100) if deberian_seguimiento > 0 else 0
-                
-                st.metric("En seguimiento actual", en_seguimiento_real)
-                st.metric("Deberían estar en seguimiento", deberian_seguimiento)
-                st.metric("Eficiencia del seguimiento", f"{eficiencia:.1f}%")
-            
-            st.markdown("</div>", unsafe_allow_html=True)
+                st.markdown(f"""
+                <div class="highlight-box">
+                    <h4 style="color: #1565c0; margin-top: 0;">🎯 Población Objetivo</h4>
+                    <div style="text-align: center; margin: 1.5rem 0;">
+                        <div style="font-size: 2.5rem; color: #2196f3; font-weight: 700;">{porcentaje_menores:.0f}%</div>
+                        <div style="color: #546e7a; font-size: 0.9rem;">Menores de 5 años</div>
+                    </div>
+                    <div style="font-size: 0.9rem; color: #546e7a;">
+                        <div style="display: flex; justify-content: space-between; margin: 5px 0;">
+                            <span>👶 <5 años:</span>
+                            <span style="font-weight: 600;">{menores_5}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin: 5px 0;">
+                            <span>👦 >5 años:</span>
+                            <span style="font-weight: 600;">{mayores_5}</span>
+                        </div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
         
         # ========== EXPORTAR REPORTE ==========
         st.markdown("---")
         
-        with st.expander("📥 Exportar Reporte Completo", expanded=False):
-            st.markdown("### Descargar Datos de Análisis")
+        with st.expander("📥 **Exportar Reporte Completo**", expanded=False):
+            st.markdown("""
+            <div style="background: #f5f7ff; padding: 1.5rem; border-radius: 10px;">
+                <h4 style="color: #2a5298; margin-top: 0;">Descargar Informe de Análisis</h4>
+                <p style="color: #546e7a;">Exporte los datos analizados para su uso en informes y presentaciones.</p>
+            """, unsafe_allow_html=True)
             
             col_exp1, col_exp2 = st.columns(2)
             
@@ -2063,39 +2139,49 @@ with tab3:
                 # CSV
                 csv = datos.to_csv(index=False).encode('utf-8')
                 st.download_button(
-                    label="📊 Descargar CSV Completo",
+                    label="📊 **Descargar CSV Completo**",
                     data=csv,
                     file_name=f"reporte_anemia_{datetime.now().strftime('%Y%m%d')}.csv",
                     mime="text/csv",
-                    use_container_width=True
+                    use_container_width=True,
+                    type="secondary"
                 )
             
             with col_exp2:
-                # Resumen estadístico
-                if st.button("📋 Generar Resumen Ejecutivo", use_container_width=True):
-                    with st.spinner("Generando resumen..."):
+                if st.button("📋 **Generar Resumen Ejecutivo**", use_container_width=True, type="secondary"):
+                    with st.spinner("Generando resumen ejecutivo..."):
+                        # Crear resumen HTML
                         resumen_html = f"""
-                        <h3>📊 Resumen Ejecutivo - Monitoreo de Anemia</h3>
-                        <p><strong>Fecha:</strong> {datetime.now().strftime('%d/%m/%Y')}</p>
-                        
-                        <h4>📈 Métricas Principales</h4>
-                        <ul>
-                            <li>Total de pacientes: {total_pacientes}</li>
-                            <li>Hemoglobina promedio: {datos['hemoglobina_dl1'].mean():.1f} g/dL</li>
-                            <li>Edad promedio: {(datos['edad_meses'].mean()/12):.1f} años</li>
-                            <li>Pacientes en seguimiento: {datos['en_seguimiento'].sum()}</li>
-                        </ul>
-                        
-                        <h4>🩺 Prevalencia de Anemia</h4>
-                        <ul>
-                            <li>Sin anemia: {sin_anemia} ({(sin_anemia/total*100):.1f}%)</li>
-                            <li>Anemia leve: {leve} ({(leve/total*100):.1f}%)</li>
-                            <li>Anemia moderada: {moderada} ({(moderada/total*100):.1f}%)</li>
-                            <li>Anemia severa: {severa} ({(severa/total*100):.1f}%)</li>
-                        </ul>
+                        <div style="font-family: Arial, sans-serif; color: #2a5298;">
+                            <h2>📊 Resumen Ejecutivo - Monitoreo de Anemia</h2>
+                            <p><strong>Fecha de generación:</strong> {datetime.now().strftime('%d/%m/%Y %H:%M')}</p>
+                            
+                            <h3>📈 Métricas Principales</h3>
+                            <ul>
+                                <li>Total de pacientes monitoreados: <strong>{total_pacientes}</strong></li>
+                                <li>Hemoglobina promedio: <strong>{datos['hemoglobina_dl1'].mean():.1f} g/dL</strong></li>
+                                <li>Edad promedio: <strong>{(datos['edad_meses'].mean()/12):.1f} años</strong></li>
+                                <li>Pacientes en seguimiento activo: <strong>{datos['en_seguimiento'].sum()}</strong></li>
+                            </ul>
+                            
+                            <h3>🩺 Prevalencia de Anemia</h3>
+                            <ul>
+                                <li>Sin anemia: <strong>{sin_anemia}</strong> ({(sin_anemia/total*100):.1f}%)</li>
+                                <li>Anemia leve: <strong>{leve}</strong> ({(leve/total*100):.1f}%)</li>
+                                <li>Anemia moderada: <strong>{moderada}</strong> ({(moderada/total*100):.1f}%)</li>
+                                <li>Anemia severa: <strong>{severa}</strong> ({(severa/total*100):.1f}%)</li>
+                            </ul>
+                            
+                            <h3>🎯 Población Objetivo (<5 años)</h3>
+                            <ul>
+                                <li>Niños menores de 5 años: <strong>{menores_5}</strong> ({(porcentaje_menores):.1f}%)</li>
+                            </ul>
+                        </div>
                         """
                         
                         st.markdown(resumen_html, unsafe_allow_html=True)
+            
+            st.markdown("</div>", unsafe_allow_html=True)
 # ==================================================
 # PESTAÑA 4: SISTEMA DE CITAS - VINCULADO CON ANEMIA
 # ==================================================
