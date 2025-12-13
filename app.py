@@ -1802,7 +1802,7 @@ with tab3:
         st.info("👆 Presiona el botón 'Cargar Datos para Análisis' para comenzar")
 
 # ==================================================
-# PESTAÑA 4: SISTEMA DE CITAS - VERSIÓN CORREGIDA
+# PESTAÑA 4: SISTEMA DE CITAS - VERSIÓN CORREGIDA COMPLETA
 # ==================================================
 
 with tab4:
@@ -1886,14 +1886,35 @@ with tab4:
             st.warning(f"No se pudieron cargar las citas: {str(e)}")
             return []
     
-    # ========== FUNCIÓN PARA AGREGAR NUEVA CITA ==========
+    # ========== FUNCIÓN PARA AGREGAR NUEVA CITA (CORREGIDA) ==========
     def agregar_cita(datos_cita):
-        """Agrega una nueva cita a la base de datos"""
+        """Agrega una nueva cita a la base de datos - VERSIÓN CORREGIDA"""
         try:
+            # Mostrar qué estamos enviando
+            st.write("📤 Datos que se envían a Supabase:")
+            st.json(datos_cita)
+            
             response = supabase.table("citas").insert(datos_cita).execute()
-            return response.data if response.data else None
+            
+            if response.data:
+                st.success(f"✅ Cita guardada exitosamente! ID: {response.data[0].get('id')}")
+                return response.data
+            elif hasattr(response, 'error'):
+                error_msg = response.error.message
+                st.error(f"❌ Error al guardar: {error_msg}")
+                
+                # Mostrar ayuda específica
+                if "null value in column" in error_msg:
+                    st.info("💡 Faltan campos requeridos. Asegúrate de completar todos los campos.")
+                return None
+            else:
+                st.error("❌ Error desconocido al guardar")
+                return None
+                
         except Exception as e:
-            st.error(f"❌ Error al guardar cita: {str(e)}")
+            st.error(f"🔥 Error inesperado: {str(e)}")
+            import traceback
+            st.code(traceback.format_exc())
             return None
     
     # ========== EJECUTAR BÚSQUEDA ==========
@@ -2051,6 +2072,31 @@ with tab4:
                     proxima_cita = st.date_input("📅 Próxima cita", 
                                                 value=datetime.now() + timedelta(days=30))
                 
+                # ========== CAMPOS NUEVOS REQUERIDOS POR LA TABLA ==========
+                st.markdown("---")
+                st.markdown("#### 🩺 Datos Clínicos Adicionales")
+                
+                col_severidad, col_suplemento = st.columns(2)
+                with col_severidad:
+                    severidad_anemia = st.selectbox(
+                        "📊 Severidad de anemia",
+                        ["NORMAL", "LEVE", "MODERADA", "SEVERA", "NO ESPECIFICADA"],
+                        index=4
+                    )
+                
+                with col_suplemento:
+                    suplemento_hierro = st.selectbox(
+                        "💊 Suplemento de hierro indicado",
+                        ["Ninguno", "Sulfato ferroso", "Gluconato ferroso", "Fumarato ferroso", 
+                         "Hierro polimaltosado", "Sulfato ferroso intravenoso"]
+                    )
+                
+                frecuencia_suplemento = st.selectbox(
+                    "📅 Frecuencia de suplemento",
+                    ["No aplica", "Diario", "3 veces por semana", "2 veces por semana", 
+                     "Semanal", "Quincenal", "Mensual"]
+                )
+                
                 # Botones de acción
                 col_btn1, col_btn2, col_btn3 = st.columns(3)
                 with col_btn2:
@@ -2069,6 +2115,9 @@ with tab4:
                             "tratamiento": tratamiento,
                             "observaciones": observaciones,
                             "investigador_responsable": investigador,
+                            "severidad_anemia": severidad_anemia,
+                            "suplemento_hierro": suplemento_hierro,
+                            "frecuencia_suplemento": frecuencia_suplemento,
                             "proxima_cita": str(proxima_cita)
                         }
                         
@@ -2135,7 +2184,6 @@ with tab4:
             
     except Exception as e:
         st.error(f"❌ Error al cargar pacientes en seguimiento: {str(e)}")
-
 # ==================================================
 # PESTAÑA 5: DASHBOARD NACIONAL
 # ==================================================
