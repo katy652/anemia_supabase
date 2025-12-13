@@ -153,7 +153,7 @@ st.markdown("""
 
 TABLE_NAME = "alertas_hemoglobina"
 ALTITUD_TABLE = "altitud_regiones"
-CRECIMIENTO_TABLE = "referencia_crecimiento"
+CRECIMIENTO_TABLE = "referencia_crecimiento"  # Corregí "crediniento"
 
 SUPABASE_URL = st.secrets.get("SUPABASE_URL", "https://kwsuszkblbejvliniggd.supabase.co")
 SUPABASE_KEY = st.secrets.get("SUPABASE_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3c3VzemtibGJlanZsaW5pZ2dkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE2ODE0NTUsImV4cCI6MjA3NzI1NzQ1NX0.DQpt-rSNprcUrbOLTgUEEn_0jFIuSX5b0AVuVirk0vw")
@@ -169,6 +169,108 @@ def init_supabase():
 
 supabase = init_supabase()
 
+# ==================================================
+# FUNCIÓN SIMPLIFICADA PARA CREAR TABLA CITAS
+# ==================================================
+def crear_tabla_citas_simple():
+    """Crea la tabla citas con RLS básico"""
+    
+    import requests
+    
+    # SQL completo para crear tabla y políticas
+    sql_completo = """
+    -- Crear tabla si no existe
+    CREATE TABLE IF NOT EXISTS citas (
+        id BIGSERIAL PRIMARY KEY,
+        dni_paciente TEXT NOT NULL,
+        fecha_cita DATE NOT NULL,
+        hora_cita TIME NOT NULL,
+        tipo_consulta TEXT,
+        diagnostico TEXT,
+        tratamiento TEXT,
+        observaciones TEXT,
+        investigador_responsable TEXT,
+        proxima_cita DATE,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    
+    -- Habilitar RLS
+    ALTER TABLE citas ENABLE ROW LEVEL SECURITY;
+    
+    -- Política simple para todo
+    DROP POLICY IF EXISTS "allow_all_citas" ON citas;
+    CREATE POLICY "allow_all_citas" ON citas
+    FOR ALL TO anon, authenticated
+    USING (true)
+    WITH CHECK (true);
+    """
+    
+    try:
+        headers = {
+            "apikey": SUPABASE_KEY,
+            "Authorization": f"Bearer {SUPABASE_KEY}",
+            "Content-Type": "application/json"
+        }
+        
+        response = requests.post(
+            f"{SUPABASE_URL}/rest/v1/rpc/exec_sql",
+            headers=headers,
+            json={"query": sql_completo}
+        )
+        
+        if response.status_code == 200:
+            st.sidebar.success("✅ Tabla 'citas' creada y RLS configurado")
+            return True
+        else:
+            st.sidebar.error(f"❌ Error: {response.text}")
+            return False
+            
+    except Exception as e:
+        st.sidebar.error(f"🔥 Error: {str(e)}")
+        return False
+
+# ==================================================
+# PRUEBA DE GUARDADO SIMPLE
+# ==================================================
+def probar_guardado_simple():
+    """Prueba simple de guardado"""
+    try:
+        test_cita = {
+            "dni_paciente": "99988877",
+            "fecha_cita": "2024-12-13",
+            "hora_cita": "15:00:00",
+            "tipo_consulta": "Prueba Simple",
+            "diagnostico": "Probando configuración"
+        }
+        
+        result = supabase.table("citas").insert(test_cita).execute()
+        
+        if result.data:
+            st.sidebar.success("✅ ¡Guardado exitoso!")
+            
+            # Limpiar
+            supabase.table("citas").delete().eq("dni_paciente", "99988877").execute()
+            return True
+        else:
+            st.sidebar.error(f"❌ Error: {result.error.message if hasattr(result, 'error') else 'Sin datos'}")
+            return False
+            
+    except Exception as e:
+        st.sidebar.error(f"🔥 Error: {str(e)}")
+        return False
+
+# ==================================================
+# BOTONES EN BARRA LATERAL
+# ==================================================
+st.sidebar.markdown("---")
+st.sidebar.markdown("### 🔧 Configuración Citas")
+
+if st.sidebar.button("🛠️ Crear tabla citas", type="primary"):
+    if crear_tabla_citas_simple():
+        st.sidebar.success("✅ Configuración completada")
+
+if st.sidebar.button("🧪 Probar guardado", type="secondary"):
+    probar_guardado_simple()
 # ==================================================
 # FUNCIONES DE BASE DE DATOS (CORREGIDAS)
 # ==================================================
