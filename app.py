@@ -3253,6 +3253,390 @@ with tab5:
         st.info("👆 Presiona el botón 'Cargar Datos Nacionales' para ver el dashboard nacional")
 
 # ==================================================
+# PESTAÑA 6: DIAGNÓSTICO COMPLETO (NUEVA PESTAÑA)
+# ==================================================
+
+# Agregar esta nueva pestaña:
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+    "📋 Registro", 
+    "📅 Citas", 
+    "📊 Dashboard", 
+    "💊 Farmacia",
+    "🩺 Clínico",
+    "🔬 Diagnóstico Completo"  # <-- NUEVA
+])
+
+with tab6:
+    # ========== HEADER CIENTÍFICO ==========
+    st.markdown("""
+    <div style='background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%); 
+                padding: 2rem; border-radius: 15px; color: white; margin-bottom: 2rem;'>
+        <h1 style='margin: 0; color: white;'>🔬 Diagnóstico Integral de Anemia</h1>
+        <p style='opacity: 0.9; margin-top: 10px;'>
+        Basado en evidencia científica: Hemoglobina + Hemograma + Marcadores de Hierro + Inflamación
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # ========== ADVERTENCIA CIENTÍFICA ==========
+    st.warning("""
+    **📚 EVIDENCIA CIENTÍFICA:** 
+    Los programas de lucha contra la anemia deben incluir:
+    1. **Medición de hemoglobina** - Para detectar anemia
+    2. **Hemograma completo** - Para clasificar tipo de anemia
+    3. **Marcador de estatus de hierro** - Para diagnosticar deficiencia de hierro
+    4. **Marcador de inflamación** - Para identificar anemia de enfermedad crónica
+    
+    *Fuente: Revisión científica sobre anemia en poblaciones de altura*
+    """)
+    
+    # ========== FORMULARIO DE DIAGNÓSTICO COMPLETO ==========
+    st.markdown("## 🧪 Formulario de Evaluación Completa")
+    
+    with st.form("form_diagnostico_completo"):
+        col_diag1, col_diag2 = st.columns(2)
+        
+        with col_diag1:
+            # 1. HEMOGLOBINA (ya lo tienes)
+            st.markdown("### 1. Hemoglobina")
+            hb = st.number_input("Hemoglobina (g/dL) *", 
+                                min_value=0.0, max_value=20.0, value=12.0,
+                                help="Valor de hemoglobina en sangre")
+            
+            # 2. HEMOGRAMA COMPLETO
+            st.markdown("### 2. Hemograma Completo")
+            vcm = st.number_input("VCM (fL) *", 
+                                 min_value=50.0, max_value=120.0, value=85.0,
+                                 help="Volumen Corpuscular Medio (80-100 fL)")
+            hcm = st.number_input("HCM (pg) *", 
+                                 min_value=15.0, max_value=40.0, value=28.0,
+                                 help="Hemoglobina Corpuscular Media (27-33 pg)")
+            chcm = st.number_input("CHCM (g/dL) *", 
+                                  min_value=20.0, max_value=40.0, value=32.0,
+                                  help="Concentración de Hb Corpuscular Media (32-36 g/dL)")
+            rdw = st.number_input("RDW (%) *", 
+                                 min_value=10.0, max_value=25.0, value=13.5,
+                                 help="Ancho de distribución eritrocitaria (11.5-14.5%)")
+        
+        with col_diag2:
+            # 3. MARCADORES DE HIERRO
+            st.markdown("### 3. Marcadores de Hierro")
+            ferritina = st.number_input("Ferritina (ng/mL) *", 
+                                       min_value=0.0, max_value=500.0, value=30.0,
+                                       help="<15 ng/mL = deficiencia de hierro")
+            hierro_serico = st.number_input("Hierro sérico (μg/dL)", 
+                                          min_value=0.0, max_value=200.0, value=60.0)
+            tibc = st.number_input("TIBC (μg/dL)", 
+                                  min_value=100.0, max_value=500.0, value=300.0)
+            saturacion = st.number_input("Saturación de transferrina (%)", 
+                                        min_value=0.0, max_value=100.0, value=20.0)
+            
+            # 4. MARCADOR DE INFLAMACIÓN
+            st.markdown("### 4. Marcador de Inflamación")
+            pcr = st.number_input("Proteína C Reactiva (mg/L)", 
+                                 min_value=0.0, max_value=50.0, value=2.0,
+                                 help=">5 mg/L sugiere inflamación")
+            vsg = st.number_input("VSG (mm/h)", 
+                                 min_value=0.0, max_value=100.0, value=15.0)
+        
+        # Información adicional
+        st.markdown("### 📝 Información Clínica Adicional")
+        col_clin1, col_clin2 = st.columns(2)
+        
+        with col_clin1:
+            infeccion_actual = st.checkbox("Infección actual")
+            enfermedad_cronica = st.checkbox("Enfermedad crónica")
+            cirugia_reciente = st.checkbox("Cirugía reciente")
+        
+        with col_clin2:
+            deficit_b12 = st.checkbox("Sospecha deficiencia B12")
+            deficit_folato = st.checkbox("Sospecha deficiencia folato")
+            parasitosis = st.checkbox("Parasitosis intestinal")
+        
+        # Botón de análisis
+        submitted = st.form_submit_button("🔍 Analizar Diagnóstico Completo", type="primary")
+        
+        if submitted:
+            # ========== ANÁLISIS CIENTÍFICO COMPLETO ==========
+            with st.spinner("Realizando análisis diagnóstico integral..."):
+                
+                # 1. Clasificar por Hb (con ajuste por altitud si aplica)
+                diagnostico_hb = clasificar_por_hb(hb, altitud_msnm=0)  # Pasar altitud real
+                
+                # 2. Determinar tipo de anemia por índices eritrocitarios
+                tipo_anemia = determinar_tipo_anemia(vcm, hcm, hb)
+                
+                # 3. Evaluar estatus de hierro
+                estatus_hierro = evaluar_estatus_hierro(ferritina, hierro_serico, saturacion)
+                
+                # 4. Evaluar inflamación
+                inflamacion = evaluar_inflamacion(pcr, vsg)
+                
+                # 5. Diagnóstico diferencial
+                diagnostico_final = generar_diagnostico_diferencial(
+                    hb, vcm, hcm, ferritina, pcr, 
+                    deficit_b12, deficit_folato, parasitosis
+                )
+                
+                # Mostrar resultados
+                mostrar_resultados_completos(
+                    diagnostico_hb, 
+                    tipo_anemia, 
+                    estatus_hierro, 
+                    inflamacion, 
+                    diagnostico_final
+                )
+
+# ==================================================
+# FUNCIONES DE ANÁLISIS CIENTÍFICO
+# ==================================================
+
+def clasificar_por_hb(hb, altitud_msnm=0):
+    """Clasifica anemia con ajuste por altitud según evidencia científica"""
+    
+    # Ajuste por altitud (discutido en el texto)
+    if altitud_msnm > 2500:
+        ajuste = 0.5  # g/dL - Basado en estudios
+        hb_ajustada = hb - ajuste
+    else:
+        hb_ajustada = hb
+    
+    # Clasificación OMS tradicional
+    if hb_ajustada >= 11.0:
+        return {
+            "clasificacion": "NO ANÉMICO",
+            "hb_original": hb,
+            "hb_ajustada": hb_ajustada,
+            "ajuste_altitud": ajuste if altitud_msnm > 2500 else 0,
+            "nota": "Considerar ajuste por altitud según controversia científica"
+        }
+    elif hb_ajustada >= 10.0:
+        return {"clasificacion": "ANEMIA LEVE", "hb_ajustada": hb_ajustada}
+    elif hb_ajustada >= 9.0:
+        return {"clasificacion": "ANEMIA MODERADA", "hb_ajustada": hb_ajustada}
+    else:
+        return {"clasificacion": "ANEMIA SEVERA", "hb_ajustada": hb_ajustada}
+
+def determinar_tipo_anemia(vcm, hcm, hb):
+    """Determina el tipo de anemia según índices eritrocitarios"""
+    
+    if vcm < 80:
+        tipo = "MICROCÍTICA"
+        causas = ["Deficiencia de hierro", "Talasemia", "Anemia de enfermedad crónica"]
+    elif vcm > 100:
+        tipo = "MACROCÍTICA"
+        causas = ["Deficiencia de B12/folato", "Hipotiroidismo", "Enfermedad hepática"]
+    else:
+        tipo = "NORMOCÍTICA"
+        causas = ["Anemia de enfermedad crónica", "Hemólisis", "Insuficiencia renal"]
+    
+    # Hipocromía (baja HCM)
+    hipocromia = "HIPOCRÓMICA" if hcm < 27 else "NORMOCRÓMICA"
+    
+    return {
+        "tipo_morfologia": tipo,
+        "hipocromia": hipocromia,
+        "causas_posibles": causas,
+        "vcm": vcm,
+        "hcm": hcm,
+        "interpretacion": f"Anemia {tipo.lower()} {hipocromia.lower()}"
+    }
+
+def evaluar_estatus_hierro(ferritina, hierro_serico, saturacion):
+    """Evalúa el estatus de hierro corporal"""
+    
+    deficiencia_hierro = ferritina < 15
+    reservas_bajas = ferritina < 30
+    saturacion_baja = saturacion < 20
+    
+    if deficiencia_hierro:
+        estatus = "DEFICIENCIA DE HIERRO CONFIRMADA"
+        severidad = "GRAVE"
+    elif reservas_bajas:
+        estatus = "RESERVAS DE HIERRO BAJAS"
+        severidad = "MODERADA"
+    else:
+        estatus = "RESERVAS DE HIERRO ADECUADAS"
+        severidad = "NORMAL"
+    
+    return {
+        "estatus": estatus,
+        "severidad": severidad,
+        "ferritina": ferritina,
+        "hierro_serico": hierro_serico,
+        "saturacion": saturacion,
+        "deficiencia_confirmada": deficiencia_hierro
+    }
+
+def evaluar_inflamacion(pcr, vsg):
+    """Evalúa presencia de inflamación"""
+    
+    inflamacion_activa = pcr > 5 or vsg > 20
+    inflamacion_leve = pcr > 2 or vsg > 15
+    
+    if inflamacion_activa:
+        resultado = "INFLAMACIÓN ACTIVA"
+        impacto = "Puede causar anemia de enfermedad crónica"
+    elif inflamacion_leve:
+        resultado = "INFLAMACIÓN LEVE/SUBCLÍNICA"
+        impacto = "Puede afectar metabolismo del hierro"
+    else:
+        resultado = "SIN INFLAMACIÓN SIGNIFICATIVA"
+        impacto = "No contribuye a la anemia"
+    
+    return {
+        "resultado": resultado,
+        "pcr": pcr,
+        "vsg": vsg,
+        "impacto_anemia": impacto,
+        "inflamacion_activa": inflamacion_activa
+    }
+
+def generar_diagnostico_diferencial(hb, vcm, hcm, ferritina, pcr, 
+                                    deficit_b12, deficit_folato, parasitosis):
+    """Genera diagnóstico diferencial basado en todos los parámetros"""
+    
+    diagnosticos = []
+    
+    # 1. Anemia ferropénica
+    if ferritina < 15 and vcm < 80 and hcm < 27:
+        diagnosticos.append({
+            "diagnostico": "ANEMIA FERROPÉNICA",
+            "probabilidad": "ALTA",
+            "evidencia": f"Ferritina baja ({ferritina} ng/mL) + microcitosis + hipocromía",
+            "tratamiento": "Suplementación con hierro + control en 1 mes"
+        })
+    
+    # 2. Anemia de enfermedad crónica
+    elif pcr > 5 and ferritina > 15 and vcm < 80:
+        diagnosticos.append({
+            "diagnostico": "ANEMIA DE ENFERMEDAD CRÓNICA",
+            "probabilidad": "ALTA",
+            "evidencia": f"Inflamación (PCR: {pcr} mg/L) + ferritina normal",
+            "tratamiento": "Tratar causa subyacente + evaluación especializada"
+        })
+    
+    # 3. Deficiencia de B12/folato
+    elif deficit_b12 or deficit_folato or vcm > 100:
+        diagnosticos.append({
+            "diagnostico": "ANEMIA MEGALOBLÁSTICA (B12/folato)",
+            "probabilidad": "MODERADA",
+            "evidencia": "Macrocitosis y/o sospecha clínica",
+            "tratamiento": "Suplementación específica + estudio de causa"
+        })
+    
+    # 4. Parasitosis
+    elif parasitosis and ferritina < 30:
+        diagnosticos.append({
+            "diagnostico": "ANEMIA POR PÉRDIDA SANGUÍNEA/PARASITOSIS",
+            "probabilidad": "MODERADA",
+            "evidencia": "Parasitosis intestinal + reservas bajas de hierro",
+            "tratamiento": "Desparasitación + suplemento de hierro"
+        })
+    
+    # 5. Sin causa clara
+    if not diagnosticos and hb < 11:
+        diagnosticos.append({
+            "diagnostico": "ANEMIA DE ETIOLOGÍA NO DETERMINADA",
+            "probabilidad": "POR DEFINIR",
+            "evidencia": "Requiere estudios adicionales",
+            "tratamiento": "Evaluación hematológica completa"
+        })
+    
+    return diagnosticos
+
+def mostrar_resultados_completos(diagnostico_hb, tipo_anemia, estatus_hierro, 
+                                inflamacion, diagnosticos_finales):
+    """Muestra los resultados del análisis completo"""
+    
+    st.success("✅ Análisis diagnóstico completo generado")
+    
+    # Panel de resultados
+    st.markdown("## 📋 Resultados del Diagnóstico Integral")
+    
+    # Tarjeta 1: Hemoglobina
+    with st.expander("🔴 **1. HEMOGLOBINA Y CLASIFICACIÓN**", expanded=True):
+        col_hb1, col_hb2 = st.columns(2)
+        with col_hb1:
+            st.metric("Hemoglobina", f"{diagnostico_hb['hb_original']} g/dL")
+            st.metric("Clasificación", diagnostico_hb['clasificacion'])
+        with col_hb2:
+            if diagnostico_hb.get('ajuste_altitud', 0) > 0:
+                st.info(f"📐 Ajuste por altitud: +{diagnostico_hb['ajuste_altitud']} g/dL")
+                st.metric("Hb ajustada", f"{diagnostico_hb['hb_ajustada']} g/dL")
+    
+    # Tarjeta 2: Tipo de anemia
+    with st.expander("🔬 **2. TIPO DE ANEMIA (HEMOGRAMA)**", expanded=True):
+        st.markdown(f"**Morfología:** {tipo_anemia['tipo_morfologia']}")
+        st.markdown(f"**Hipocromía:** {tipo_anemia['hipocromia']}")
+        st.markdown(f"**VCM:** {tipo_anemia['vcm']} fL | **HCM:** {tipo_anemia['hcm']} pg")
+        
+        st.markdown("**Causas posibles:**")
+        for causa in tipo_anemia['causas_posibles']:
+            st.markdown(f"- {causa}")
+    
+    # Tarjeta 3: Estatus de hierro
+    with st.expander("🧲 **3. ESTATUS DE HIERRO**", expanded=True):
+        color = "red" if estatus_hierro['severidad'] == "GRAVE" else "orange" if estatus_hierro['severidad'] == "MODERADA" else "green"
+        
+        st.markdown(f"**Estatus:** <span style='color:{color}; font-weight:bold;'>{estatus_hierro['estatus']}</span>", 
+                   unsafe_allow_html=True)
+        
+        col_fe1, col_fe2, col_fe3 = st.columns(3)
+        with col_fe1:
+            st.metric("Ferritina", f"{estatus_hierro['ferritina']} ng/mL", 
+                     delta="BAJA" if estatus_hierro['ferritina'] < 15 else None)
+        with col_fe2:
+            st.metric("Hierro sérico", f"{estatus_hierro['hierro_serico']} μg/dL")
+        with col_fe3:
+            st.metric("Saturación", f"{estatus_hierro['saturacion']}%")
+    
+    # Tarjeta 4: Inflamación
+    with st.expander("🔥 **4. MARCADORES DE INFLAMACIÓN**", expanded=True):
+        st.markdown(f"**Resultado:** {inflamacion['resultado']}")
+        st.markdown(f"**Impacto en anemia:** {inflamacion['impacto_anemia']}")
+        
+        col_inf1, col_inf2 = st.columns(2)
+        with col_inf1:
+            st.metric("PCR", f"{inflamacion['pcr']} mg/L", 
+                     delta="ELEVADO" if inflamacion['pcr'] > 5 else None)
+        with col_inf2:
+            st.metric("VSG", f"{inflamacion['vsg']} mm/h", 
+                     delta="ELEVADO" if inflamacion['vsg'] > 20 else None)
+    
+    # Tarjeta 5: Diagnóstico diferencial
+    with st.expander("🎯 **5. DIAGNÓSTICO DIFERENCIAL Y PLAN**", expanded=True):
+        if diagnosticos_finales:
+            for i, diag in enumerate(diagnosticos_finales, 1):
+                st.markdown(f"**{i}. {diag['diagnostico']}**")
+                st.markdown(f"   *Probabilidad:* {diag['probabilidad']}")
+                st.markdown(f"   *Evidencia:* {diag['evidencia']}")
+                st.markdown(f"   *Tratamiento sugerido:* {diag['tratamiento']}")
+                st.markdown("---")
+        else:
+            st.info("No se identificaron diagnósticos específicos. Considerar evaluación especializada.")
+    
+    # Resumen ejecutivo
+    st.markdown("## 📄 RESUMEN EJECUTIVO")
+    
+    resumen_html = f"""
+    <div style='background: #f8f9fa; padding: 20px; border-radius: 10px; border-left: 5px solid #3498db;'>
+        <h4 style='color: #2c3e50; margin-top: 0;'>📋 Resumen Diagnóstico:</h4>
+        <p><strong>Clasificación por Hb:</strong> {diagnostico_hb['clasificacion']}</p>
+        <p><strong>Tipo de anemia:</strong> {tipo_anemia['interpretacion']}</p>
+        <p><strong>Estatus de hierro:</strong> {estatus_hierro['estatus']}</p>
+        <p><strong>Inflamación:</strong> {inflamacion['resultado']}</p>
+        <p><strong>Diagnóstico principal:</strong> {diagnosticos_finales[0]['diagnostico'] if diagnosticos_finales else 'Por determinar'}</p>
+    </div>
+    """
+    
+    st.markdown(resumen_html, unsafe_allow_html=True)
+    
+    # Botón para guardar informe
+    if st.button("💾 Guardar Informe Diagnóstico", type="secondary"):
+        st.success("Informe guardado en la base de datos")
+
+# ==================================================
 # SIDEBAR
 # ==================================================
 
