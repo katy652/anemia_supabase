@@ -1802,388 +1802,476 @@ with tab3:
         st.info("👆 Presiona el botón 'Cargar Datos para Análisis' para comenzar")
 
 # ==================================================
-# PESTAÑA 4: SISTEMA DE CITAS - VERSIÓN CORREGIDA COMPLETA
+# PESTAÑA 4: SISTEMA DE CITAS - VINCULADO CON ANEMIA
 # ==================================================
 
 with tab4:
     st.header("📋 Sistema de Seguimiento y Citas")
-    st.markdown("Registro de nuevas citas y seguimiento de pacientes")
+    st.markdown("Registro de nuevas citas **vinculadas con diagnóstico de anemia**")
     
-    # ========== BUSCADOR DE PACIENTES ==========
-    st.subheader("🔍 Buscar Paciente para Seguimiento")
+    # ========== FUNCIONES VINCULADAS ==========
     
-    metodo_busqueda = st.selectbox(
-        "Método de búsqueda:",
-        ["Por DNI", "Por Nombre", "Ver todos los pacientes"]
+    def obtener_citas_con_info_anemia():
+        """Obtiene citas con información de anemia del paciente"""
+        try:
+            # Obtener todas las citas
+            response_citas = supabase.table("citas").select("*").order("fecha_cita", desc=True).execute()
+            citas = response_citas.data if response_citas.data else []
+            
+            if not citas:
+                return []
+            
+            # Obtener información de anemia para cada paciente
+            citas_con_info = []
+            
+            for cita in citas:
+                dni = cita.get('dni_paciente')
+                if dni:
+                    # Buscar información de anemia
+                    response_paciente = supabase.table("alertas_hemoglobina")\
+                        .select("*")\
+                        .eq("dni", dni)\
+                        .execute()
+                    
+                    info_anemia = response_paciente.data[0] if response_paciente.data else {}
+                    
+                    # Combinar información
+                    cita_completa = {
+                        **cita,
+                        "info_anemia": info_anemia,
+                        "nombre_paciente": info_anemia.get('nombre_apellido', 'Desconocido'),
+                        "hemoglobina": info_anemia.get('hemoglobina_dl1', 'N/A'),
+                        "clasificacion_anemia": clasificar_anemia_simple(
+                            info_anemia.get('hemoglobina_dl1', 0),
+                            info_anemia.get('edad_meses', 0)
+                        ),
+                        "riesgo": info_anemia.get('riesgo', 'N/A'),
+                        "en_seguimiento": info_anemia.get('en_seguimiento', False)
+                    }
+                    citas_con_info.append(cita_completa)
+                else:
+                    citas_con_info.append({
+                        **cita,
+                        "nombre_paciente": "Sin información",
+                        "hemoglobina": "N/A",
+                        "clasificacion_anemia": "N/A",
+                        "riesgo": "N/A",
+                        "en_seguimiento": False
+                    })
+            
+            return citas_con_info
+            
+        except Exception as e:
+            st.error(f"❌ Error al obtener citas: {str(e)}")
+            return []
+    
+    def clasificar_anemia_simple(hemoglobina, edad_meses):
+        """Clasificación simple de anemia"""
+        if hemoglobina == 'N/A' or not hemoglobina:
+            return "Sin datos"
+        
+        if edad_meses < 60:  # Menores de 5 años
+            if hemoglobina >= 11.0:
+                return "Normal"
+            elif hemoglobina >= 10.0:
+                return "Leve"
+            elif hemoglobina >= 9.0:
+                return "Moderada"
+            else:
+                return "Severa"
+        else:
+            if hemoglobina >= 12.0:
+                return "Normal"
+            elif hemoglobina >= 11.0:
+                return "Leve"
+            elif hemoglobina >= 10.0:
+                return "Moderada"
+            else:
+                return "Severa"
+    
+    def obtener_color_anemia(clasificacion):
+        """Obtiene color según clasificación de anemia"""
+        colores = {
+            "Normal": "🟢",
+            "Leve": "🟡",
+            "Moderada": "🟠",
+            "Severa": "🔴",
+            "Sin datos": "⚪"
+        }
+        return colores.get(clasificacion, "⚪")
+    
+    # ========== SECCIÓN 1: CITAS CON INFO DE ANEMIA ==========
+    st.subheader("🩺 Citas con Estado de Anemia")
+    
+    if st.button("🔄 Cargar citas con información de anemia", key="cargar_citas_anemia"):
+        with st.spinner("Vinculando citas con diagnóstico de anemia..."):
+            citas_vinculadas = obtener_citas_con_info_anemia()
+            st.session_state.citas_vinculadas = citas_vinculadas
+            
+            if citas_vinculadas:
+                st.success(f"✅ {len(citas_vinculadas)} citas vinculadas con información de anemia")
+            else:
+                st.warning("⚠️ No hay citas registradas")
+    
+    # Mostrar citas vinculadas
+    if 'citas_vinculadas' in st.session_state and st.session_state.citas_vinculadas:
+        citas_df = pd.DataFrame(st.session_state.citas_vinculadas)
+        
+        # Aplicar colores a la clasificación
+        citas_df['anemia_icono'] = citas_df['clasificacion_anemia'].apply(obtener_color_anemia)
+        citas_df['anemia_mostrar'] = citas_df['anemia_icono'] + " " + citas_df['clasificacion_anemia']
+        
+        # Mostrar tabla ENRIQUECIDA
+        st.dataframe(
+            citas_df[['fecha_cita', 'hora_cita', 'nombre_paciente', 'dni_paciente',
+                     'anemia_mostrar', 'hemoglobina', 'tipo_consulta', 'diagnostico', 'riesgo']],
+            use_container_width=True,
+            height=400,
+            column_config={
+                "fecha_cita": "Fecha",
+                "hora_cita": "Hora",
+                "nombre_paciente": "Paciente",
+                "dni_paciente": "DNI",
+                "anemia_mostrar": st.column_config.TextColumn("Estado Anemia", width="small"),
+                "hemoglobina": st.column_config.NumberColumn("Hb (g/dL)", format="%.1f"),
+                "tipo_consulta": "Tipo Consulta",
+                "diagnostico": st.column_config.TextColumn("Diagnóstico", width="large"),
+                "riesgo": "Riesgo"
+            }
+        )
+        
+        # ========== ANÁLISIS ESTADÍSTICO ==========
+        st.markdown("#### 📊 Estadísticas de Anemia en Citas")
+        
+        col_est1, col_est2, col_est3, col_est4 = st.columns(4)
+        
+        with col_est1:
+            total_citas = len(citas_df)
+            st.metric("Total Citas", total_citas)
+        
+        with col_est2:
+            con_anemia = len(citas_df[citas_df['clasificacion_anemia'].isin(["Leve", "Moderada", "Severa"])])
+            porcentaje = (con_anemia / total_citas * 100) if total_citas > 0 else 0
+            st.metric("Con Anemia", con_anemia, f"{porcentaje:.1f}%")
+        
+        with col_est3:
+            severas = len(citas_df[citas_df['clasificacion_anemia'] == "Severa"])
+            st.metric("Anemia Severa", severas)
+        
+        with col_est4:
+            seguimiento = len(citas_df[citas_df['en_seguimiento'] == True])
+            st.metric("En Seguimiento", seguimiento)
+        
+        # Gráfico de distribución de anemia
+        st.markdown("#### 📈 Distribución de Severidad de Anemia")
+        
+        if 'clasificacion_anemia' in citas_df.columns:
+            distribucion = citas_df['clasificacion_anemia'].value_counts()
+            
+            fig = px.bar(
+                x=distribucion.index,
+                y=distribucion.values,
+                title="Casos por Nivel de Anemia",
+                color=distribucion.values,
+                color_continuous_scale='RdYlGn_r',  # Rojo para severa, verde para normal
+                text=distribucion.values,
+                height=300
+            )
+            
+            fig.update_layout(
+                xaxis_title="Clasificación de Anemia",
+                yaxis_title="Número de Citas",
+                showlegend=False
+            )
+            
+            fig.update_traces(
+                texttemplate='%{text}',
+                textposition='outside'
+            )
+            
+            st.plotly_chart(fig, use_container_width=True)
+    
+    # ========== SECCIÓN 2: AGENDAR CITA CON ENFOQUE EN ANEMIA ==========
+    st.markdown("---")
+    st.subheader("➕ Agendar Nueva Cita con Diagnóstico de Anemia")
+    
+    # Buscar pacientes CON anemia
+    st.markdown("#### 🔍 Buscar Pacientes con Anemia")
+    
+    filtro_anemia = st.selectbox(
+        "Filtrar por estado de anemia:",
+        ["Todos los pacientes", "Con anemia", "Anemia moderada/severa", "En seguimiento"]
     )
     
-    valor_busqueda = None
-    paciente_encontrado = None
-    
-    col_buscar1, col_buscar2 = st.columns(2)
-    
-    with col_buscar1:
-        if metodo_busqueda == "Por DNI":
-            dni_buscar = st.text_input("Ingrese DNI del paciente:", placeholder="Ej: 11111111")
-            valor_busqueda = dni_buscar.strip() if dni_buscar else None
-            
-        elif metodo_busqueda == "Por Nombre":
-            nombre_buscar = st.text_input("Ingrese nombre del paciente:", placeholder="Ej: Juan")
-            valor_busqueda = nombre_buscar.strip() if nombre_buscar else None
-    
-    with col_buscar2:
-        st.write("")  # Espaciador
-        st.write("")  # Espaciador
-        if metodo_busqueda != "Ver todos los pacientes":
-            buscar_paciente = st.button("🔍 Buscar Paciente", use_container_width=True, type="primary")
-        else:
-            buscar_paciente = True  # Auto-buscar para ver todos
-    
-    # ========== FUNCIÓN MEJORADA PARA BUSCAR PACIENTE ==========
-    def buscar_pacientes_db(metodo=None, valor=None):
-        """Busca paciente(s) en la base de datos de Supabase"""
-        try:
-            # Conectar a Supabase directamente para búsquedas específicas
-            if metodo == "Por DNI" and valor:
-                response = supabase.table("alertas_hemoglobina")\
-                    .select("*")\
-                    .eq("dni", valor)\
-                    .execute()
-                return response.data if response.data else []
-            
-            elif metodo == "Por Nombre" and valor:
-                response = supabase.table("alertas_hemoglobina")\
-                    .select("*")\
-                    .ilike("nombre_apellido", f"%{valor}%")\
-                    .execute()
-                return response.data if response.data else []
-            
-            elif metodo == "Ver todos los pacientes" or not metodo:
-                # Obtener todos los pacientes (limitado a 50)
-                response = supabase.table("alertas_hemoglobina")\
-                    .select("*")\
-                    .limit(50)\
-                    .execute()
-                return response.data if response.data else []
-            
-            return []
-        
-        except Exception as e:
-            st.error(f"❌ Error al buscar pacientes: {str(e)}")
-            return []
-    
-    # ========== FUNCIÓN PARA OBTENER CITAS DEL PACIENTE ==========
-    def obtener_citas_paciente(dni):
-        """Obtiene el historial de citas de un paciente"""
-        try:
-            response = supabase.table("citas")\
-                .select("*")\
-                .eq("dni_paciente", dni)\
-                .order("fecha_cita", desc=True)\
-                .execute()
-            return response.data if response.data else []
-        except Exception as e:
-            st.warning(f"No se pudieron cargar las citas: {str(e)}")
-            return []
-    
-    # ========== FUNCIÓN PARA AGREGAR NUEVA CITA (CORREGIDA) ==========
-    def agregar_cita(datos_cita):
-        """Agrega una nueva cita a la base de datos - VERSIÓN CORREGIDA"""
-        try:
-            # Mostrar qué estamos enviando
-            st.write("📤 Datos que se envían a Supabase:")
-            st.json(datos_cita)
-            
-            response = supabase.table("citas").insert(datos_cita).execute()
-            
-            if response.data:
-                st.success(f"✅ Cita guardada exitosamente! ID: {response.data[0].get('id')}")
-                return response.data
-            elif hasattr(response, 'error'):
-                error_msg = response.error.message
-                st.error(f"❌ Error al guardar: {error_msg}")
-                
-                # Mostrar ayuda específica
-                if "null value in column" in error_msg:
-                    st.info("💡 Faltan campos requeridos. Asegúrate de completar todos los campos.")
-                return None
-            else:
-                st.error("❌ Error desconocido al guardar")
-                return None
-                
-        except Exception as e:
-            st.error(f"🔥 Error inesperado: {str(e)}")
-            import traceback
-            st.code(traceback.format_exc())
-            return None
-    
-    # ========== EJECUTAR BÚSQUEDA ==========
-    pacientes_encontrados = []
-    
-    if buscar_paciente:
-        with st.spinner("🔍 Buscando pacientes..."):
-            pacientes_encontrados = buscar_pacientes_db(metodo_busqueda, valor_busqueda)
-    
-    # ========== MOSTRAR RESULTADOS ==========
-    if pacientes_encontrados:
-        if metodo_busqueda == "Ver todos los pacientes" or len(pacientes_encontrados) > 1:
-            st.success(f"✅ Se encontraron {len(pacientes_encontrados)} paciente(s)")
-            
-            # Mostrar lista de pacientes en un selectbox
-            opciones_pacientes = [f"{p['dni']} - {p['nombre_apellido']}" for p in pacientes_encontrados]
-            seleccion = st.selectbox("Seleccione un paciente:", opciones_pacientes)
-            
-            if seleccion:
-                dni_seleccionado = seleccion.split(" - ")[0]
-                paciente_encontrado = next((p for p in pacientes_encontrados if p['dni'] == dni_seleccionado), None)
-        else:
-            paciente_encontrado = pacientes_encontrados[0]
-    
-    # ========== MOSTRAR INFORMACIÓN DEL PACIENTE SELECCIONADO ==========
-    if paciente_encontrado:
-        st.markdown(f"### 👤 Paciente: **{paciente_encontrado.get('nombre_apellido', 'N/A')}**")
-        
-        # Tarjetas de información
-        col1, col2, col3, col4 = st.columns(4)
-        
-        with col1:
-            st.metric("DNI", paciente_encontrado.get('dni', 'N/A'))
-        with col2:
-            edad = paciente_encontrado.get('edad_meses', 'N/A')
-            st.metric("Edad", f"{edad} meses" if edad != 'N/A' else 'N/A')
-        with col3:
-            st.metric("Hemoglobina", f"{paciente_encontrado.get('hemoglobina_dl1', 'N/A')} g/dL")
-        with col4:
-            riesgo = paciente_encontrado.get('riesgo', 'N/A')
-            color = {
-                'BAJO RIESGO': 'green',
-                'MODERADO': 'orange',
-                'ALTO RIESGO': 'red',
-                'ALTÍSIMO RIESGO': 'darkred'
-            }.get(riesgo, 'gray')
-            st.markdown(f"**Riesgo:** <span style='color:{color}; font-weight:bold'>{riesgo}</span>", unsafe_allow_html=True)
-        
-        # Pestañas para información detallada
-        tab_info, tab_historial, tab_nueva_cita = st.tabs(["📋 Información", "📅 Historial", "➕ Nueva Cita"])
-        
-        with tab_info:
-            # Información detallada del paciente
-            col_info1, col_info2 = st.columns(2)
-            
-            with col_info1:
-                st.markdown("#### Datos Personales")
-                st.write(f"**Nombre completo:** {paciente_encontrado.get('nombre_apellido', 'N/A')}")
-                st.write(f"**Género:** {paciente_encontrado.get('genero', 'N/A')}")
-                st.write(f"**Teléfono:** {paciente_encontrado.get('telefono', 'N/A')}")
-                st.write(f"**Región:** {paciente_encontrado.get('region', 'N/A')}")
-                st.write(f"**Departamento:** {paciente_encontrado.get('departamento', 'N/A')}")
-            
-            with col_info2:
-                st.markdown("#### Datos Clínicos")
-                st.write(f"**Estado:** {paciente_encontrado.get('estado_paciente', 'N/A')}")
-                st.write(f"**En seguimiento:** {'✅ Sí' if paciente_encontrado.get('en_seguimiento') else '❌ No'}")
-                st.write(f"**Consume hierro:** {'✅ Sí' if paciente_encontrado.get('consumir_hierro') else '❌ No'}")
-                st.write(f"**Antecedentes anemia:** {'✅ Sí' if paciente_encontrado.get('antecedentes_anemia') else '❌ No'}")
-                st.write(f"**Fecha última alerta:** {paciente_encontrado.get('fecha_alerta', 'N/A')}")
-        
-        with tab_historial:
-            st.markdown("#### 📋 Historial de Citas")
-            
-            # Obtener citas del paciente
-            citas_paciente = obtener_citas_paciente(paciente_encontrado['dni'])
-            
-            if citas_paciente:
-                # Convertir a DataFrame para mejor visualización
-                df_citas = pd.DataFrame(citas_paciente)
-                
-                # Formatear columnas para mostrar
-                if not df_citas.empty:
-                    # Seleccionar columnas relevantes
-                    columnas_mostrar = ['fecha_cita', 'hora_cita', 'tipo_consulta', 
-                                       'diagnostico', 'tratamiento', 'investigador_responsable']
-                    columnas_disponibles = [c for c in columnas_mostrar if c in df_citas.columns]
-                    
-                    if columnas_disponibles:
-                        df_display = df_citas[columnas_disponibles].copy()
-                        
-                        # Ordenar por fecha
-                        if 'fecha_cita' in df_display.columns:
-                            df_display = df_display.sort_values('fecha_cita', ascending=False)
-                        
-                        # Mostrar tabla
-                        st.dataframe(
-                            df_display,
-                            use_container_width=True,
-                            hide_index=True,
-                            column_config={
-                                "fecha_cita": st.column_config.DateColumn("Fecha"),
-                                "hora_cita": st.column_config.TimeColumn("Hora"),
-                                "diagnostico": st.column_config.TextColumn("Diagnóstico", width="medium"),
-                                "tratamiento": st.column_config.TextColumn("Tratamiento", width="medium")
-                            }
-                        )
-                        
-                        # Métricas del historial
-                        col_hist1, col_hist2 = st.columns(2)
-                        with col_hist1:
-                            st.metric("Total de citas", len(citas_paciente))
-                        with col_hist2:
-                            if 'fecha_cita' in df_citas.columns:
-                                ultima_cita = df_citas['fecha_cita'].max()
-                                st.metric("Última cita", ultima_cita)
-            else:
-                st.info("📭 No hay citas registradas para este paciente")
-        
-        with tab_nueva_cita:
-            st.markdown("#### Registrar Nueva Cita")
-            
-            with st.form("form_nueva_cita"):
-                col_fecha, col_hora = st.columns(2)
-                with col_fecha:
-                    fecha_cita = st.date_input("📅 Fecha de cita", value=datetime.now())
-                with col_hora:
-                    hora_cita = st.time_input("⏰ Hora", value=datetime.now().time())
-                
-                tipo_consulta = st.selectbox(
-                    "🩺 Tipo de consulta",
-                    ["Consulta inicial", "Control mensual", "Control escolar", 
-                     "Seguimiento", "Urgencia", "Reevaluación"]
-                )
-                
-                diagnostico = st.text_area(
-                    "📝 Diagnóstico",
-                    placeholder="Ej: Anemia moderada controlada, mejora en niveles de hemoglobina..."
-                )
-                
-                tratamiento = st.text_area(
-                    "💊 Tratamiento indicado",
-                    placeholder="Ej: Continuar con suplemento de hierro, dieta rica en..."
-                )
-                
-                observaciones = st.text_area(
-                    "📋 Observaciones adicionales",
-                    placeholder="Notas importantes sobre el estado del paciente..."
-                )
-                
-                col_responsable, col_proxima = st.columns(2)
-                with col_responsable:
-                    investigador = st.text_input("👨‍⚕️ Investigador responsable", value="Dr. Responsable")
-                with col_proxima:
-                    proxima_cita = st.date_input("📅 Próxima cita", 
-                                                value=datetime.now() + timedelta(days=30))
-                
-                # ========== CAMPOS NUEVOS REQUERIDOS POR LA TABLA ==========
-                st.markdown("---")
-                st.markdown("#### 🩺 Datos Clínicos Adicionales")
-                
-                col_severidad, col_suplemento = st.columns(2)
-                with col_severidad:
-                    severidad_anemia = st.selectbox(
-                        "📊 Severidad de anemia",
-                        ["NORMAL", "LEVE", "MODERADA", "SEVERA", "NO ESPECIFICADA"],
-                        index=4
-                    )
-                
-                with col_suplemento:
-                    suplemento_hierro = st.selectbox(
-                        "💊 Suplemento de hierro indicado",
-                        ["Ninguno", "Sulfato ferroso", "Gluconato ferroso", "Fumarato ferroso", 
-                         "Hierro polimaltosado", "Sulfato ferroso intravenoso"]
-                    )
-                
-                frecuencia_suplemento = st.selectbox(
-                    "📅 Frecuencia de suplemento",
-                    ["No aplica", "Diario", "3 veces por semana", "2 veces por semana", 
-                     "Semanal", "Quincenal", "Mensual"]
-                )
-                
-                # Botones de acción
-                col_btn1, col_btn2, col_btn3 = st.columns(3)
-                with col_btn2:
-                    guardar_cita = st.form_submit_button("💾 Guardar Cita", type="primary")
-                
-                if guardar_cita:
-                    if not diagnostico.strip() or not tratamiento.strip():
-                        st.error("⚠️ Por favor complete el diagnóstico y tratamiento")
-                    else:
-                        nueva_cita = {
-                            "dni_paciente": paciente_encontrado['dni'],
-                            "fecha_cita": str(fecha_cita),
-                            "hora_cita": str(hora_cita),
-                            "tipo_consulta": tipo_consulta,
-                            "diagnostico": diagnostico,
-                            "tratamiento": tratamiento,
-                            "observaciones": observaciones,
-                            "investigador_responsable": investigador,
-                            "severidad_anemia": severidad_anemia,
-                            "suplemento_hierro": suplemento_hierro,
-                            "frecuencia_suplemento": frecuencia_suplemento,
-                            "proxima_cita": str(proxima_cita)
-                        }
-                        
-                        resultado = agregar_cita(nueva_cita)
-                        if resultado:
-                            st.success("✅ Cita registrada exitosamente!")
-                            st.balloons()
-                            st.rerun()
-    
-    elif buscar_paciente and not pacientes_encontrados:
-        st.error("❌ No se encontraron pacientes con los criterios de búsqueda")
-    
-    # ========== SECCIÓN: PACIENTES EN SEGUIMIENTO ==========
-    st.markdown("---")
-    st.subheader("📊 Pacientes en Seguimiento Activo")
+    # Obtener pacientes según filtro
+    pacientes_filtrados = []
     
     try:
-        # Obtener pacientes en seguimiento
-        response = supabase.table("alertas_hemoglobina")\
-            .select("*")\
-            .eq("en_seguimiento", True)\
-            .execute()
+        response = supabase.table("alertas_hemoglobina").select("*").execute()
+        todos_pacientes = response.data if response.data else []
         
-        pacientes_seguimiento = response.data if response.data else []
-        
-        if pacientes_seguimiento:
-            df_seguimiento = pd.DataFrame(pacientes_seguimiento)
+        for paciente in todos_pacientes:
+            hb = paciente.get('hemoglobina_dl1', 0)
+            edad = paciente.get('edad_meses', 0)
+            clasificacion = clasificar_anemia_simple(hb, edad)
             
-            # Mostrar métricas
-            col_met1, col_met2, col_met3 = st.columns(3)
-            with col_met1:
-                st.metric("Total en seguimiento", len(pacientes_seguimiento))
-            with col_met2:
-                if 'hemoglobina_dl1' in df_seguimiento.columns:
-                    hb_promedio = df_seguimiento['hemoglobina_dl1'].mean()
-                    st.metric("HB promedio", f"{hb_promedio:.1f} g/dL")
-            with col_met3:
-                if 'edad_meses' in df_seguimiento.columns:
-                    edad_promedio = df_seguimiento['edad_meses'].mean()
-                    st.metric("Edad promedio", f"{edad_promedio:.0f} meses")
+            include = False
             
-            # Mostrar tabla de pacientes en seguimiento
-            columnas_relevantes = ['nombre_apellido', 'dni', 'edad_meses', 
-                                  'hemoglobina_dl1', 'riesgo', 'estado_alerta']
-            columnas_disponibles = [c for c in columnas_relevantes if c in df_seguimiento.columns]
+            if filtro_anemia == "Todos los pacientes":
+                include = True
+            elif filtro_anemia == "Con anemia" and clasificacion in ["Leve", "Moderada", "Severa"]:
+                include = True
+            elif filtro_anemia == "Anemia moderada/severa" and clasificacion in ["Moderada", "Severa"]:
+                include = True
+            elif filtro_anemia == "En seguimiento" and paciente.get('en_seguimiento', False):
+                include = True
             
-            if columnas_disponibles:
-                st.dataframe(
-                    df_seguimiento[columnas_disponibles],
-                    use_container_width=True,
-                    height=300,
-                    hide_index=True,
-                    column_config={
-                        "nombre_apellido": "Paciente",
-                        "dni": "DNI",
-                        "edad_meses": "Edad (meses)",
-                        "hemoglobina_dl1": "HB (g/dL)",
-                        "riesgo": "Nivel de riesgo",
-                        "estado_alerta": "Estado"
-                    }
-                )
-        else:
-            st.info("📭 No hay pacientes en seguimiento activo")
-            
+            if include:
+                pacientes_filtrados.append({
+                    **paciente,
+                    'clasificacion_anemia': clasificacion,
+                    'icono_anemia': obtener_color_anemia(clasificacion)
+                })
+    
     except Exception as e:
-        st.error(f"❌ Error al cargar pacientes en seguimiento: {str(e)}")
+        st.error(f"Error al cargar pacientes: {str(e)}")
+    
+    # Mostrar lista de pacientes
+    if pacientes_filtrados:
+        st.success(f"✅ {len(pacientes_filtrados)} pacientes encontrados")
+        
+        # Crear opciones para selectbox
+        opciones_pacientes = []
+        for paciente in pacientes_filtrados:
+            nombre = paciente.get('nombre_apellido', 'Sin nombre')
+            dni = paciente.get('dni', 'N/A')
+            anemia = paciente.get('clasificacion_anemia', 'N/A')
+            icono = paciente.get('icono_anemia', '⚪')
+            hb = paciente.get('hemoglobina_dl1', 'N/A')
+            
+            opciones_pacientes.append(f"{icono} {nombre} | DNI: {dni} | Hb: {hb}g/dL | {anemia}")
+        
+        # Seleccionar paciente
+        paciente_seleccionado = st.selectbox(
+            "Seleccione el paciente para la cita:",
+            opciones_pacientes,
+            key="select_paciente_cita"
+        )
+        
+        if paciente_seleccionado:
+            # Extraer DNI de la selección
+            dni_seleccionado = paciente_seleccionado.split("|")[1].split(":")[1].strip()
+            
+            # Buscar paciente completo
+            paciente_completo = None
+            for p in pacientes_filtrados:
+                if p['dni'] == dni_seleccionado:
+                    paciente_completo = p
+                    break
+            
+            if paciente_completo:
+                st.markdown(f"### 📋 Cita para: **{paciente_completo.get('nombre_apellido')}**")
+                
+                # Mostrar alerta de anemia
+                clasificacion = paciente_completo.get('clasificacion_anemia')
+                icono = paciente_completo.get('icono_anemia')
+                hb = paciente_completo.get('hemoglobina_dl1')
+                
+                if clasificacion == "Severa":
+                    st.error(f"{icono} **ANEMIA SEVERA** - Hemoglobina: {hb} g/dL - **ATENCIÓN INMEDIATA REQUERIDA**")
+                elif clasificacion == "Moderada":
+                    st.warning(f"{icono} **ANEMIA MODERADA** - Hemoglobina: {hb} g/dL - Seguimiento mensual requerido")
+                elif clasificacion == "Leve":
+                    st.info(f"{icono} **ANEMIA LEVE** - Hemoglobina: {hb} g/dL - Seguimiento cada 3 meses")
+                else:
+                    st.success(f"{icono} **SIN ANEMIA** - Hemoglobina: {hb} g/dL")
+                
+                # Formulario de cita ESPECÍFICO para anemia
+                with st.form("form_cita_anemia"):
+                    col1, col2 = st.columns(2)
+                    
+                    with col1:
+                        fecha_cita = st.date_input("📅 Fecha de cita", value=datetime.now())
+                        tipo_consulta = st.selectbox(
+                            "🩺 Tipo de consulta",
+                            ["Control de anemia", "Seguimiento anemia", "Evaluación hematológica",
+                             "Control tratamiento hierro", "Reevaluación anemia", "Urgencia anemia"]
+                        )
+                    
+                    with col2:
+                        hora_cita = st.time_input("⏰ Hora", value=datetime.now().time())
+                        proxima_cita = st.date_input(
+                            "📅 Próximo control sugerido",
+                            value=datetime.now() + timedelta(days=30)
+                        )
+                    
+                    # Campos específicos para anemia
+                    st.markdown("#### 🩺 Datos Clínicos de Anemia")
+                    
+                    evolucion_anemia = st.selectbox(
+                        "📈 Evolución de la anemia",
+                        ["Mejoría", "Estable", "Empeoramiento", "Primera evaluación", "No evaluado"]
+                    )
+                    
+                    col_trat1, col_trat2 = st.columns(2)
+                    with col_trat1:
+                        tratamiento_hierro = st.selectbox(
+                            "💊 Tratamiento con hierro",
+                            ["Sin tratamiento", "Sulfato ferroso", "Gluconato ferroso", 
+                             "Fumarato ferroso", "Hierro intravenoso", "Otro"]
+                        )
+                    
+                    with col_trat2:
+                        dosis_hierro = st.text_input(
+                            "📏 Dosis de hierro",
+                            placeholder="Ej: 3 mg/kg/día"
+                        )
+                    
+                    diagnostico = st.text_area(
+                        "📝 Diagnóstico detallado",
+                        value=f"Paciente con {clasificacion.lower()}. {paciente_completo.get('interpretacion_hematologica', '')}",
+                        height=100
+                    )
+                    
+                    plan_tratamiento = st.text_area(
+                        "💡 Plan de tratamiento",
+                        placeholder="Describa el plan específico para este paciente...",
+                        height=100
+                    )
+                    
+                    observaciones = st.text_area(
+                        "📋 Observaciones específicas",
+                        placeholder="Observaciones sobre respuesta al tratamiento, efectos secundarios, etc.",
+                        height=100
+                    )
+                    
+                    investigador = st.text_input(
+                        "👨‍⚕️ Hematólogo/Responsable",
+                        value="Dr. Hematólogo"
+                    )
+                    
+                    # Botón de guardar
+                    if st.form_submit_button("💾 Guardar Cita de Anemia", type="primary", use_container_width=True):
+                        if not diagnostico.strip():
+                            st.error("❌ Por favor complete el diagnóstico")
+                        else:
+                            nueva_cita = {
+                                "dni_paciente": dni_seleccionado,
+                                "fecha_cita": str(fecha_cita),
+                                "hora_cita": str(hora_cita),
+                                "tipo_consulta": tipo_consulta,
+                                "diagnostico": diagnostico,
+                                "tratamiento": f"{tratamiento_hierro} - {dosis_hierro}" if dosis_hierro else tratamiento_hierro,
+                                "observaciones": f"Evolución: {evolucion_anemia}. {observaciones}",
+                                "investigador_responsable": investigador,
+                                "proxima_cita": str(proxima_cita),
+                                "severidad_anemia": clasificacion,
+                                "hemoglobina_actual": hb,
+                                "evolucion": evolucion_anemia
+                            }
+                            
+                            try:
+                                response = supabase.table("citas").insert(nueva_cita).execute()
+                                
+                                if response.data:
+                                    st.success("✅ Cita de anemia guardada exitosamente!")
+                                    st.balloons()
+                                    
+                                    # Actualizar estado de seguimiento si es necesario
+                                    if clasificacion in ["Moderada", "Severa"]:
+                                        supabase.table("alertas_hemoglobina")\
+                                            .update({"en_seguimiento": True})\
+                                            .eq("dni", dni_seleccionado)\
+                                            .execute()
+                                    
+                                    # Limpiar cache y recargar
+                                    if 'citas_vinculadas' in st.session_state:
+                                        del st.session_state.citas_vinculadas
+                                    
+                                    time.sleep(2)
+                                    st.rerun()
+                                else:
+                                    st.error("❌ Error al guardar la cita")
+                            except Exception as e:
+                                st.error(f"❌ Error: {str(e)}")
+    
+    # ========== SECCIÓN 3: REPORTES DE ANEMIA ==========
+    st.markdown("---")
+    st.subheader("📊 Reportes de Seguimiento de Anemia")
+    
+    col_rep1, col_rep2 = st.columns(2)
+    
+    with col_rep1:
+        if st.button("📋 Generar Reporte Mensual", use_container_width=True):
+            try:
+                # Obtener citas del último mes
+                un_mes_atras = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
+                
+                response = supabase.table("citas")\
+                    .select("*")\
+                    .gte("fecha_cita", un_mes_atras)\
+                    .execute()
+                
+                citas_mes = response.data if response.data else []
+                
+                if citas_mes:
+                    st.success(f"📈 {len(citas_mes)} citas en el último mes")
+                    
+                    # Contar por severidad
+                    severidades = {}
+                    for cita in citas_mes:
+                        # Buscar información de anemia
+                        dni = cita.get('dni_paciente')
+                        if dni:
+                            response_pac = supabase.table("alertas_hemoglobina")\
+                                .select("hemoglobina_dl1, edad_meses")\
+                                .eq("dni", dni)\
+                                .execute()
+                            
+                            if response_pac.data:
+                                paciente = response_pac.data[0]
+                                clasificacion = clasificar_anemia_simple(
+                                    paciente.get('hemoglobina_dl1', 0),
+                                    paciente.get('edad_meses', 0)
+                                )
+                                
+                                severidades[clasificacion] = severidades.get(clasificacion, 0) + 1
+                    
+                    # Mostrar resultados
+                    for severidad, cantidad in severidades.items():
+                        st.write(f"{obtener_color_anemia(severidad)} {severidad}: {cantidad} pacientes")
+                else:
+                    st.info("No hay citas en el último mes")
+                    
+            except Exception as e:
+                st.error(f"Error: {str(e)}")
+    
+    with col_rep2:
+        if st.button("🩺 Pacientes Críticos", use_container_width=True):
+            try:
+                # Buscar pacientes con anemia severa
+                response = supabase.table("alertas_hemoglobina")\
+                    .select("*")\
+                    .execute()
+                
+                pacientes_criticos = []
+                for paciente in response.data:
+                    hb = paciente.get('hemoglobina_dl1', 0)
+                    edad = paciente.get('edad_meses', 0)
+                    
+                    if (edad < 60 and hb < 9.0) or (edad >= 60 and hb < 10.0):
+                        pacientes_criticos.append(paciente)
+                
+                if pacientes_criticos:
+                    st.error(f"🚨 {len(pacientes_criticos)} pacientes con ANEMIA SEVERA")
+                    
+                    for paciente in pacientes_criticos[:5]:  # Mostrar primeros 5
+                        st.write(f"**{paciente.get('nombre_apellido')}** - Hb: {paciente.get('hemoglobina_dl1')} g/dL")
+                else:
+                    st.success("✅ No hay pacientes con anemia severa")
+                    
+            except Exception as e:
+                st.error(f"Error: {str(e)}")
 # ==================================================
 # PESTAÑA 5: DASHBOARD NACIONAL
 # ==================================================
