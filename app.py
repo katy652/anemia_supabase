@@ -2524,112 +2524,7 @@ with tab4:
         st.error(f"Error al cargar datos de seguimiento: {e}")
 
 # ==================================================
-# PESTAÑA 5: EVALUACIÓN NUTRICIONAL
-# ==================================================
-
-with tab4:
-    st.header("🍎 Evaluación Nutricional Individual")
-    
-    with st.form("evaluacion_nutricional"):
-        st.subheader("Datos del Paciente para Evaluación")
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            edad_eval = st.number_input("Edad (meses)", 1, 240, 24, key="eval_edad")
-            peso_eval = st.number_input("Peso (kg)", 0.0, 50.0, 12.5, 0.1, key="eval_peso")
-            talla_eval = st.number_input("Talla (cm)", 0.0, 150.0, 85.0, 0.1, key="eval_talla")
-            genero_eval = st.selectbox("Género", GENEROS, key="eval_genero")
-        
-        with col2:
-            hemoglobina_eval = st.number_input("Hemoglobina (g/dL)", 5.0, 20.0, 11.0, 0.1, key="eval_hb")
-            altitud_eval = st.number_input("Altitud (msnm)", 0, 5000, 150, key="eval_altitud")
-        
-        submitted_eval = st.form_submit_button("📊 EVALUAR ESTADO NUTRICIONAL")
-    
-    if submitted_eval:
-        # Calcular hemoglobina ajustada
-        ajuste_hb_eval = obtener_ajuste_hemoglobina(altitud_eval)
-        hb_ajustada_eval = hemoglobina_eval + ajuste_hb_eval
-        
-        # Evaluación nutricional
-        estado_peso, estado_talla, estado_nutricional = evaluar_estado_nutricional(
-            edad_eval, peso_eval, talla_eval, genero_eval
-        )
-        
-        # Clasificación de anemia
-        clasificacion, recomendacion, _ = clasificar_anemia(hb_ajustada_eval, edad_eval)
-        
-        # Generar interpretación automática con parámetros simulados
-        parametros_simulados = generar_parametros_hematologicos(hb_ajustada_eval, edad_eval)
-        interpretacion_auto = interpretar_analisis_hematologico(
-            parametros_simulados['ferritina'],
-            parametros_simulados['chcm'],
-            parametros_simulados['reticulocitos'], 
-            parametros_simulados['transferrina'],
-            hb_ajustada_eval,
-            edad_eval
-        )
-        
-        # Mostrar resultados
-        st.markdown("---")
-        st.subheader("📋 Resultados de la Evaluación")
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.markdown("### 🩺 Parámetros Hematológicos")
-            st.metric("Hemoglobina medida", f"{hemoglobina_eval:.1f} g/dL")
-            st.metric("Ajuste por altitud", f"{ajuste_hb_eval:+.1f} g/dL")
-            st.metric("Hemoglobina ajustada", f"{hb_ajustada_eval:.1f} g/dL", delta=f"{ajuste_hb_eval:+.1f}")
-            st.metric("Clasificación OMS", clasificacion)
-            
-            # Mostrar parámetros hematológicos estimados
-            st.markdown("#### 🧪 Parámetros Hematológicos Estimados")
-            st.metric("Ferritina", f"{parametros_simulados['ferritina']} ng/mL")
-            st.metric("CHCM", f"{parametros_simulados['chcm']} g/dL")
-            st.metric("Reticulocitos", f"{parametros_simulados['reticulocitos']} %")
-        
-        with col2:
-            st.markdown("### 🍎 Parámetros Nutricionales")
-            st.metric("Estado de Peso", estado_peso)
-            st.metric("Estado de Talla", estado_talla)
-            st.metric("Estado Nutricional", estado_nutricional)
-            st.metric("Recomendación", recomendacion)
-            
-            # Mostrar más parámetros hematológicos
-            st.markdown("#### 🔬 Más Parámetros")
-            st.metric("VCM", f"{parametros_simulados['vcm']} fL")
-            st.metric("HCM", f"{parametros_simulados['hcm']} pg")
-            st.metric("Transferrina", f"{parametros_simulados['transferrina']} mg/dL")
-        
-        # INTERPRETACIÓN AUTOMÁTICA
-        st.markdown("### 🎯 Interpretación Hematológica Automática")
-        
-        # Aplicar estilo según severidad
-        if interpretacion_auto['severidad'] == "CRITICO":
-            st.markdown(f'<div class="interpretacion-critica">', unsafe_allow_html=True)
-        elif interpretacion_auto['severidad'] == "MODERADO":
-            st.markdown(f'<div class="interpretacion-moderada">', unsafe_allow_html=True)
-        elif interpretacion_auto['severidad'] == "LEVE":
-            st.markdown(f'<div class="interpretacion-leve">', unsafe_allow_html=True)
-        else:
-            st.markdown(f'<div class="interpretacion-normal">', unsafe_allow_html=True)
-        
-        st.markdown(f"**📋 Análisis Integrado - {interpretacion_auto['severidad']}**")
-        st.markdown(f"**Interpretación:** {interpretacion_auto['interpretacion']}")
-        st.markdown(f"**💡 Plan Específico:** {interpretacion_auto['recomendacion']}")
-        st.markdown('</div>', unsafe_allow_html=True)
-        
-        # Tabla de referencia
-        st.subheader("📊 Tablas de Referencia OMS")
-        referencia_df = obtener_referencia_crecimiento()
-        if not referencia_df.empty:
-            st.dataframe(referencia_df, use_container_width=True, height=300)
-        else:
-            st.info("No se pudieron cargar las tablas de referencia")
-
-# ==================================================
-# PESTAÑA 6: DASHBOARD NACIONAL
+# PESTAÑA 5: DASHBOARD NACIONAL
 # ==================================================
 
 with tab5:
@@ -3118,6 +3013,7 @@ with tab5:
             <h4>Actualizado: Diciembre 2024</h4>
         </div>
         """, unsafe_allow_html=True)
+
 # ==================================================
 # SIDEBAR
 # ==================================================
