@@ -2133,51 +2133,84 @@ with tab4:
                 """)
         
         # ========== HISTORIAL CLÍNICO ==========
-        st.markdown("## 🏥 Historial Clínico")
+        # En la pestaña de Historial Clínico / Seguimiento
+
+# 1. CONECTAR CON SUPABASE
+@st.cache_resource
+def init_supabase():
+    supabase_url = st.secrets["SUPABASE_URL"]
+    supabase_key = st.secrets["SUPABASE_KEY"]
+    return create_client(supabase_url, supabase_key)
+
+supabase = init_supabase()
+
+# 2. BUSCAR PACIENTE
+dni_buscado = st.text_input("Ingrese DNI del paciente:")
+
+if dni_buscado:
+    # Verificar si paciente existe
+    paciente = supabase.table("alertas_hemoglobina")\
+        .select("*")\
+        .eq("dni", dni_buscado)\
+        .execute()
+    
+    if paciente.data:
+        st.success(f"✅ Paciente encontrado: {paciente.data[0]['nombre_apellido']}")
         
-        # Simular historial (en un sistema real, esto vendría de una tabla de historial)
-        historial_data = {
-            'fecha': ['2024-01-15', '2024-02-20', '2024-03-25'],
-            'hemoglobina': [10.5, 11.0, 11.5],
-            'diagnostico': ['Anemia Moderada', 'Anemia Leve', 'Mejoría'],
-            'tratamiento': ['Suplemento de hierro', 'Continuar suplemento', 'Control mensual'],
-            'medico': ['Dr. Perez', 'Dr. Perez', 'Dr. Lopez']
-        }
+        # 3. MOSTRAR HISTORIAL REAL (desde tabla citas)
+        st.subheader("📋 Historial Clínico Real")
         
-        historial_df = pd.DataFrame(historial_data)
+        historial = supabase.table("citas")\
+            .select("*")\
+            .eq("dni_paciente", dni_buscado)\
+            .order("fecha_cita", desc=True)\
+            .execute()
         
-        col_hist1, col_hist2 = st.columns([3, 1])
+        if historial.data:
+            # Convertir a DataFrame para mostrar mejor
+            df_historial = pd.DataFrame(historial.data)
+            st.dataframe(df_historial[['fecha_cita', 'diagnostico', 'tratamiento', 'investigador_responsable']])
+        else:
+            st.info("No hay citas registradas para este paciente")
         
-        with col_hist1:
-            st.dataframe(historial_df, use_container_width=True, hide_index=True)
+        # 4. FORMULARIO PARA NUEVA CITA
+        st.subheader("➕ Registrar Nueva Cita")
         
-        with col_hist2:
-            # Gráfico de evolución de hemoglobina
-            fig_evolucion = px.line(
-                historial_df,
-                x='fecha',
-                y='hemoglobina',
-                title='<b>Evolución de Hemoglobina</b>',
-                markers=True,
-                height=300
-            )
+        with st.form("nueva_cita"):
+            col1, col2 = st.columns(2)
             
-            # Línea de referencia para anemia
-            fig_evolucion.add_hline(
-                y=11.0,
-                line_dash="dash",
-                line_color="red",
-                annotation_text="Umbral Anemia"
-            )
+            with col1:
+                fecha_cita = st.date_input("Fecha de cita")
+                hora_cita = st.time_input("Hora")
+                tipo_consulta = st.selectbox("Tipo de consulta", 
+                                             ["Control", "Evaluación", "Emergencia", "Seguimiento"])
+                
+            with col2:
+                diagnostico = st.text_area("Diagnóstico")
+                tratamiento = st.text_area("Tratamiento")
+                proxima_cita = st.date_input("Próxima cita")
             
-            fig_evolucion.add_hline(
-                y=12.0,
-                line_dash="dash",
-                line_color="green",
-                annotation_text="Normal"
-            )
+            submit_cita = st.form_submit_button("💾 Guardar Cita")
             
-            st.plotly_chart(fig_evolucion, use_container_width=True)
+            if submit_cita:
+                nueva_cita = {
+                    "dni_paciente": dni_buscado,
+                    "fecha_cita": str(fecha_cita),
+                    "hora_cita": str(hora_cita),
+                    "tipo_consulta": tipo_consulta,
+                    "diagnostico": diagnostico,
+                    "tratamiento": tratamiento,
+                    "proxima_cita": str(proxima_cita),
+                    "investigador_responsable": "Dr. Responsable"  # Puedes hacerlo dinámico
+                }
+                
+                # Insertar en Supabase
+                response = supabase.table("citas").insert(nueva_cita).execute()
+                st.success("✅ Cita guardada correctamente en la base de datos")
+                st.rerun()  # Recargar para mostrar la nueva cita
+                
+    else:
+        st.error("❌ Paciente no encontrado")
         
         # ========== FORMULARIO PARA NUEVA CITA ==========
         st.markdown("## 📝 Registrar Nueva Cita")
