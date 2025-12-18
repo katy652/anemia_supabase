@@ -496,12 +496,30 @@ def calcular_hemoglobina_ajustada(hemoglobina_medida, altitud):
 # SISTEMA DE INTERPRETACIÓN AUTOMÁTICA
 # ==================================================
 
+def generar_interpretacion_completa(hemoglobina_ajustada, edad_meses):
+    interpretacion = ""
     
-    # CLASIFICACIÓN DE ANEMIA
-    clasificacion_hb, _, _ = clasificar_anemia(hemoglobina_ajustada, edad_meses)
-    interpretacion += f"📊 **CLASIFICACIÓN HEMOGLOBINA: {clasificacion_hb}**"
+    # 1. CLASIFICACIÓN DE ANEMIA
+    clasificacion_hb, rango_min, rango_max = clasificar_anemia(hemoglobina_ajustada, edad_meses)
+    interpretacion += f"📊 **CLASIFICACIÓN HEMOGLOBINA: {clasificacion_hb}**\n\n"
     
-    # GENERAR RECOMENDACIÓN
+    # 2. DETERMINAR SEVERIDAD BASADA EN LA CLASIFICACIÓN
+    if clasificacion_hb == "ANEMIA GRAVE":
+        severidad = "CRITICO"
+    elif clasificacion_hb == "ANEMIA MODERADA":
+        severidad = "MODERADO"
+    elif clasificacion_hb == "ANEMIA LEVE":
+        severidad = "LEVE"
+    else:  # NORMAL, OTROS CASOS
+        severidad = "NORMAL"
+    
+    # 3. AGREGAR INFORMACIÓN ADICIONAL A LA INTERPRETACIÓN
+    interpretacion += f"📈 **Nivel de hemoglobina**: {hemoglobina_ajustada} g/dL\n"
+    interpretacion += f"📅 **Edad**: {edad_meses} meses\n"
+    interpretacion += f"🎯 **Rango normal esperado**: {rango_min} - {rango_max} g/dL\n"
+    interpretacion += f"⚠️ **Nivel de severidad**: {severidad}\n\n"
+    
+    # 4. GENERAR RECOMENDACIÓN SEGÚN SEVERIDAD
     if severidad == "CRITICO":
         recomendacion = "🚨 **INTERVENCIÓN INMEDIATA**: Suplementación con hierro elemental 3-6 mg/kg/día + Control en 15 días + Evaluación médica urgente"
         codigo_color = "#DC2626"
@@ -515,15 +533,20 @@ def calcular_hemoglobina_ajustada(hemoglobina_medida, altitud):
         recomendacion = "✅ **SEGUIMIENTO RUTINARIO**: Mantener alimentación balanceada + Control preventivo cada 6 meses"
         codigo_color = "#16A34A"
     
+    # 5. AGREGAR RECOMENDACIÓN A LA INTERPRETACIÓN
+    interpretacion += f"💡 **RECOMENDACIÓN**: {recomendacion}"
+    
     return {
         "interpretacion": interpretacion,
         "severidad": severidad,
         "recomendacion": recomendacion,
         "codigo_color": codigo_color,
-        "clasificacion_hemoglobina": clasificacion_hb
+        "clasificacion_hemoglobina": clasificacion_hb,
+        "hemoglobina": hemoglobina_ajustada,
+        "edad_meses": edad_meses,
+        "rango_min": rango_min,
+        "rango_max": rango_max
     }
-
-
 
 # ==================================================
 # CLASIFICACIÓN DE ANEMIA
