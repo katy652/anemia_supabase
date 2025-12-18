@@ -751,6 +751,312 @@ FACTORES_SOCIOECONOMICOS = [
     "Trabajo informal o precario"
 ]
 
+# =========================================================
+# FUNCIÓN FORMULARIO DE BIOMARCADORES - COLOCA AQUÍ
+# =========================================================
+def form_analisis_biomarcadores():
+    """
+    Formulario para ingresar los valores de biomarcadores hematológicos
+    """
+    from datetime import datetime
+    
+    st.markdown("#### 📝 **Ingrese los valores de laboratorio**")
+    
+    # Crear formulario en columnas
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.markdown("##### 🩸 **Hemograma Completo**")
+        hemoglobina = st.number_input("Hemoglobina (g/dL)", 
+                                     min_value=0.0, 
+                                     max_value=20.0, 
+                                     value=10.0, 
+                                     step=0.1,
+                                     key="hemo_biomarcador")
+        hematocrito = st.number_input("Hematocrito (%)", 
+                                     min_value=0.0, 
+                                     max_value=70.0, 
+                                     value=35.0, 
+                                     step=0.1,
+                                     key="hemato_biomarcador")
+        vcm = st.number_input("VCM (fL)", 
+                             min_value=50.0, 
+                             max_value=120.0, 
+                             value=85.0, 
+                             step=0.1,
+                             key="vcm_biomarcador")
+        hcm = st.number_input("HCM (pg)", 
+                             min_value=15.0, 
+                             max_value=40.0, 
+                             value=28.0, 
+                             step=0.1,
+                             key="hcm_biomarcador")
+        chcm = st.number_input("CHCM (g/dL)", 
+                              min_value=20.0, 
+                              max_value=40.0, 
+                              value=33.0, 
+                              step=0.1,
+                              key="chcm_biomarcador")
+        reticulocitos = st.number_input("Reticulocitos (%)", 
+                                       min_value=0.0, 
+                                       max_value=10.0, 
+                                       value=1.0, 
+                                       step=0.1,
+                                       key="retic_biomarcador")
+    
+    with col2:
+        st.markdown("##### 🧪 **Hierro y Ferritina**")
+        ferritina = st.number_input("Ferritina (ng/mL)", 
+                                   min_value=0.0, 
+                                   max_value=500.0, 
+                                   value=30.0, 
+                                   step=0.1,
+                                   key="ferritina_biomarcador")
+        hierro_serico = st.number_input("Hierro Sérico (µg/dL)", 
+                                       min_value=0.0, 
+                                       max_value=200.0, 
+                                       value=60.0, 
+                                       step=0.1,
+                                       key="hierro_biomarcador")
+        transferrina = st.number_input("Transferrina (mg/dL)", 
+                                      min_value=0.0, 
+                                      max_value=500.0, 
+                                      value=250.0, 
+                                      step=0.1,
+                                      key="transferrina_biomarcador")
+        saturacion_transferrina = st.number_input("Saturación Transferrina (%)", 
+                                                 min_value=0.0, 
+                                                 max_value=100.0, 
+                                                 value=25.0, 
+                                                 step=0.1,
+                                                 key="saturacion_biomarcador")
+        
+        st.markdown("##### 🔬 **Inflamación**")
+        pcr = st.number_input("PCR (mg/L)", 
+                             min_value=0.0, 
+                             max_value=50.0, 
+                             value=5.0, 
+                             step=0.1,
+                             key="pcr_biomarcador")
+        vsg = st.number_input("VSG (mm/h)", 
+                             min_value=0.0, 
+                             max_value=100.0, 
+                             value=15.0, 
+                             step=0.1,
+                             key="vsg_biomarcador")
+    
+    with col3:
+        st.markdown("##### 💊 **Vitaminas**")
+        folato = st.number_input("Folato (ng/mL)", 
+                                min_value=0.0, 
+                                max_value=20.0, 
+                                value=5.0, 
+                                step=0.1,
+                                key="folato_biomarcador")
+        vitamina_b12 = st.number_input("Vitamina B12 (pg/mL)", 
+                                      min_value=0.0, 
+                                      max_value=2000.0, 
+                                      value=300.0, 
+                                      step=0.1,
+                                      key="b12_biomarcador")
+        
+        st.markdown("##### 📋 **Información del Laboratorio**")
+        laboratorio = st.text_input("Nombre del Laboratorio", 
+                                   value="Laboratorio Clínico",
+                                   key="lab_biomarcador")
+        
+        # Fecha del análisis
+        fecha_analisis = st.date_input("Fecha del Análisis", 
+                                      value=datetime.now().date(),
+                                      key="fecha_biomarcador")
+    
+    # Botón para procesar
+    col_btn1, col_btn2 = st.columns([3, 1])
+    with col_btn1:
+        if st.button("🔍 ANALIZAR BIOMARCADORES", type="primary", use_container_width=True):
+            # Crear diccionario con todos los datos
+            datos = {
+                'hemoglobina': hemoglobina,
+                'hematocrito': hematocrito,
+                'vcm': vcm,
+                'hcm': hcm,
+                'chcm': chcm,
+                'reticulocitos': reticulocitos,
+                'ferritina': ferritina,
+                'hierro_serico': hierro_serico,
+                'transferrina': transferrina,
+                'saturacion_transferrina': saturacion_transferrina,
+                'pcr': pcr,
+                'vsg': vsg,
+                'folato': folato,
+                'vitamina_b12': vitamina_b12,
+                'laboratorio': laboratorio,
+                'fecha_analisis': fecha_analisis
+            }
+            
+            # Validar datos mínimos
+            if hemoglobina > 0 and vcm > 0:
+                st.session_state['datos_biomarcadores'] = datos
+                st.success("✅ Datos de biomarcadores guardados para análisis")
+                return datos
+            else:
+                st.error("❌ Por favor ingrese valores válidos para hemoglobina y VCM")
+                return None
+    
+    with col_btn2:
+        if st.button("🔄 Limpiar", type="secondary", use_container_width=True):
+            st.session_state.pop('datos_biomarcadores', None)
+            st.rerun()
+    
+    # Si ya hay datos en session_state, retornarlos
+    if 'datos_biomarcadores' in st.session_state:
+        return st.session_state['datos_biomarcadores']
+    
+    return None
+
+# =========================================================
+# FUNCIÓN INTERPRETACIÓN DE BIOMARCADORES - SOLO UNA VEZ
+# =========================================================
+def interpretacion_biomarcadores_completa(vcm=80, hcm=27, chcm=33, ferritina=30, 
+                                         transferrina=250, reticulocitos=1.0, 
+                                         hierro_serico=60, saturacion_transferrina=25):
+    """
+    Interpreta los biomarcadores hematológicos para diagnóstico diferencial de anemia
+    """
+    diagnosticos = []
+    tratamientos = []
+    severidad_global = "MODERADA"
+    
+    # 1. Evaluar deficiencia de hierro
+    if ferritina < 15:
+        diagnosticos.append("🔴 **Deficiencia de hierro severa** (ferritina baja)")
+        tratamientos.append("Suplementación intensiva de hierro: 3-6 mg/kg/día por 3 meses")
+        severidad_global = "SEVERA"
+    elif ferritina < 30:
+        diagnosticos.append("🟠 **Deficiencia de hierro moderada**")
+        tratamientos.append("Suplementación de hierro: 2-4 mg/kg/día por 2 meses")
+    elif ferritina < 50:
+        diagnosticos.append("🟡 **Reservas de hierro bajas**")
+        tratamientos.append("Suplementación preventiva de hierro: 1-2 mg/kg/día")
+    else:
+        diagnosticos.append("✅ **Reservas de hierro adecuadas**")
+    
+    # 2. Evaluar VCM para clasificación morfológica
+    if vcm < 75:
+        diagnosticos.append("📉 **Anemia microcítica severa** (VCM muy bajo)")
+        tratamientos.append("Evaluar causas: deficiencia de hierro, talasemia, anemia de enfermedades crónicas")
+        severidad_global = "SEVERA"
+    elif vcm < 80:
+        diagnosticos.append("📉 **Anemia microcítica** (VCM bajo)")
+        tratamientos.append("Evaluar deficiencia de hierro, talasemia minor")
+    elif vcm > 100:
+        diagnosticos.append("📈 **Anemia macrocítica** (VCM alto)")
+        tratamientos.append("Evaluar deficiencia de B12/folato, hipotiroidismo, enfermedad hepática")
+    else:
+        diagnosticos.append("📊 **Anemia normocítica** (VCM normal)")
+        tratamientos.append("Evaluar hemólisis, pérdida aguda de sangre, enfermedad renal")
+    
+    # 3. Evaluar reticulocitos para actividad medular
+    if reticulocitos < 0.5:
+        diagnosticos.append("⚠️ **Respuesta reticulocitaria baja** (médula hipoproliferativa)")
+        tratamientos.append("Investigar falla medular, deficiencias nutricionales, inflamación crónica")
+    elif reticulocitos > 2.0:
+        diagnosticos.append("⬆️ **Respuesta reticulocitaria aumentada** (hemólisis o sangrado)")
+        tratamientos.append("Buscar hemólisis, sangrado oculto, respuesta a tratamiento")
+    
+    # 4. Evaluar saturación de transferrina
+    if saturacion_transferrina < 16:
+        diagnosticos.append("🔻 **Saturación de transferrina baja** (compatible con deficiencia de hierro)")
+        tratamientos.append("Aumentar dosis de hierro y monitorizar saturación")
+    elif saturacion_transferrina > 45:
+        diagnosticos.append("🔺 **Saturación de transferrina elevada** (posible sobrecarga)")
+        tratamientos.append("Evaluar hemocromatosis, transfusiones múltiples")
+    
+    # 5. Evaluar HCM y CHCM
+    if hcm < 27:
+        diagnosticos.append("⚖️ **Hipocromía** (HCM baja - contenido bajo de Hb por eritrocito)")
+    if chcm < 32:
+        diagnosticos.append("🎨 **Hipocromía central** (CHCM baja)")
+    
+    # Determinar diagnóstico integral basado en hallazgos
+    if ferritina < 15 and vcm < 80:
+        diagnostico_integral = "ANEMIA FERROPÉNICA SEVERA"
+        plan_tratamiento = """PLAN DE TRATAMIENTO PARA ANEMIA FERROPÉNICA SEVERA:
+        
+1. TRATAMIENTO FARMACOLÓGICO:
+   - Sulfato ferroso: 3-6 mg/kg/día de hierro elemental
+   - Administrar en ayunas con jugo cítrico
+   - Duración: 3 meses mínimo
+   
+2. MONITOREO:
+   - Revisar hemoglobina a las 4 semanas
+   - Esperar aumento ≥1 g/dL
+   - Continuar tratamiento 2 meses después de normalización
+   
+3. ESTUDIOS COMPLEMENTARIOS:
+   - Ultrasonido abdominal para descartar sangrado GI
+   - Parasitológico seriado
+   - Evaluación nutricional completa
+   
+4. EDUCACIÓN:
+   - Dieta rica en hierro hemínico
+   - Evitar inhibidores (té, café, lácteos)
+   - Consumir alimentos con vitamina C"""
+        
+    elif ferritina < 30 and vcm < 80:
+        diagnostico_integral = "ANEMIA FERROPÉNICA MODERADA"
+        plan_tratamiento = """PLAN DE TRATAMIENTO PARA ANEMIA FERROPÉNICA MODERADA:
+        
+1. TRATAMIENTO FARMACOLÓGICO:
+   - Sulfato ferroso: 2-4 mg/kg/día
+   - Duración: 2-3 meses
+   
+2. MONITOREO:
+   - Control mensual de hemoglobina
+   - Revisar adherencia al tratamiento
+   
+3. RECOMENDACIONES DIETÉTICAS:
+   - Carnes rojas, hígado, pescado
+   - Legumbres con vitamina C
+   - Evitar inhibidores de absorción"""
+        
+    elif vcm > 100:
+        diagnostico_integral = "ANEMIA MACROCÍTICA"
+        plan_tratamiento = """PLAN PARA ANEMIA MACROCÍTICA:
+        
+1. EVALUAR CAUSAS:
+   - Dosificar B12 y folato
+   - Evaluar función tiroidea
+   - Estudiar función hepática
+   
+2. TRATAMIENTO:
+   - Según deficiencia identificada
+   - B12 intramuscular si es necesario
+   - Suplementación oral de ácido fólico"""
+        
+    else:
+        diagnostico_integral = "ANEMIA DE ETIOLOGÍA MIXTA O COMPLEJA"
+        plan_tratamiento = """PLAN DE EVALUACIÓN COMPLEMENTARIA:
+        
+1. ESTUDIOS ADICIONALES NECESARIOS:
+   - Electroforesis de hemoglobina
+   - Bilirrubinas y LDH
+   - Pruebas de función renal
+   - Proteína C reactiva
+   
+2. CONSULTAS ESPECIALIZADAS:
+   - Hematología pediátrica
+   - Gastroenterología
+   - Nefrología si es necesario"""
+    
+    return {
+        'diagnosticos': diagnosticos,
+        'tratamientos': tratamientos,
+        'diagnostico_integral': diagnostico_integral,
+        'plan_tratamiento': plan_tratamiento,
+        'severidad_global': severidad_global
+    }
+
 # ==================================================
 # FUNCIONES DE CÁLCULO DE RIESGO
 # ==================================================
