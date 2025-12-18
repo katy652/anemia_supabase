@@ -1150,7 +1150,7 @@ with tab1:
                 st.error("🔴 No hay conexión a Supabase")
 
 # ==================================================
-# PESTAÑA 2: SEGUIMIENTO CLÍNICO COMPLETO
+# PESTAÑA 2: SEGUIMIENTO CLÍNICO COMPLETO - CON ANÁLISIS DE BIOMARCADORES
 # ==================================================
 
 with tab2:
@@ -1158,7 +1158,7 @@ with tab2:
     <div class="main-title" style="background: linear-gradient(135deg, #10b981 0%, #047857 100%); padding: 2rem;">
         <h2 style="margin: 0; color: white;">🔬 SEGUIMIENTO CLÍNICO COMPLETO</h2>
         <p style="margin: 10px 0 0 0; color: rgba(255,255,255,0.9);">
-        Sistema paso a paso basado en hemoglobina inicial y biomarcadores específicos
+        Sistema paso a paso basado en hemoglobina inicial y análisis de biomarcadores específicos
         </p>
     </div>
     """, unsafe_allow_html=True)
@@ -1297,7 +1297,7 @@ with tab2:
             st.markdown("---")
             
             # ============================================
-            # DECISIÓN: ¿QUÉ TIPO DE SEGUIMIENTO?
+            # PASO 3: DECISIÓN - TIPO DE SEGUIMIENTO
             # ============================================
             st.markdown("""
             <div class="section-title-blue">
@@ -1305,8 +1305,19 @@ with tab2:
             </div>
             """, unsafe_allow_html=True)
             
-            # Lógica según clasificación
-            if clasificacion in ["ANEMIA SEVERA", "ANEMIA MODERADA"]:
+            # Opciones de seguimiento
+            opcion_seguimiento = st.radio(
+                "Seleccione el tipo de seguimiento necesario:",
+                [
+                    "🧪 **Análisis Completo de Biomarcadores** (Anemia Severa/Moderada)",
+                    "🍎 **Seguimiento Nutricional Básico** (Anemia Leve)", 
+                    "📝 **Control Rutinario** (Sin anemia)",
+                    "📊 **Solo Visualización de Datos**"
+                ],
+                index=0
+            )
+            
+            if "Análisis Completo" in opcion_seguimiento:
                 st.warning("""
                 **🚨 REQUIERE ANÁLISIS COMPLETO DE BIOMARCADORES**
                 
@@ -1317,15 +1328,13 @@ with tab2:
                 4. Seguimiento intensivo
                 """)
                 
-                # Botón para ir a análisis completo
-                if st.button("🧪 INICIAR ANÁLISIS DE BIOMARCADORES", 
-                           type="primary",
-                           use_container_width=True):
-                    st.session_state['analisis_completo'] = True
+                # Botón para iniciar análisis
+                if st.button("🧪 INICIAR ANÁLISIS DE BIOMARCADORES", type="primary", use_container_width=True):
+                    st.session_state['analisis_biomarcadores'] = True
                     st.session_state['paciente_actual'] = paciente_data.to_dict()
                     st.rerun()
             
-            elif clasificacion == "ANEMIA LEVE":
+            elif "Nutricional" in opcion_seguimiento:
                 st.info("""
                 **🟡 SEGUIMIENTO NUTRICIONAL BÁSICO**
                 
@@ -1335,16 +1344,8 @@ with tab2:
                 3. Control cada 6 meses
                 4. Educación nutricional
                 """)
-                
-                # Botón para seguimiento nutricional
-                if st.button("🍎 INICIAR SEGUIMIENTO NUTRICIONAL",
-                           type="secondary",
-                           use_container_width=True):
-                    st.session_state['seguimiento_nutricional'] = True
-                    st.session_state['paciente_actual'] = paciente_data.to_dict()
-                    st.rerun()
             
-            else:
+            elif "Rutinario" in opcion_seguimiento:
                 st.success("""
                 **🟢 SEGUIMIENTO RUTINARIO**
                 
@@ -1353,23 +1354,23 @@ with tab2:
                 2. Control anual
                 3. Monitoreo de crecimiento
                 """)
-                
-                st.button("📝 REGISTRAR CONTROL RUTINARIO",
-                         use_container_width=True)
             
             st.markdown("---")
             
             # ============================================
-            # SECCIÓN CONDICIONAL: ANÁLISIS COMPLETO
+            # SECCIÓN CONDICIONAL: ANÁLISIS DE BIOMARCADORES
             # ============================================
-            if st.session_state.get('analisis_completo', False) and \
+            if st.session_state.get('analisis_biomarcadores', False) and \
                st.session_state.get('paciente_actual', {}).get('dni') == dni_seleccionado:
                 
                 st.markdown("""
                 <div class="section-title-red">
-                    🧪 ANÁLISIS COMPLETO DE BIOMARCADORES
+                    🧪 ANÁLISIS COMPLETO DE BIOMARCADORES HEMATOLÓGICOS
                 </div>
+                """, unsafe_allow_html=True)
                 
+                # Mostrar advertencia importante
+                st.markdown("""
                 <div style="background: #fef2f2; padding: 1.5rem; border-radius: 10px; margin: 1rem 0;">
                     <p style="color: #7f1d1d; margin: 0;">
                     ⚠️ <strong>Nota importante:</strong> Como se menciona en la literatura, 
@@ -1380,446 +1381,154 @@ with tab2:
                 """, unsafe_allow_html=True)
                 
                 # FORMULARIO DE BIOMARCADORES
-                with st.form("form_biomarcadores_completos"):
-                    st.markdown("""
-                    <div class="section-title-blue" style="font-size: 1.4rem;">
-                        🔬 Biomarcadores Específicos (Según Evidencia Científica)
-                    </div>
-                    """, unsafe_allow_html=True)
-                    
-                    col_bio1, col_bio2 = st.columns(2)
-                    
-                    with col_bio1:
-                        st.markdown("**🩸 CONTENIDO DE HIERRO CORPORAL**")
-                        hierro_serico = st.number_input("Hierro sérico (µg/dL)", 
-                                                       min_value=0.0, max_value=500.0, value=60.0)
-                        ferritina = st.number_input("Ferritina (ng/mL)", 
-                                                   min_value=0.0, max_value=1000.0, value=15.0)
-                        transferrina = st.number_input("Transferrina (mg/dL)", 
-                                                      min_value=0.0, max_value=800.0, value=250.0)
-                        saturacion_transferrina = st.number_input("Saturación de transferrina (%)", 
-                                                                 min_value=0.0, max_value=100.0, value=20.0)
-                    
-                    with col_bio2:
-                        st.markdown("**🦠 CONTRIBUCIÓN INFLAMATORIA**")
-                        pcr = st.number_input("Proteína C Reactiva (mg/dL)", 
-                                             min_value=0.0, max_value=50.0, value=0.3, step=0.1)
-                        vsg = st.number_input("VSG (mm/h)", 
-                                             min_value=0.0, max_value=100.0, value=15.0)
-                        leucocitos = st.number_input("Leucocitos (x10³/µL)", 
-                                                    min_value=0.0, max_value=50.0, value=8.0)
-                        
-                        st.markdown("**💊 OTROS NUTRIENTES**")
-                        folato = st.number_input("Folato (ng/mL)", 
-                                                min_value=0.0, max_value=50.0, value=6.0)
-                        vitamina_b12 = st.number_input("Vitamina B12 (pg/mL)", 
-                                                      min_value=0.0, max_value=2000.0, value=300.0)
-                        vitamina_a = st.number_input("Vitamina A - Retinol (µg/dL)", 
-                                                    min_value=0.0, max_value=200.0, value=25.0)
-                    
-                    # Fecha de análisis
-                    fecha_analisis = st.date_input("Fecha del análisis de biomarcadores")
-                    
-                    submit_biomarcadores = st.form_submit_button(
-                        "🎯 GENERAR DIAGNÓSTICO ETIOLÓGICO",
-                        type="primary",
-                        use_container_width=True
-                    )
+                datos_biomarcadores = form_analisis_biomarcadores()
                 
-                if submit_biomarcadores:
+                if datos_biomarcadores:
                     # ============================================
-                    # DIAGNÓSTICO AUTOMÁTICO
+                    # INTERPRETACIÓN AUTOMÁTICA
                     # ============================================
                     st.markdown("---")
                     st.markdown("""
                     <div class="section-title-green">
-                        🎯 DIAGNÓSTICO ETIOLÓGICO AUTOMÁTICO
+                        🎯 INTERPRETACIÓN AUTOMÁTICA DE BIOMARCADORES
                     </div>
                     """, unsafe_allow_html=True)
                     
-                    # Evaluar cada posible causa
-                    causas = []
-                    
-                    # 1. Deficiencia de Hierro
-                    if ferritina < 15 or hierro_serico < 50:
-                        causas.append({
-                            "causa": "DEFICIENCIA DE HIERRO",
-                            "severidad": "🔴 SEVERA" if ferritina < 15 else "🟠 MODERADA",
-                            "evidencia": f"Ferritina: {ferritina} ng/mL, Hierro: {hierro_serico} µg/dL",
-                            "recomendacion": "Suplementación con hierro elemental 3-6 mg/kg/día"
-                        })
-                    
-                    # 2. Inflamación/Infección
-                    if pcr > 0.5 or vsg > 20:
-                        causas.append({
-                            "causa": "ANEMIA INFLAMATORIA/INFECCIOSA",
-                            "severidad": "🟠 MODERADA",
-                            "evidencia": f"PCR: {pcr} mg/dL, VSG: {vsg} mm/h",
-                            "recomendacion": "Tratar proceso inflamatorio/infeccioso primero"
-                        })
-                    
-                    # 3. Deficiencia de Folato
-                    if folato < 5.4:
-                        causas.append({
-                            "causa": "DEFICIENCIA DE FOLATO",
-                            "severidad": "🟡 LEVE",
-                            "evidencia": f"Folato: {folato} ng/mL",
-                            "recomendacion": "Suplemento de folato 100-200 µg/día"
-                        })
-                    
-                    # 4. Deficiencia de Vitamina B12
-                    if vitamina_b12 < 200:
-                        causas.append({
-                            "causa": "DEFICIENCIA DE VITAMINA B12",
-                            "severidad": "🟡 LEVE",
-                            "evidencia": f"Vitamina B12: {vitamina_b12} pg/mL",
-                            "recomendacion": "Suplemento de B12 1-2 µg/kg/día"
-                        })
-                    
-                    # 5. Deficiencia de Vitamina A
-                    if vitamina_a < 20:
-                        causas.append({
-                            "causa": "DEFICIENCIA DE VITAMINA A",
-                            "severidad": "🟡 LEVE",
-                            "evidencia": f"Vitamina A: {vitamina_a} µg/dL",
-                            "recomendacion": "Suplemento de vitamina A 100,000 UI (dosis única)"
-                        })
-                    
-                    # Mostrar diagnóstico
-                    if causas:
-                        st.success("**🔍 SE IDENTIFICARON LAS SIGUIENTES CAUSAS:**")
-                        
-                        for i, causa in enumerate(causas, 1):
-                            with st.expander(f"{i}. {causa['severidad']} {causa['causa']}", expanded=True):
-                                col_diag1, col_diag2 = st.columns([2, 1])
-                                
-                                with col_diag1:
-                                    st.markdown(f"""
-                                    **Evidencia:** {causa['evidencia']}
-                                    
-                                    **Recomendación:** {causa['recomendacion']}
-                                    """)
-                                
-                                with col_diag2:
-                                    if "HIERRO" in causa['causa']:
-                                        st.button("💊 Calcular dosis de hierro", 
-                                                 key=f"hierro_{i}",
-                                                 use_container_width=True)
-                                    elif "INFLAMATORIA" in causa['causa']:
-                                        st.button("🦠 Ver protocolo antiinflamatorio",
-                                                 key=f"inflam_{i}",
-                                                 use_container_width=True)
-                    else:
-                        st.info("**✅ NO SE IDENTIFICARON DEFICIENCIAS ESPECÍFICAS**")
-                        st.markdown("""
-                        **Posibles causas adicionales a considerar:**
-                        - Anemia hemolítica
-                        - Anemia aplásica
-                        - Enfermedades crónicas
-                        - Factores genéticos
-                        """)
-                    
-                    # ============================================
-                    # BOTÓN DE CONSUMO DE HIERRO
-                    # ============================================
-                    st.markdown("---")
-                    st.markdown("""
-                    <div class="section-title-blue">
-                        ✅ SEGUIMIENTO DE CONSUMO DE HIERRO
-                    </div>
-                    """, unsafe_allow_html=True)
-                    
-                    with st.form("form_consumo_hierro"):
-                        st.markdown("**¿El paciente está consumiendo suplemento de hierro?**")
-                        
-                        col_cons1, col_cons2 = st.columns(2)
-                        
-                        with col_cons1:
-                            consumiendo = st.radio(
-                                "Estado actual:",
-                                ["Sí, regularmente", "Sí, irregularmente", "No"],
-                                horizontal=True
-                            )
-                            
-                            if "Sí" in consumiendo:
-                                dosis = st.number_input("Dosis actual (mg/día)", 
-                                                       min_value=1, max_value=100, value=15)
-                                frecuencia = st.selectbox("Frecuencia", 
-                                                         ["Diario", "3 veces/semana", "Semanal", "Otra"])
-                        
-                        with col_cons2:
-                            fecha_inicio = st.date_input("Fecha de inicio de suplementación")
-                            proximo_control = st.date_input("Próximo control recomendado")
-                            adherencia = st.slider("Adherencia estimada (%)", 0, 100, 80)
-                        
-                        efectos_adversos = st.text_area("Efectos adversos observados", 
-                                                       placeholder="Ej: Náuseas leves, estreñimiento...")
-                        
-                        submit_consumo = st.form_submit_button(
-                            "💾 GUARDAR SEGUIMIENTO DE HIERRO",
-                            use_container_width=True
-                        )
-                    
-                    if submit_consumo:
-                        # Mostrar mensaje de éxito
-                        st.success("✅ Seguimiento de hierro guardado")
-                        
-                        # Mostrar recomendaciones
-                        st.markdown("---")
-                        st.markdown("""
-                        <div class="section-title-green">
-                            🍎 RECOMENDACIONES ALIMENTARIAS ESPECÍFICAS
-                        </div>
-                        """, unsafe_allow_html=True)
-                        
-                        # Recomendaciones según deficiencias
-                        recomendaciones_alimentarias = []
-                        
-                        for causa in causas:
-                            if "HIERRO" in causa['causa']:
-                                recomendaciones_alimentarias.append("""
-                                **🍖 Alimentos ricos en hierro HEMO:**
-                                - Carnes rojas magras (3-4 veces/semana)
-                                - Hígado (1 vez/semana)
-                                - Pollo y pescado
-                                
-                                **🥦 Alimentos ricos en hierro NO HEMO:**
-                                - Lentejas, frijoles, garbanzos
-                                - Espinacas, acelgas
-                                - Cereales fortificados
-                                
-                                **🍊 Potenciadores de absorción:**
-                                - Vitamina C: naranja, kiwi, pimiento
-                                - Combinar carne + vegetales
-                                """)
-                            
-                            if "FOLATO" in causa['causa']:
-                                recomendaciones_alimentarias.append("""
-                                **🥬 Alimentos ricos en folato:**
-                                - Espinacas, brócoli, espárragos
-                                - Legumbres: lentejas, garbanzos
-                                - Aguacate, naranja
-                                - Cereales fortificados
-                                """)
-                            
-                            if "B12" in causa['causa']:
-                                recomendaciones_alimentarias.append("""
-                                **🥩 Alimentos ricos en vitamina B12:**
-                                - Carnes rojas
-                                - Pescado (salmón, atún)
-                                - Huevos
-                                - Lácteos fortificados
-                                """)
-                            
-                            if "VITAMINA A" in causa['causa']:
-                                recomendaciones_alimentarias.append("""
-                                **🥕 Alimentos ricos en vitamina A:**
-                                - Zanahorias, batatas
-                                - Espinacas, kale
-                                - Pimiento rojo
-                                - Hígado
-                                - Mango, melón
-                                """)
-                        
-                        # Mostrar recomendaciones
-                        if recomendaciones_alimentarias:
-                            for i, rec in enumerate(recomendaciones_alimentarias, 1):
-                                st.markdown(f"**{i}. Recomendación específica:**")
-                                st.markdown(rec)
-                        else:
-                            st.info("**🍽️ RECOMENDACIONES GENERALES DE ALIMENTACIÓN SALUDABLE**")
-                            st.markdown("""
-                            - Dieta variada y balanceada
-                            - Incluir todos los grupos alimenticios
-                            - Evitar alimentos ultraprocesados
-                            - Mantener buena hidratación
-                            """)
-                    
-                    # ============================================
-                    # GRÁFICO DE PROGRESO CORREGIDO
-                    # ============================================
-                    st.markdown("---")
-                    st.markdown("""
-                    <div class="section-title-blue">
-                        📈 GRÁFICO DE PROGRESO DEL PACIENTE
-                    </div>
-                    """, unsafe_allow_html=True)
-                    
-                    # Datos simulados para el gráfico
-                    fechas = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun']
-                    valores_hb = [hb_ajustada]
-                    
-                    # Simular progreso basado en tratamiento
-                    for i in range(1, 6):
-                        mejora = np.random.uniform(0.2, 0.8) if "Sí" in consumiendo else np.random.uniform(0.0, 0.3)
-                        nuevo_valor = valores_hb[0] + mejora * i
-                        valores_hb.append(min(nuevo_valor, 15.0))
-                    
-                    # SOLO MOSTRAR GRÁFICO SI HAY DATOS REALES
-                    if len(valores_hb) >= 2:
-                        # Crear gráfico
-                        fig = go.Figure()
-                        
-                        # Línea principal
-                        fig.add_trace(go.Scatter(
-                            x=fechas,
-                            y=valores_hb,
-                            mode='lines+markers',
-                            name='Hemoglobina',
-                            line=dict(color='#3b82f6', width=4),
-                            marker=dict(size=10, color='#1e40af')
-                        ))
-                        
-                        # Áreas de severidad
-                        fig.add_hrect(y0=0, y1=6.9, fillcolor="rgba(239,68,68,0.1)", 
-                                     line_width=0, annotation_text="Severa")
-                        fig.add_hrect(y0=7.0, y1=9.9, fillcolor="rgba(245,158,11,0.1)", 
-                                     line_width=0, annotation_text="Moderada")
-                        fig.add_hrect(y0=10.0, y1=10.9, fillcolor="rgba(59,130,246,0.1)", 
-                                     line_width=0, annotation_text="Leve")
-                        fig.add_hrect(y0=11.0, y1=15, fillcolor="rgba(16,185,129,0.1)", 
-                                     line_width=0, annotation_text="Normal")
-                        
-                        # Línea de meta
-                        fig.add_hline(y=11.0, line_dash="dash", line_color="green",
-                                     annotation_text="Meta: 11.0 g/dL")
-                        
-                        # Configurar layout
-                        fig.update_layout(
-                            title="<b>Evolución de Hemoglobina Ajustada</b>",
-                            xaxis_title="<b>Meses de Seguimiento</b>",
-                            yaxis_title="<b>Hemoglobina (g/dL)</b>",
-                            template="plotly_white",
-                            height=400,
-                            showlegend=True,
-                            legend=dict(
-                                yanchor="top",
-                                y=0.99,
-                                xanchor="left",
-                                x=0.01
-                            )
-                        )
-                        
-                        st.plotly_chart(fig, use_container_width=True)
-                        
-                        # Resumen del progreso
-                        col_prog1, col_prog2, col_prog3 = st.columns(3)
-                        
-                        with col_prog1:
-                            variacion = valores_hb[-1] - valores_hb[0]
-                            st.metric("Cambio total", f"{variacion:+.1f} g/dL")
-                        
-                        with col_prog2:
-                            if valores_hb[-1] >= 11.0:
-                                st.metric("Estado actual", "🟢 NORMAL", delta="Alcanzado")
-                            elif valores_hb[-1] >= 10.0:
-                                st.metric("Estado actual", "🟡 LEVE", 
-                                         delta=f"{11.0 - valores_hb[-1]:.1f} para meta")
-                            else:
-                                st.metric("Estado actual", "🔴 SEVERA/MODERADA", 
-                                         delta="Requiere atención")
-                        
-                        with col_prog3:
-                            if len(valores_hb) > 1:
-                                promedio_mensual = np.mean(np.diff(valores_hb))
-                                st.metric("Mejora mensual", f"{promedio_mensual:+.2f} g/dL/mes")
-                            else:
-                                st.metric("Mejora mensual", "N/A", delta="Sin datos suficientes")
-                    else:
-                        st.warning("📊 **Se necesitan al menos 2 mediciones para mostrar el gráfico de progreso**")
-                        st.info("Por favor, ingrese mediciones anteriores en la sección de Laboratorio del paciente")
-                    
-            # ============================================
-            # SECCIÓN CONDICIONAL: SEGUIMIENTO NUTRICIONAL
-            # ============================================
-            elif st.session_state.get('seguimiento_nutricional', False) and \
-                 st.session_state.get('paciente_actual', {}).get('dni') == dni_seleccionado:
-                
-                st.markdown("""
-                <div class="section-title-green">
-                    🍎 SEGUIMIENTO NUTRICIONAL BÁSICO
-                </div>
-                
-                <div style="background: #f0fdf4; padding: 1.5rem; border-radius: 10px; margin: 1rem 0;">
-                    <p style="color: #065f46; margin: 0;">
-                    📋 <strong>Protocolo para anemia leve:</strong> 
-                    Seguimiento cada 6 meses con enfoque en nutrición y suplementación preventiva.
-                    </p>
-                </div>
-                """, unsafe_allow_html=True)
-                
-                # Suplementación según edad
-                edad_meses = paciente_data['edad_meses']
-                
-                if edad_meses <= 24:
-                    dosis = 3.0
-                    formulacion = "Gotas pediátricas"
-                else:
-                    dosis = 2.0
-                    formulacion = "Jarabe o comprimidos masticables"
-                
-                # Mostrar recomendaciones
-                col_nut1, col_nut2 = st.columns(2)
-                
-                with col_nut1:
-                    st.markdown(f"""
-                    <div class="metric-card-blue">
-                        <div class="metric-label">SUPLEMENTACIÓN</div>
-                        <div style="font-size: 1.5rem; font-weight: 700; color: #1e40af;">
-                        {dosis} mg/kg/día
-                        </div>
-                        <div style="font-size: 0.9rem; color: #6b7280; margin-top: 10px;">
-                        <strong>Formulación:</strong> {formulacion}<br>
-                        <strong>Duración:</strong> 3 meses mínimo<br>
-                        <strong>Control:</strong> Cada 6 meses
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                
-                with col_nut2:
-                    st.markdown(f"""
-                    <div class="metric-card-green">
-                        <div class="metric-label">PRÓXIMO CONTROL</div>
-                        <div style="font-size: 1.5rem; font-weight: 700; color: #065f46;">
-                        {datetime.now() + timedelta(days=180):%d/%m/%Y}
-                        </div>
-                        <div style="font-size: 0.9rem; color: #6b7280; margin-top: 10px;">
-                        <strong>En 6 meses:</strong><br>
-                        • Reevaluar hemoglobina<br>
-                        • Ajustar suplementación<br>
-                        • Evaluar crecimiento
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                
-                # BOTÓN DE CONSUMO DE HIERRO (versión simplificada)
-                st.markdown("---")
-                st.markdown("**✅ Control de Consumo de Suplemento**")
-                
-                with st.form("form_control_nutricional"):
-                    consume_hierro = st.radio(
-                        "¿El paciente consume suplemento de hierro actualmente?",
-                        ["Sí", "No", "Interrumpido"]
+                    # Interpretación completa
+                    interpretacion = interpretacion_biomarcadores_completa(
+                        vcm=datos_biomarcadores['vcm'],
+                        hcm=datos_biomarcadores['hcm'],
+                        chcm=datos_biomarcadores['chcm'],
+                        ferritina=datos_biomarcadores['ferritina'],
+                        transferrina=datos_biomarcadores['transferrina'],
+                        reticulocitos=datos_biomarcadores['reticulocitos'],
+                        hierro_serico=datos_biomarcadores['hierro_serico'],
+                        saturacion_transferrina=datos_biomarcadores['saturacion_transferrina']
                     )
                     
-                    if consume_hierro == "Sí":
-                        col_control1, col_control2 = st.columns(2)
-                        
-                        with col_control1:
-                            dosis_actual = st.number_input("Dosis actual (mg/día)", 1, 100, 15)
-                            frecuencia = st.selectbox("Frecuencia", 
-                                                     ["Diario", "3 veces/semana", "Semanal"])
-                        
-                        with col_control2:
-                            adherencia = st.slider("Adherencia (%)", 0, 100, 80)
-                            efectos = st.multiselect("Efectos adversos", 
-                                                    ["Ninguno", "Náuseas", "Estreñimiento", 
-                                                     "Dolor abdominal", "Vómitos"])
+                    # Mostrar diagnóstico integral
+                    st.markdown(f"""
+                    <div class="diagnosis-box">
+                        <h3 style="margin: 0 0 15px 0; color: #92400e;">🎯 DIAGNÓSTICO INTEGRAL</h3>
+                        <div style="font-size: 1.2rem; font-weight: 700; margin-bottom: 15px;">
+                        {interpretacion['diagnostico_integral']}
+                        </div>
+                        <div style="color: #78350f;">
+                        <strong>Severidad global:</strong> {interpretacion['severidad_global']}
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
                     
-                    observaciones = st.text_area("Observaciones del control nutricional")
+                    # Mostrar hallazgos específicos
+                    col_hall1, col_hall2 = st.columns(2)
                     
-                    if st.form_submit_button("💾 GUARDAR CONTROL NUTRICIONAL"):
-                        st.success("✅ Control nutricional registrado")
+                    with col_hall1:
+                        st.markdown("#### 📋 **HALLAZGOS POR PARÁMETRO**")
+                        for diagnostico in interpretacion['diagnosticos']:
+                            st.markdown(f"- {diagnostico}")
+                    
+                    with col_hall2:
+                        st.markdown("#### 💊 **RECOMENDACIONES ESPECÍFICAS**")
+                        for tratamiento in interpretacion['tratamientos']:
+                            st.markdown(f"- {tratamiento}")
+                    
+                    # Plan de tratamiento detallado
+                    st.markdown(f"""
+                    <div class="treatment-plan">
+                        <h3 style="margin: 0 0 15px 0; color: #065f46;">📋 PLAN DE TRATAMIENTO</h3>
+                        <pre style="white-space: pre-wrap; font-family: monospace; background: white; padding: 1rem; border-radius: 8px; margin: 0;">
+{interpretacion['plan_tratamiento']}
+                        </pre>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
+                    # ============================================
+                    # RESUMEN DE VALORES
+                    # ============================================
+                    st.markdown("---")
+                    st.markdown("""
+                    <div class="section-title-blue">
+                        📊 RESUMEN DE VALORES INGRESADOS
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
+                    # Mostrar valores en tarjetas
+                    col_val1, col_val2, col_val3 = st.columns(3)
+                    
+                    with col_val1:
+                        st.metric("Ferritina", f"{datos_biomarcadores['ferritina']} ng/mL")
+                        st.metric("Hierro Sérico", f"{datos_biomarcadores['hierro_serico']} µg/dL")
+                        st.metric("Transferrina", f"{datos_biomarcadores['transferrina']} mg/dL")
+                    
+                    with col_val2:
+                        st.metric("VCM", f"{datos_biomarcadores['vcm']} fL")
+                        st.metric("HCM", f"{datos_biomarcadores['hcm']} pg")
+                        st.metric("CHCM", f"{datos_biomarcadores['chcm']} g/dL")
+                    
+                    with col_val3:
+                        st.metric("Reticulocitos", f"{datos_biomarcadores['reticulocitos']} %")
+                        st.metric("Saturación", f"{datos_biomarcadores['saturacion_transferrina']} %")
+                        st.metric("Hemoglobina", f"{datos_biomarcadores['hemoglobina']} g/dL")
+                    
+                    # ============================================
+                    # BOTÓN DE GUARDADO
+                    # ============================================
+                    st.markdown("---")
+                    if st.button("💾 GUARDAR ANÁLISIS DE BIOMARCADORES", type="primary", use_container_width=True):
+                        # Preparar datos para guardar
+                        analisis_data = {
+                            "dni_paciente": dni_seleccionado,
+                            "fecha_analisis": datos_biomarcadores['fecha_analisis'].strftime('%Y-%m-%d'),
+                            "laboratorio": datos_biomarcadores['laboratorio'],
+                            "hemoglobina": datos_biomarcadores['hemoglobina'],
+                            "hematocrito": datos_biomarcadores['hematocrito'],
+                            "vcm": datos_biomarcadores['vcm'],
+                            "hcm": datos_biomarcadores['hcm'],
+                            "chcm": datos_biomarcadores['chcm'],
+                            "ferritina": datos_biomarcadores['ferritina'],
+                            "hierro_serico": datos_biomarcadores['hierro_serico'],
+                            "transferrina": datos_biomarcadores['transferrina'],
+                            "saturacion_transferrina": datos_biomarcadores['saturacion_transferrina'],
+                            "reticulocitos": datos_biomarcadores['reticulocitos'],
+                            "pcr": datos_biomarcadores['pcr'],
+                            "vsg": datos_biomarcadores['vsg'],
+                            "folato": datos_biomarcadores['folato'],
+                            "vitamina_b12": datos_biomarcadores['vitamina_b12'],
+                            "diagnostico_integral": interpretacion['diagnostico_integral'],
+                            "plan_tratamiento": interpretacion['plan_tratamiento'],
+                            "severidad": interpretacion['severidad_global'],
+                            "created_at": datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                        }
+                        
+                        try:
+                            # Guardar en Supabase (asumiendo que hay una tabla 'analisis_biomarcadores')
+                            if supabase:
+                                response = supabase.table("analisis_biomarcadores").insert(analisis_data).execute()
+                                
+                                if response.data:
+                                    st.success("✅ Análisis de biomarcadores guardado exitosamente")
+                                    st.balloons()
+                                    
+                                    # Actualizar paciente
+                                    supabase.table("alertas_hemoglobina")\
+                                        .update({
+                                            "interpretacion_hematologica": interpretacion['diagnostico_integral'],
+                                            "severidad_interpretacion": interpretacion['severidad_global'],
+                                            "en_seguimiento": True,
+                                            "fecha_alerta": datetime.now().strftime("%Y-%m-%d")
+                                        })\
+                                        .eq("dni", dni_seleccionado)\
+                                        .execute()
+                                    
+                                    time.sleep(2)
+                                    st.rerun()
+                                else:
+                                    st.error("❌ Error al guardar el análisis")
+                            else:
+                                st.error("🔴 No hay conexión a Supabase")
+                                
+                        except Exception as e:
+                            st.error(f"❌ Error: {str(e)}")
     else:
         st.info("📝 No hay pacientes registrados en el sistema")
         st.markdown("""
@@ -1829,9 +1538,9 @@ with tab2:
         1. Seleccionarlos para seguimiento
         2. Evaluar su hemoglobina
         3. Determinar tipo de seguimiento necesario
-        4. Registrar biomarcadores específicos
-        5. Hacer seguimiento de consumo de hierro
-        6. Ver gráficos de progreso
+        4. Realizar análisis de biomarcadores
+        5. Obtener diagnóstico específico
+        6. Guardar resultados
         """)
 
 # ==================================================
