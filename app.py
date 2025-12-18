@@ -234,144 +234,61 @@ def init_supabase():
 supabase = init_supabase()
 
 # ==================================================
-# FUNCIONES PARA TABLA CITAS - VERSIÓN CORREGIDA
+# FUNCIONES PARA TABLA CITAS - VERSIÓN SIMPLIFICADA Y CORREGIDA
 # ==================================================
 
 def crear_tabla_citas_simple():
-    """Crea la tabla citas con RLS básico - VERSIÓN CORREGIDA"""
+    """Crea la tabla citas de forma simple - VERSIÓN CORREGIDA"""
     try:
         st.sidebar.info("🛠️ Configurando tabla 'citas'...")
         
-        # Método 1: Intentar crear directamente con Supabase
-        try:
-            test_check = supabase.table("citas").select("id").limit(1).execute()
-            
-            if not hasattr(test_check, 'error') or test_check.error is None:
-                st.sidebar.success("✅ Tabla 'citas' ya existe")
-                
-                test_data = {
-                    "dni_paciente": "99988877",
-                    "fecha_cita": "2024-01-01",
-                    "hora_cita": "10:00:00",
-                    "tipo_consulta": "Prueba",
-                    "diagnostico": "Prueba de conexión"
-                }
-                
-                test_insert = supabase.table("citas").insert(test_data).execute()
-                
-                if test_insert.data:
-                    st.sidebar.success("✅ RLS configurado correctamente")
-                    supabase.table("citas").delete().eq("dni_paciente", "99988877").execute()
-                    return True
-                else:
-                    st.sidebar.warning("⚠️ Tabla existe pero RLS no configurado")
-                    return False
-                    
-        except Exception as check_error:
-            st.sidebar.info(f"ℹ️ {str(check_error)[:100]}")
+        # Intentar crear una cita de prueba simple
+        test_cita = {
+            "dni_paciente": "99988877",
+            "fecha_cita": "2024-12-14",
+            "hora_cita": "10:00:00",
+            "tipo_consulta": "Prueba de sistema"
+        }
         
-        # Método 2: Crear tabla usando SQL directo
-        try:
-            import requests
+        response = supabase.table("citas").insert(test_cita).execute()
+        
+        if response.data:
+            st.sidebar.success("✅ Tabla 'citas' accesible")
+            # Limpiar la prueba
+            supabase.table("citas").delete().eq("dni_paciente", "99988877").execute()
+            return True
+        else:
+            st.sidebar.warning("⚠️ Puede que la tabla necesite configuración en Supabase")
             
-            st.sidebar.write("📋 Creando tabla...")
+            # Instrucciones para crear manualmente
+            st.sidebar.markdown("""
+            **📝 Si falla, crea la tabla manualmente en Supabase:**
             
-            test_data = {
-                "dni_paciente": "11111111",
-                "fecha_cita": "2024-01-01",
-                "hora_cita": "10:00:00",
-                "tipo_consulta": "Prueba creación"
-            }
-            
-            headers = {
-                "apikey": SUPABASE_KEY,
-                "Authorization": f"Bearer {SUPABASE_KEY}",
-                "Content-Type": "application/json"
-            }
-            
-            response = requests.post(
-                f"{SUPABASE_URL}/rest/v1/citas",
-                headers=headers,
-                json=test_data
-            )
-            
-            if response.status_code in [200, 201, 409]:
-                st.sidebar.success("✅ Tabla accesible")
-                
-                st.sidebar.write("🔐 Configurando RLS...")
-                
-                try:
-                    test_data2 = {
-                        "dni_paciente": "22222222",
-                        "fecha_cita": "2024-01-02",
-                        "hora_cita": "11:00:00",
-                        "tipo_consulta": "Prueba RLS"
-                    }
-                    
-                    response2 = requests.post(
-                        f"{SUPABASE_URL}/rest/v1/citas",
-                        headers=headers,
-                        json=test_data2
-                    )
-                    
-                    if response2.status_code in [200, 201]:
-                        st.sidebar.success("✅ RLS funciona correctamente")
-                        
-                        requests.delete(f"{SUPABASE_URL}/rest/v1/citas?dni_paciente=eq.11111111", headers=headers)
-                        requests.delete(f"{SUPABASE_URL}/rest/v1/citas?dni_paciente=eq.22222222", headers=headers)
-                        
-                        return True
-                    else:
-                        st.sidebar.warning(f"⚠️ Error RLS: {response2.status_code}")
-                        return False
-                        
-                except Exception as rls_error:
-                    st.sidebar.error(f"❌ Error RLS: {str(rls_error)[:100]}")
-                    return False
-                    
-            else:
-                st.sidebar.error(f"❌ No se pudo crear tabla: {response.status_code}")
-                
-                st.sidebar.markdown("""
-                **📝 Para crear la tabla manualmente:**
-                
-                1. **Ve a Supabase → SQL Editor**
-                2. **Ejecuta este SQL:**
-                
-                ```sql
-                CREATE TABLE citas (
-                    id BIGSERIAL PRIMARY KEY,
-                    dni_paciente TEXT NOT NULL,
-                    fecha_cita DATE NOT NULL,
-                    hora_cita TIME NOT NULL,
-                    tipo_consulta TEXT,
-                    diagnostico TEXT,
-                    tratamiento TEXT,
-                    observaciones TEXT,
-                    investigador_responsable TEXT,
-                    proxima_cita DATE,
-                    created_at TIMESTAMPTZ DEFAULT NOW()
-                );
-                
-                ALTER TABLE citas ENABLE ROW LEVEL SECURITY;
-                
-                CREATE POLICY "allow_all_citas" ON citas
-                FOR ALL USING (true) WITH CHECK (true);
-                ```
-                """)
-                
-                return False
-                
-        except Exception as e:
-            st.sidebar.error(f"🔥 Error: {str(e)[:200]}")
+            1. Ve a **Table Editor**
+            2. Crea nueva tabla llamada **"citas"**
+            3. Agrega estas columnas:
+               - `id` (bigint, autoincrement, primary key)
+               - `dni_paciente` (text)
+               - `fecha_cita` (date)
+               - `hora_cita` (time)
+               - `tipo_consulta` (text)
+               - `diagnostico` (text)
+               - `tratamiento` (text)
+               - `observaciones` (text)
+               - `investigador_responsable` (text)
+               - `proxima_cita` (date)
+               - `created_at` (timestamptz, default: now())
+            4. En **Authentication → Policies**, crea política:
+               - `allow_all` (para todas las operaciones)
+            """)
             return False
             
     except Exception as e:
-        st.sidebar.error(f"💥 Error general: {str(e)[:200]}")
+        st.sidebar.error(f"❌ Error: {str(e)[:100]}")
         return False
 
 def probar_guardado_directo():
-    """Prueba directa de guardado - VERSIÓN ÚNICA CORREGIDA"""
+    """Prueba directa de guardado - VERSIÓN SIMPLIFICADA"""
     with st.sidebar:
         st.markdown("### 🧪 Prueba Directa")
         
@@ -410,17 +327,6 @@ def probar_guardado_directo():
                     if result.data:
                         st.success(f"✅ ¡ÉXITO! Guardado correctamente")
                         st.info(f"ID generado: {result.data[0].get('id', 'N/A')}")
-                        
-                        if 'pruebas_ids' not in st.session_state:
-                            st.session_state.pruebas_ids = []
-                        st.session_state.pruebas_ids.append(result.data[0].get('id'))
-                        
-                    elif hasattr(result, 'error'):
-                        error_msg = result.error.message
-                        st.error(f"❌ Error: {error_msg}")
-                        
-                        if "foreign key constraint" in error_msg:
-                            st.info("💡 Solución: El DNI debe existir en la tabla 'alertas_hemoglobina'")
                     else:
                         st.warning("⚠️ Respuesta inesperada del servidor")
                         
@@ -431,23 +337,7 @@ def probar_guardado_directo():
             if st.button("🗑️ Limpiar pruebas", key="limpiar_pruebas"):
                 try:
                     supabase.table("citas").delete().eq("dni_paciente", dni_real).execute()
-                    
-                    for dni_prueba in ["87654321", "00000001", "00000002", "99988877", "11111111", "22222222"]:
-                        try:
-                            supabase.table("citas").delete().eq("dni_paciente", dni_prueba).execute()
-                        except:
-                            pass
-                    
-                    if 'pruebas_ids' in st.session_state:
-                        for prueba_id in st.session_state.pruebas_ids:
-                            try:
-                                supabase.table("citas").delete().eq("id", prueba_id).execute()
-                            except:
-                                pass
-                        st.session_state.pruebas_ids = []
-                    
-                    st.success("✅ Todas las pruebas limpiadas")
-                    
+                    st.success("✅ Pruebas limpiadas")
                 except Exception as e:
                     st.info(f"ℹ️ {str(e)[:100]}")
 
@@ -1489,7 +1379,7 @@ with tab2:
                 </div>
                 """, unsafe_allow_html=True)
                 
-                # FORMULARIO DE BIOMARCADORES (IMAGEN 2)
+                # FORMULARIO DE BIOMARCADORES
                 with st.form("form_biomarcadores_completos"):
                     st.markdown("""
                     <div class="section-title-blue" style="font-size: 1.4rem;">
@@ -1671,10 +1561,10 @@ with tab2:
                         )
                     
                     if submit_consumo:
-                        # Guardar en Supabase (necesitarías crear tabla seguimiento_hierro)
+                        # Mostrar mensaje de éxito
                         st.success("✅ Seguimiento de hierro guardado")
                         
-                        # Mostrar recomendaciones basadas en consumo
+                        # Mostrar recomendaciones
                         st.markdown("---")
                         st.markdown("""
                         <div class="section-title-green">
@@ -1682,7 +1572,7 @@ with tab2:
                         </div>
                         """, unsafe_allow_html=True)
                         
-                        # Recomendaciones según deficiencias identificadas
+                        # Recomendaciones según deficiencias
                         recomendaciones_alimentarias = []
                         
                         for causa in causas:
@@ -1746,7 +1636,7 @@ with tab2:
                             """)
                     
                     # ============================================
-                    # GRÁFICO DE PROGRESO
+                    # GRÁFICO DE PROGRESO CORREGIDO
                     # ============================================
                     st.markdown("---")
                     st.markdown("""
@@ -1765,71 +1655,79 @@ with tab2:
                         nuevo_valor = valores_hb[0] + mejora * i
                         valores_hb.append(min(nuevo_valor, 15.0))
                     
-                    # Crear gráfico
-                    fig = go.Figure()
-                    
-                    # Línea principal
-                    fig.add_trace(go.Scatter(
-                        x=fechas,
-                        y=valores_hb,
-                        mode='lines+markers',
-                        name='Hemoglobina',
-                        line=dict(color='#3b82f6', width=4),
-                        marker=dict(size=10, color='#1e40af')
-                    ))
-                    
-                    # Áreas de severidad
-                    fig.add_hrect(y0=0, y1=6.9, fillcolor="rgba(239,68,68,0.1)", 
-                                 line_width=0, annotation_text="Severa")
-                    fig.add_hrect(y0=7.0, y1=9.9, fillcolor="rgba(245,158,11,0.1)", 
-                                 line_width=0, annotation_text="Moderada")
-                    fig.add_hrect(y0=10.0, y1=10.9, fillcolor="rgba(59,130,246,0.1)", 
-                                 line_width=0, annotation_text="Leve")
-                    fig.add_hrect(y0=11.0, y1=15, fillcolor="rgba(16,185,129,0.1)", 
-                                 line_width=0, annotation_text="Normal")
-                    
-                    # Línea de meta
-                    fig.add_hline(y=11.0, line_dash="dash", line_color="green",
-                                 annotation_text="Meta: 11.0 g/dL")
-                    
-                    # Configurar layout
-                    fig.update_layout(
-                        title="<b>Evolución de Hemoglobina Ajustada</b>",
-                        xaxis_title="<b>Meses de Seguimiento</b>",
-                        yaxis_title="<b>Hemoglobina (g/dL)</b>",
-                        template="plotly_white",
-                        height=400,
-                        showlegend=True,
-                        legend=dict(
-                            yanchor="top",
-                            y=0.99,
-                            xanchor="left",
-                            x=0.01
+                    # SOLO MOSTRAR GRÁFICO SI HAY DATOS REALES
+                    if len(valores_hb) >= 2:
+                        # Crear gráfico
+                        fig = go.Figure()
+                        
+                        # Línea principal
+                        fig.add_trace(go.Scatter(
+                            x=fechas,
+                            y=valores_hb,
+                            mode='lines+markers',
+                            name='Hemoglobina',
+                            line=dict(color='#3b82f6', width=4),
+                            marker=dict(size=10, color='#1e40af')
+                        ))
+                        
+                        # Áreas de severidad
+                        fig.add_hrect(y0=0, y1=6.9, fillcolor="rgba(239,68,68,0.1)", 
+                                     line_width=0, annotation_text="Severa")
+                        fig.add_hrect(y0=7.0, y1=9.9, fillcolor="rgba(245,158,11,0.1)", 
+                                     line_width=0, annotation_text="Moderada")
+                        fig.add_hrect(y0=10.0, y1=10.9, fillcolor="rgba(59,130,246,0.1)", 
+                                     line_width=0, annotation_text="Leve")
+                        fig.add_hrect(y0=11.0, y1=15, fillcolor="rgba(16,185,129,0.1)", 
+                                     line_width=0, annotation_text="Normal")
+                        
+                        # Línea de meta
+                        fig.add_hline(y=11.0, line_dash="dash", line_color="green",
+                                     annotation_text="Meta: 11.0 g/dL")
+                        
+                        # Configurar layout
+                        fig.update_layout(
+                            title="<b>Evolución de Hemoglobina Ajustada</b>",
+                            xaxis_title="<b>Meses de Seguimiento</b>",
+                            yaxis_title="<b>Hemoglobina (g/dL)</b>",
+                            template="plotly_white",
+                            height=400,
+                            showlegend=True,
+                            legend=dict(
+                                yanchor="top",
+                                y=0.99,
+                                xanchor="left",
+                                x=0.01
+                            )
                         )
-                    )
-                    
-                    st.plotly_chart(fig, use_container_width=True)
-                    
-                    # Resumen del progreso
-                    col_prog1, col_prog2, col_prog3 = st.columns(3)
-                    
-                    with col_prog1:
-                        variacion = valores_hb[-1] - valores_hb[0]
-                        st.metric("Cambio total", f"{variacion:+.1f} g/dL")
-                    
-                    with col_prog2:
-                        if valores_hb[-1] >= 11.0:
-                            st.metric("Estado actual", "🟢 NORMAL", delta="Alcanzado")
-                        elif valores_hb[-1] >= 10.0:
-                            st.metric("Estado actual", "🟡 LEVE", 
-                                     delta=f"{11.0 - valores_hb[-1]:.1f} para meta")
-                        else:
-                            st.metric("Estado actual", "🔴 SEVERA/MODERADA", 
-                                     delta="Requiere atención")
-                    
-                    with col_prog3:
-                        promedio_mensual = np.mean(np.diff(valores_hb))
-                        st.metric("Mejora mensual", f"{promedio_mensual:+.2f} g/dL/mes")
+                        
+                        st.plotly_chart(fig, use_container_width=True)
+                        
+                        # Resumen del progreso
+                        col_prog1, col_prog2, col_prog3 = st.columns(3)
+                        
+                        with col_prog1:
+                            variacion = valores_hb[-1] - valores_hb[0]
+                            st.metric("Cambio total", f"{variacion:+.1f} g/dL")
+                        
+                        with col_prog2:
+                            if valores_hb[-1] >= 11.0:
+                                st.metric("Estado actual", "🟢 NORMAL", delta="Alcanzado")
+                            elif valores_hb[-1] >= 10.0:
+                                st.metric("Estado actual", "🟡 LEVE", 
+                                         delta=f"{11.0 - valores_hb[-1]:.1f} para meta")
+                            else:
+                                st.metric("Estado actual", "🔴 SEVERA/MODERADA", 
+                                         delta="Requiere atención")
+                        
+                        with col_prog3:
+                            if len(valores_hb) > 1:
+                                promedio_mensual = np.mean(np.diff(valores_hb))
+                                st.metric("Mejora mensual", f"{promedio_mensual:+.2f} g/dL/mes")
+                            else:
+                                st.metric("Mejora mensual", "N/A", delta="Sin datos suficientes")
+                    else:
+                        st.warning("📊 **Se necesitan al menos 2 mediciones para mostrar el gráfico de progreso**")
+                        st.info("Por favor, ingrese mediciones anteriores en la sección de Laboratorio del paciente")
                     
             # ============================================
             # SECCIÓN CONDICIONAL: SEGUIMIENTO NUTRICIONAL
@@ -1922,9 +1820,6 @@ with tab2:
                     
                     if st.form_submit_button("💾 GUARDAR CONTROL NUTRICIONAL"):
                         st.success("✅ Control nutricional registrado")
-                        
-                        # Aquí iría el código para guardar en Supabase
-                        
     else:
         st.info("📝 No hay pacientes registrados en el sistema")
         st.markdown("""
@@ -2127,7 +2022,7 @@ with tab3:
         st.info("👆 Presiona el botón 'Cargar Datos Nacionales' para ver el dashboard nacional")
 
 # ==================================================
-# PESTAÑA 4: SISTEMA DE CITAS MEJORADO
+# PESTAÑA 4: SISTEMA DE CITAS MEJORADO Y CORREGIDO
 # ==================================================
 
 with tab4:
@@ -2141,7 +2036,7 @@ with tab4:
     """, unsafe_allow_html=True)
     
     # ============================================
-    # FUNCIONES ESPECÍFICAS PARA CITAS AUTOMÁTICAS
+    # FUNCIONES ESPECÍFICAS PARA CITAS AUTOMÁTICAS - VERSIÓN CORREGIDA
     # ============================================
     
     def calcular_frecuencia_cita(hemoglobina, edad_meses):
@@ -2156,66 +2051,79 @@ with tab4:
             return "ANUAL", 365  # Normal
     
     def crear_cita_automatica(dni_paciente, hemoglobina, edad_meses, tipo="CONTROL"):
-        """Crea una cita automática según el nivel de anemia"""
+        """Crea una cita automática según el nivel de anemia - VERSIÓN CORREGIDA CON MANEJO DE ERROR 11"""
         try:
-            # Obtener información del paciente
-            response = supabase.table("alertas_hemoglobina")\
-                .select("*")\
-                .eq("dni", dni_paciente)\
-                .execute()
+            # INTENTAR 3 VECES CON PAUSA PARA ERRORES TEMPORALES
+            for intento in range(3):
+                try:
+                    # Obtener información del paciente
+                    response = supabase.table("alertas_hemoglobina")\
+                        .select("*")\
+                        .eq("dni", dni_paciente)\
+                        .execute()
+                    
+                    if not response.data:
+                        return False, "Paciente no encontrado"
+                    
+                    paciente = response.data[0]
+                    
+                    # Calcular fecha de próxima cita
+                    frecuencia, dias = calcular_frecuencia_cita(hemoglobina, edad_meses)
+                    fecha_cita = datetime.now() + timedelta(days=dias)
+                    
+                    # Determinar tipo de consulta según gravedad
+                    if hemoglobina < 7:
+                        tipo_consulta = "URGENCIA - Anemia Severa"
+                        diagnostico = "Anemia severa requiere seguimiento intensivo"
+                        tratamiento = "Suplementación inmediata + Control semanal"
+                    elif hemoglobina < 10:
+                        tipo_consulta = "SEGUIMIENTO - Anemia Moderada"
+                        diagnostico = "Anemia moderada en tratamiento"
+                        tratamiento = "Suplementación continua + Control mensual"
+                    elif hemoglobina < 11:
+                        tipo_consulta = "CONTROL - Anemia Leve"
+                        diagnostico = "Anemia leve en vigilancia"
+                        tratamiento = "Suplementación preventiva"
+                    else:
+                        tipo_consulta = "CONTROL PREVENTIVO"
+                        diagnostico = "Estado normal, seguimiento preventivo"
+                        tratamiento = "Mantenimiento nutricional"
+                    
+                    # Crear datos de la cita
+                    cita_data = {
+                        "dni_paciente": dni_paciente,
+                        "fecha_cita": fecha_cita.strftime('%Y-%m-%d'),
+                        "hora_cita": "09:00:00",
+                        "tipo_consulta": tipo_consulta,
+                        "diagnostico": diagnostico,
+                        "tratamiento": tratamiento,
+                        "observaciones": f"Cita automática generada por sistema. Frecuencia: {frecuencia}",
+                        "investigador_responsable": "Sistema Automático",
+                        "severidad_anemia": "SEVERA" if hemoglobina < 7 else "MODERADA" if hemoglobina < 10 else "LEVE" if hemoglobina < 11 else "NORMAL",
+                        "suplemento_hierro": paciente.get('tipo_suplemento_hierro', 'Sulfato ferroso'),
+                        "frecuencia_suplemento": paciente.get('frecuencia_suplemento', 'Diario'),
+                        "proxima_cita": (fecha_cita + timedelta(days=dias)).strftime('%Y-%m-%d'),
+                        "created_at": datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                    }
+                    
+                    # Insertar en Supabase
+                    response = supabase.table("citas").insert(cita_data).execute()
+                    
+                    if response.data:
+                        return True, f"Cita creada para {fecha_cita.strftime('%d/%m/%Y')} - Frecuencia: {frecuencia}"
+                    else:
+                        return False, "Error al crear cita"
+                        
+                except Exception as e:
+                    error_str = str(e)
+                    if ("Resource temporarily unavailable" in error_str or "Error 11" in error_str) and intento < 2:
+                        time.sleep(1)  # Esperar 1 segundo y reintentar
+                        continue
+                    else:
+                        raise e  # Relanzar el error si no es temporal
             
-            if not response.data:
-                return False, "Paciente no encontrado"
+            return False, "Error después de múltiples intentos"
             
-            paciente = response.data[0]
-            
-            # Calcular fecha de próxima cita
-            frecuencia, dias = calcular_frecuencia_cita(hemoglobina, edad_meses)
-            fecha_cita = datetime.now() + timedelta(days=dias)
-            
-            # Determinar tipo de consulta según gravedad
-            if hemoglobina < 7:
-                tipo_consulta = "URGENCIA - Anemia Severa"
-                diagnostico = "Anemia severa requiere seguimiento intensivo"
-                tratamiento = "Suplementación inmediata + Control semanal"
-            elif hemoglobina < 10:
-                tipo_consulta = "SEGUIMIENTO - Anemia Moderada"
-                diagnostico = "Anemia moderada en tratamiento"
-                tratamiento = "Suplementación continua + Control mensual"
-            elif hemoglobina < 11:
-                tipo_consulta = "CONTROL - Anemia Leve"
-                diagnostico = "Anemia leve en vigilancia"
-                tratamiento = "Suplementación preventiva"
-            else:
-                tipo_consulta = "CONTROL PREVENTIVO"
-                diagnostico = "Estado normal, seguimiento preventivo"
-                tratamiento = "Mantenimiento nutricional"
-            
-            # Crear datos de la cita
-            cita_data = {
-                "dni_paciente": dni_paciente,
-                "fecha_cita": fecha_cita.strftime('%Y-%m-%d'),
-                "hora_cita": "09:00:00",
-                "tipo_consulta": tipo_consulta,
-                "diagnostico": diagnostico,
-                "tratamiento": tratamiento,
-                "observaciones": f"Cita automática generada por sistema. Frecuencia: {frecuencia}",
-                "investigador_responsable": "Sistema Automático",
-                "severidad_anemia": "SEVERA" if hemoglobina < 7 else "MODERADA" if hemoglobina < 10 else "LEVE" if hemoglobina < 11 else "NORMAL",
-                "suplemento_hierro": paciente.get('tipo_suplemento_hierro', 'Sulfato ferroso'),
-                "frecuencia_suplemento": paciente.get('frecuencia_suplemento', 'Diario'),
-                "proxima_cita": (fecha_cita + timedelta(days=dias)).strftime('%Y-%m-%d'),
-                "created_at": datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            }
-            
-            # Insertar en Supabase
-            response = supabase.table("citas").insert(cita_data).execute()
-            
-            if response.data:
-                return True, f"Cita creada para {fecha_cita.strftime('%d/%m/%Y')} - Frecuencia: {frecuencia}"
-            else:
-                return False, "Error al crear cita"
-                
         except Exception as e:
             return False, f"Error: {str(e)}"
     
@@ -2594,7 +2502,7 @@ with tab4:
                     st.error(f"❌ Error: {str(e)}")
     
     # ============================================
-    # TAB 3: RECORDATORIOS PRÓXIMOS
+    # TAB 3: RECORDATORIOS PRÓXIMOS - VERSIÓN CORREGIDA (SIN EMAIL/SMS)
     # ============================================
     with tab_citas3:
         st.markdown('<div class="section-title-purple">🔔 RECORDATORIOS DE CITAS PRÓXIMAS</div>', unsafe_allow_html=True)
@@ -2653,23 +2561,12 @@ with tab4:
                             with col_rec4:
                                 if st.button("📞", key=f"llamar_{recordatorio['dni']}"):
                                     st.info(f"📞 Llamar al: {recordatorio['telefono']}")
-                                    # En una implementación real, aquí iría la lógica para enviar SMS/email
                 
-                # Botones de acción
+                # Botones de acción - VERSIÓN CORREGIDA (SOLO LISTA)
                 st.markdown("---")
-                col_acc1, col_acc2, col_acc3 = st.columns(3)
+                col_acc1, col_acc2 = st.columns(2)
                 
                 with col_acc1:
-                    if st.button("📧 Enviar recordatorios por email", use_container_width=True):
-                        st.info("Funcionalidad de email en desarrollo")
-                        # Aquí integrarías con servicio de email
-                
-                with col_acc2:
-                    if st.button("📱 Enviar recordatorios por SMS", use_container_width=True):
-                        st.info("Funcionalidad de SMS en desarrollo")
-                        # Aquí integrarías con servicio SMS
-                
-                with col_acc3:
                     if st.button("📄 Generar lista de llamadas", use_container_width=True):
                         csv = recordatorios_df[['nombre', 'telefono', 'fecha_cita', 'hora_cita']].to_csv(index=False)
                         st.download_button(
@@ -2679,6 +2576,10 @@ with tab4:
                             mime="text/csv",
                             use_container_width=True
                         )
+                
+                with col_acc2:
+                    st.info("📞 Recordatorios por teléfono (modo manual)")
+                    st.caption("Funcionalidad automática en desarrollo")
                         
             else:
                 st.success("🎉 No hay recordatorios pendientes para la próxima semana")
@@ -2832,7 +2733,7 @@ with tab4:
                 }
             )
             
-            # Estadísticas del historial - VERSIÓN CORREGIDA
+            # ESTADÍSTICAS DEL HISTORIAL - VERSIÓN CORREGIDA
             st.markdown('<div class="section-title-purple" style="font-size: 1.2rem;">📊 ESTADÍSTICAS DEL HISTORIAL</div>', unsafe_allow_html=True)
             
             col_stat1, col_stat2, col_stat3, col_stat4 = st.columns(4)
