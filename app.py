@@ -492,57 +492,7 @@ def calcular_hemoglobina_ajustada(hemoglobina_medida, altitud):
     ajuste = obtener_ajuste_hemoglobina(altitud)
     return hemoglobina_medida + ajuste
 
-# ==================================================
-# SISTEMA DE INTERPRETACIÓN AUTOMÁTICA
-# ==================================================
 
-def interpretar_analisis_hematologico(ferritina, chcm, reticulocitos, transferrina, hemoglobina_ajustada, edad_meses):
-    """Sistema de interpretación automática de parámetros hematológicos"""
-    
-    interpretacion = ""
-    severidad = ""
-    recomendacion = ""
-    codigo_color = ""
-    
-    # EVALUAR FERRITINA
-    if ferritina < 15:
-        interpretacion += "🚨 **DEFICIT SEVERO DE HIERRO**. "
-        severidad = "CRITICO"
-    elif ferritina < 30:
-        interpretacion += "⚠️ **DEFICIT MODERADO DE HIERRO**. "
-        severidad = "MODERADO"
-    elif ferritina < 100:
-        interpretacion += "🔄 **RESERVAS DE HIERRO LIMITE**. "
-        severidad = "LEVE"
-    else:
-        interpretacion += "✅ **RESERVAS DE HIERRO ADECUADAS**. "
-        severidad = "NORMAL"
-    
-    # EVALUAR CHCM
-    if chcm < 32:
-        interpretacion += "🚨 **HIPOCROMÍA SEVERA** - Deficiencia avanzada de hierro. "
-        severidad = "CRITICO" if severidad != "CRITICO" else severidad
-    elif chcm >= 32 and chcm <= 36:
-        interpretacion += "✅ **NORMOCROMÍA** - Estado normal. "
-    else:
-        interpretacion += "🔄 **HIPERCROMÍA** - Posible esferocitosis. "
-    
-    # EVALUAR RETICULOCITOS
-    if reticulocitos < 0.5:
-        interpretacion += "⚠️ **HIPOPROLIFERACIÓN MEDULAR** - Respuesta insuficiente. "
-    elif reticulocitos > 1.5:
-        interpretacion += "🔄 **HIPERPRODUCCIÓN COMPENSATORIA** - Respuesta aumentada. "
-    else:
-        interpretacion += "✅ **PRODUCCIÓN MEDULAR NORMAL**. "
-    
-    # EVALUAR TRANSFERRINA
-    if transferrina < 200:
-        interpretacion += "⚠️ **SATURACIÓN BAJA** - Transporte disminuido. "
-    elif transferrina > 400:
-        interpretacion += "🔄 **SATURACIÓN AUMENTADA** - Compensación por deficiencia. "
-    else:
-        interpretacion += "✅ **TRANSPORTE ADECUADO**. "
-    
     # CLASIFICACIÓN DE ANEMIA
     clasificacion_hb, _, _ = clasificar_anemia(hemoglobina_ajustada, edad_meses)
     interpretacion += f"📊 **CLASIFICACIÓN HEMOGLOBINA: {clasificacion_hb}**"
@@ -1056,7 +1006,241 @@ def interpretacion_biomarcadores_completa(vcm=80, hcm=27, chcm=33, ferritina=30,
         'plan_tratamiento': plan_tratamiento,
         'severidad_global': severidad_global
     }
-
+def interpretar_analisis_hematologico_mejorado(ferritina, chcm, reticulocitos, transferrina, hemoglobina_ajustada, edad_meses, vcm=None, hcm=None):
+    """
+    Sistema de interpretación automática MEJORADO con colores y formato visual
+    Para usar en la pestaña 2 de seguimiento
+    """
+    
+    resultados = {
+        'interpretaciones': [],
+        'severidades': [],
+        'recomendaciones': [],
+        'colores': [],
+        'iconos': []
+    }
+    
+    # ============================================
+    # 1. EVALUAR FERRITINA - CON COLORES
+    # ============================================
+    if ferritina < 15:
+        resultados['interpretaciones'].append("🚨 **DEFICIT SEVERO DE HIERRO** (Ferritina: {:.1f} ng/mL)".format(ferritina))
+        resultados['severidades'].append("CRITICO")
+        resultados['recomendaciones'].append("Suplementación urgente con hierro: 3-6 mg/kg/día")
+        resultados['colores'].append("#dc2626")  # Rojo intenso
+        resultados['iconos'].append("🔴")
+    elif ferritina < 30:
+        resultados['interpretaciones'].append("⚠️ **DEFICIT MODERADO DE HIERRO** (Ferritina: {:.1f} ng/mL)".format(ferritina))
+        resultados['severidades'].append("MODERADO")
+        resultados['recomendaciones'].append("Suplementación con hierro: 2-4 mg/kg/día")
+        resultados['colores'].append("#d97706")  # Naranja
+        resultados['iconos'].append("🟠")
+    elif ferritina < 50:
+        resultados['interpretaciones'].append("🔄 **RESERVAS DE HIERRO BAJAS** (Ferritina: {:.1f} ng/mL)".format(ferritina))
+        resultados['severidades'].append("LEVE")
+        resultados['recomendaciones'].append("Suplementación preventiva: 1-2 mg/kg/día")
+        resultados['colores'].append("#2563eb")  # Azul
+        resultados['iconos'].append("🔵")
+    elif ferritina < 100:
+        resultados['interpretaciones'].append("📊 **RESERVAS DE HIERRO LIMITE** (Ferritina: {:.1f} ng/mL)".format(ferritina))
+        resultados['severidades'].append("NORMAL_BAJO")
+        resultados['recomendaciones'].append("Monitoreo y dieta rica en hierro")
+        resultados['colores'].append("#3b82f6")  # Azul claro
+        resultados['iconos'].append("🔷")
+    else:
+        resultados['interpretaciones'].append("✅ **RESERVAS DE HIERRO ADECUADAS** (Ferritina: {:.1f} ng/mL)".format(ferritina))
+        resultados['severidades'].append("NORMAL")
+        resultados['recomendaciones'].append("Mantenimiento con alimentación balanceada")
+        resultados['colores'].append("#16a34a")  # Verde
+        resultados['iconos'].append("🟢")
+    
+    # ============================================
+    # 2. EVALUAR CHCM - CON COLORES
+    # ============================================
+    if chcm < 30:
+        resultados['interpretaciones'].append("🚨 **HIPOCROMÍA SEVERA** (CHCM: {:.1f} g/dL)".format(chcm))
+        resultados['severidades'].append("CRITICO")
+        resultados['recomendaciones'].append("Evaluar déficit de hierro avanzado o talasemia")
+        resultados['colores'].append("#dc2626")
+        resultados['iconos'].append("🔴")
+    elif chcm < 32:
+        resultados['interpretaciones'].append("⚠️ **HIPOCROMÍA MODERADA** (CHCM: {:.1f} g/dL)".format(chcm))
+        resultados['severidades'].append("MODERADO")
+        resultados['recomendaciones'].append("Reforzar suplementación de hierro")
+        resultados['colores'].append("#d97706")
+        resultados['iconos'].append("🟠")
+    elif chcm >= 32 and chcm <= 36:
+        resultados['interpretaciones'].append("✅ **NORMOCROMÍA** (CHCM: {:.1f} g/dL)".format(chcm))
+        resultados['severidades'].append("NORMAL")
+        resultados['recomendaciones'].append("Estado normal - continuar vigilancia")
+        resultados['colores'].append("#16a34a")
+        resultados['iconos'].append("🟢")
+    else:
+        resultados['interpretaciones'].append("🔄 **HIPERCROMÍA** (CHCM: {:.1f} g/dL)".format(chcm))
+        resultados['severidades'].append("LEVE")
+        resultados['recomendaciones'].append("Evaluar posible esferocitosis hereditaria")
+        resultados['colores'].append("#3b82f6")
+        resultados['iconos'].append("🔷")
+    
+    # ============================================
+    # 3. EVALUAR VCM SI ESTÁ DISPONIBLE
+    # ============================================
+    if vcm is not None:
+        if vcm < 75:
+            resultados['interpretaciones'].append("📉 **MICROCITOSIS SEVERA** (VCM: {:.1f} fL)".format(vcm))
+            resultados['severidades'].append("CRITICO")
+            resultados['recomendaciones'].append("Evaluar talasemia o déficit crónico de hierro")
+            resultados['colores'].append("#dc2626")
+            resultados['iconos'].append("🔴")
+        elif vcm < 80:
+            resultados['interpretaciones'].append("📉 **MICROCITOSIS** (VCM: {:.1f} fL)".format(vcm))
+            resultados['severidades'].append("MODERADO")
+            resultados['recomendaciones'].append("Estudiar déficit de hierro")
+            resultados['colores'].append("#d97706")
+            resultados['iconos'].append("🟠")
+        elif vcm > 100:
+            resultados['interpretaciones'].append("📈 **MACROCITOSIS** (VCM: {:.1f} fL)".format(vcm))
+            resultados['severidades'].append("MODERADO")
+            resultados['recomendaciones'].append("Evaluar déficit de B12/folato")
+            resultados['colores'].append("#d97706")
+            resultados['iconos'].append("🟠")
+        else:
+            resultados['interpretaciones'].append("📊 **NORMOCITOSIS** (VCM: {:.1f} fL)".format(vcm))
+            resultados['severidades'].append("NORMAL")
+            resultados['recomendaciones'].append("Tamaño eritrocitario normal")
+            resultados['colores'].append("#16a34a")
+            resultados['iconos'].append("🟢")
+    
+    # ============================================
+    # 4. EVALUAR RETICULOCITOS
+    # ============================================
+    if reticulocitos < 0.5:
+        resultados['interpretaciones'].append("⚠️ **RESPUESTA RETICULOCITARIA BAJA** ({:.1f}%)".format(reticulocitos))
+        resultados['severidades'].append("MODERADO")
+        resultados['recomendaciones'].append("Investigar hipoproliferación medular")
+        resultados['colores'].append("#d97706")
+        resultados['iconos'].append("🟠")
+    elif reticulocitos > 2.0:
+        resultados['interpretaciones'].append("⬆️ **RESPUESTA RETICULOCITARIA AUMENTADA** ({:.1f}%)".format(reticulocitos))
+        resultados['severidades'].append("LEVE")
+        resultados['recomendaciones'].append("Buscar hemólisis o sangrado agudo")
+        resultados['colores'].append("#3b82f6")
+        resultados['iconos'].append("🔷")
+    else:
+        resultados['interpretaciones'].append("✅ **RESPUESTA RETICULOCITARIA NORMAL** ({:.1f}%)".format(reticulocitos))
+        resultados['severidades'].append("NORMAL")
+        resultados['recomendaciones'].append("Producción medular adecuada")
+        resultados['colores'].append("#16a34a")
+        resultados['iconos'].append("🟢")
+    
+    # ============================================
+    # 5. EVALUAR TRANSFERRINA
+    # ============================================
+    if transferrina < 200:
+        resultados['interpretaciones'].append("⚠️ **TRANSFERRINA BAJA** ({:.0f} mg/dL)".format(transferrina))
+        resultados['severidades'].append("LEVE")
+        resultados['recomendaciones'].append("Posible inflamación o malnutrición proteica")
+        resultados['colores'].append("#3b82f6")
+        resultados['iconos'].append("🔷")
+    elif transferrina > 400:
+        resultados['interpretaciones'].append("🔄 **TRANSFERRINA ELEVADA** ({:.0f} mg/dL)".format(transferrina))
+        resultados['severidades'].append("LEVE")
+        resultados['recomendaciones'].append("Compensación por déficit de hierro")
+        resultados['colores'].append("#3b82f6")
+        resultados['iconos'].append("🔷")
+    else:
+        resultados['interpretaciones'].append("✅ **TRANSFERRINA NORMAL** ({:.0f} mg/dL)".format(transferrina))
+        resultados['severidades'].append("NORMAL")
+        resultados['recomendaciones'].append("Transporte de hierro adecuado")
+        resultados['colores'].append("#16a34a")
+        resultados['iconos'].append("🟢")
+    
+    # ============================================
+    # 6. CLASIFICACIÓN FINAL DE SEVERIDAD GLOBAL
+    # ============================================
+    severidades_orden = ["CRITICO", "MODERADO", "LEVE", "NORMAL_BAJO", "NORMAL"]
+    severidad_global = "NORMAL"
+    
+    for severidad in severidades_orden:
+        if severidad in resultados['severidades']:
+            severidad_global = severidad
+            break
+    
+    # ============================================
+    # 7. RECOMENDACIÓN GLOBAL SEGÚN SEVERIDAD
+    # ============================================
+    if severidad_global == "CRITICO":
+        recomendacion_global = """
+        <div style='background-color: #fef2f2; padding: 1.5rem; border-radius: 10px; border-left: 5px solid #dc2626; margin: 1rem 0;'>
+            <h4 style='color: #dc2626; margin: 0 0 10px 0;'>🚨 INTERVENCIÓN INMEDIATA REQUERIDA</h4>
+            <p style='margin: 0; color: #7f1d1d;'>
+            1. Derivación urgente a hematología pediátrica<br>
+            2. Iniciar suplementación intensiva de hierro<br>
+            3. Estudios complementarios inmediatos<br>
+            4. Control en 15 días máximo
+            </p>
+        </div>
+        """
+        color_global = "#dc2626"
+        icono_global = "🔴"
+    elif severidad_global == "MODERADO":
+        recomendacion_global = """
+        <div style='background-color: #fffbeb; padding: 1.5rem; border-radius: 10px; border-left: 5px solid #d97706; margin: 1rem 0;'>
+            <h4 style='color: #92400e; margin: 0 0 10px 0;'>⚠️ ACCIÓN PRIORITARIA</h4>
+            <p style='margin: 0; color: #92400e;'>
+            1. Iniciar suplementación con hierro<br>
+            2. Control mensual de hemoglobina<br>
+            3. Educación nutricional intensiva<br>
+            4. Evaluar causas subyacentes
+            </p>
+        </div>
+        """
+        color_global = "#d97706"
+        icono_global = "🟠"
+    elif severidad_global == "LEVE":
+        recomendacion_global = """
+        <div style='background-color: #eff6ff; padding: 1.5rem; border-radius: 10px; border-left: 5px solid #3b82f6; margin: 1rem 0;'>
+            <h4 style='color: #1e40af; margin: 0 0 10px 0;'>🔄 VIGILANCIA ACTIVA</h4>
+            <p style='margin: 0; color: #1e40af;'>
+            1. Suplementación preventiva de hierro<br>
+            2. Modificaciones dietéticas<br>
+            3. Control cada 3 meses<br>
+            4. Monitoreo de crecimiento
+            </p>
+        </div>
+        """
+        color_global = "#3b82f6"
+        icono_global = "🔵"
+    else:
+        recomendacion_global = """
+        <div style='background-color: #f0fdf4; padding: 1.5rem; border-radius: 10px; border-left: 5px solid #16a34a; margin: 1rem 0;'>
+            <h4 style='color: #065f46; margin: 0 0 10px 0;'>✅ SEGUIMIENTO RUTINARIO</h4>
+            <p style='margin: 0; color: #065f46;'>
+            1. Mantener alimentación balanceada<br>
+            2. Control preventivo cada 6 meses<br>
+            3. Educación sobre prevención de anemia<br>
+            4. Continuar monitoreo de crecimiento
+            </p>
+        </div>
+        """
+        color_global = "#16a34a"
+        icono_global = "🟢"
+    
+    # Clasificar anemia por hemoglobina
+    clasificacion_hb, _, tipo_alerta_hb = clasificar_anemia(hemoglobina_ajustada, edad_meses)
+    
+    return {
+        "interpretaciones": resultados['interpretaciones'],
+        "recomendaciones_especificas": resultados['recomendaciones'],
+        "severidad_global": severidad_global,
+        "recomendacion_global": recomendacion_global,
+        "color_global": color_global,
+        "icono_global": icono_global,
+        "colores": resultados['colores'],
+        "iconos": resultados['iconos'],
+        "clasificacion_hemoglobina": clasificacion_hb,
+        "tipo_alerta_hemoglobina": tipo_alerta_hb
+    }
 # ==================================================
 # FUNCIONES DE CÁLCULO DE RIESGO
 # ==================================================
