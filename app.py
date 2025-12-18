@@ -496,52 +496,6 @@ def calcular_hemoglobina_ajustada(hemoglobina_medida, altitud):
 # SISTEMA DE INTERPRETACIÓN AUTOMÁTICA
 # ==================================================
 
-def interpretar_analisis_hematologico(ferritina, chcm, reticulocitos, transferrina, hemoglobina_ajustada, edad_meses):
-    """Sistema de interpretación automática de parámetros hematológicos"""
-    
-    interpretacion = ""
-    severidad = ""
-    recomendacion = ""
-    codigo_color = ""
-    
-    # EVALUAR FERRITINA
-    if ferritina < 15:
-        interpretacion += "🚨 **DEFICIT SEVERO DE HIERRO**. "
-        severidad = "CRITICO"
-    elif ferritina < 30:
-        interpretacion += "⚠️ **DEFICIT MODERADO DE HIERRO**. "
-        severidad = "MODERADO"
-    elif ferritina < 100:
-        interpretacion += "🔄 **RESERVAS DE HIERRO LIMITE**. "
-        severidad = "LEVE"
-    else:
-        interpretacion += "✅ **RESERVAS DE HIERRO ADECUADAS**. "
-        severidad = "NORMAL"
-    
-    # EVALUAR CHCM
-    if chcm < 32:
-        interpretacion += "🚨 **HIPOCROMÍA SEVERA** - Deficiencia avanzada de hierro. "
-        severidad = "CRITICO" if severidad != "CRITICO" else severidad
-    elif chcm >= 32 and chcm <= 36:
-        interpretacion += "✅ **NORMOCROMÍA** - Estado normal. "
-    else:
-        interpretacion += "🔄 **HIPERCROMÍA** - Posible esferocitosis. "
-    
-    # EVALUAR RETICULOCITOS
-    if reticulocitos < 0.5:
-        interpretacion += "⚠️ **HIPOPROLIFERACIÓN MEDULAR** - Respuesta insuficiente. "
-    elif reticulocitos > 1.5:
-        interpretacion += "🔄 **HIPERPRODUCCIÓN COMPENSATORIA** - Respuesta aumentada. "
-    else:
-        interpretacion += "✅ **PRODUCCIÓN MEDULAR NORMAL**. "
-    
-    # EVALUAR TRANSFERRINA
-    if transferrina < 200:
-        interpretacion += "⚠️ **SATURACIÓN BAJA** - Transporte disminuido. "
-    elif transferrina > 400:
-        interpretacion += "🔄 **SATURACIÓN AUMENTADA** - Compensación por deficiencia. "
-    else:
-        interpretacion += "✅ **TRANSPORTE ADECUADO**. "
     
     # CLASIFICACIÓN DE ANEMIA
     clasificacion_hb, _, _ = clasificar_anemia(hemoglobina_ajustada, edad_meses)
@@ -569,36 +523,7 @@ def interpretar_analisis_hematologico(ferritina, chcm, reticulocitos, transferri
         "clasificacion_hemoglobina": clasificacion_hb
     }
 
-def generar_parametros_hematologicos(hemoglobina_ajustada, edad_meses):
-    """Genera parámetros hematológicos simulados"""
-    
-    if hemoglobina_ajustada < 9.0:
-        ferritina = np.random.uniform(5, 15)
-        chcm = np.random.uniform(28, 31)
-        reticulocitos = np.random.uniform(0.5, 1.0)
-        transferrina = np.random.uniform(350, 450)
-    elif hemoglobina_ajustada < 11.0:
-        ferritina = np.random.uniform(15, 50)
-        chcm = np.random.uniform(31, 33)
-        reticulocitos = np.random.uniform(1.0, 1.8)
-        transferrina = np.random.uniform(300, 400)
-    else:
-        ferritina = np.random.uniform(80, 150)
-        chcm = np.random.uniform(33, 36)
-        reticulocitos = np.random.uniform(0.8, 1.5)
-        transferrina = np.random.uniform(200, 350)
-    
-    vcm = (chcm / 33) * np.random.uniform(75, 95)
-    hcm = (chcm / 33) * np.random.uniform(27, 32)
-    
-    return {
-        'vcm': round(vcm, 1),
-        'hcm': round(hcm, 1),
-        'chcm': round(chcm, 1),
-        'ferritina': round(ferritina, 1),
-        'transferrina': round(transferrina, 0),
-        'reticulocitos': round(reticulocitos, 1)
-    }
+
 
 # ==================================================
 # CLASIFICACIÓN DE ANEMIA
