@@ -962,9 +962,13 @@ with tab1:
             
             sugerencias = generar_sugerencias(nivel_riesgo, hemoglobina_ajustada, edad_meses)
             
+            # Primero: Obtener el estado nutricional
             estado_peso, estado_talla, estado_nutricional = evaluar_estado_nutricional(
                 edad_meses, peso_kg, talla_cm, genero
             )
+            
+            # Verificar si es "NO EVALUABLE"
+            es_no_evaluable = "NO EVALUABLE" in estado_nutricional or "NO EVALUADA" in estado_nutricional
             
             parametros_simulados = generar_parametros_hematologicos(hemoglobina_ajustada, edad_meses)
             interpretacion_auto = interpretar_analisis_hematologico(
@@ -1001,44 +1005,80 @@ with tab1:
             with col2:
                 st.markdown('<div class="section-title-blue" style="font-size: 1.2rem;">🍎 Estado Nutricional</div>', unsafe_allow_html=True)
                 
-                # Calcular estado nutricional con los datos REALES ingresados
-                estado_peso, estado_talla, estado_nutricional = evaluar_estado_nutricional(
-                    edad_meses, peso_kg, talla_cm, genero
-                )
-                
-                st.markdown(f"""
-                <div class="metric-card-blue">
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                        <div>
-                            <div class="metric-label">EDAD</div>
-                            <div class="highlight-number highlight-blue">{edad_meses} meses</div>
+                if es_no_evaluable:
+                    # CUADRO ESPECIAL PARA "NO EVALUABLE" (como en la imagen)
+                    st.markdown(f"""
+                    <div class="metric-card-yellow">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                            <div>
+                                <div class="metric-label">EDAD</div>
+                                <div class="highlight-number highlight-yellow">{edad_meses} meses</div>
+                            </div>
+                            <div>
+                                <div class="metric-label">GÉNERO</div>
+                                <div class="highlight-number highlight-yellow">{'Niña' if genero == 'F' else 'Niño'}</div>
+                            </div>
                         </div>
-                        <div>
-                            <div class="metric-label">GÉNERO</div>
-                            <div class="highlight-number highlight-blue">{'Niña' if genero == 'F' else 'Niño'}</div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px;">
+                            <div>
+                                <div class="metric-label">PESO</div>
+                                <div class="highlight-number highlight-yellow">{peso_kg} kg</div>
+                                <div style="font-size: 0.8rem; color: #92400e;">Estado: {estado_peso}</div>
+                            </div>
+                            <div>
+                                <div class="metric-label">TALLA</div>
+                                <div class="highlight-number highlight-yellow">{talla_cm} cm</div>
+                                <div style="font-size: 0.8rem; color: #92400e;">Estado: {estado_talla}</div>
+                            </div>
+                        </div>
+                        <div style="margin-top: 15px; padding-top: 15px; border-top: 2px dashed #d97706;">
+                            <div class="metric-label">ESTADO NUTRICIONAL</div>
+                            <div class="highlight-number highlight-yellow" style="font-size: 1.8rem; color: #92400e;">NO EVALUABLE</div>
+                            <div style="font-size: 0.9rem; color: #78350f; margin-top: 5px; font-weight: 600;">
+                            <strong>Recomendación:</strong> ED normal, continuar seguimiento
+                            </div>
+                            <div style="font-size: 0.8rem; color: #92400e; margin-top: 10px; background: #fffbeb; padding: 8px; border-radius: 5px;">
+                            <strong>⚠️ Nota:</strong> La edad ({edad_meses} meses) está fuera del rango de referencia disponible. 
+                            Se recomienda evaluación antropométrica manual o usar tablas específicas.
+                            </div>
                         </div>
                     </div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px;">
-                        <div>
-                            <div class="metric-label">PESO</div>
-                            <div class="highlight-number highlight-blue">{peso_kg} kg</div>
-                            <div style="font-size: 0.8rem; color: #6b7280;">Estado: {estado_peso}</div>
+                    """, unsafe_allow_html=True)
+                else:
+                    # CUADRO NORMAL (estado evaluable)
+                    st.markdown(f"""
+                    <div class="metric-card-blue">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                            <div>
+                                <div class="metric-label">EDAD</div>
+                                <div class="highlight-number highlight-blue">{edad_meses} meses</div>
+                            </div>
+                            <div>
+                                <div class="metric-label">GÉNERO</div>
+                                <div class="highlight-number highlight-blue">{'Niña' if genero == 'F' else 'Niño'}</div>
+                            </div>
                         </div>
-                        <div>
-                            <div class="metric-label">TALLA</div>
-                            <div class="highlight-number highlight-blue">{talla_cm} cm</div>
-                            <div style="font-size: 0.8rem; color: #6b7280;">Estado: {estado_talla}</div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px;">
+                            <div>
+                                <div class="metric-label">PESO</div>
+                                <div class="highlight-number highlight-blue">{peso_kg} kg</div>
+                                <div style="font-size: 0.8rem; color: #6b7280;">Estado: {estado_peso}</div>
+                            </div>
+                            <div>
+                                <div class="metric-label">TALLA</div>
+                                <div class="highlight-number highlight-blue">{talla_cm} cm</div>
+                                <div style="font-size: 0.8rem; color: #6b7280;">Estado: {estado_talla}</div>
+                            </div>
+                        </div>
+                        <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e5e7eb;">
+                            <div class="metric-label">ESTADO NUTRICIONAL</div>
+                            <div class="highlight-number highlight-blue" style="font-size: 1.8rem;">{estado_nutricional}</div>
+                            <div style="font-size: 0.9rem; color: #6b7280; margin-top: 5px;">
+                            <strong>Recomendación:</strong> {"🚨 ATENCIÓN URGENTE" if estado_nutricional in ["DESNUTRICIÓN CRÓNICA", "DESNUTRICIÓN AGUDA"] else "⚠️ NECESITA SEGUIMIENTO" if estado_nutricional == "SOBREPESO" else "✅ NORMAL, continuar seguimiento"}
+                            </div>
                         </div>
                     </div>
-                    <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e5e7eb;">
-                        <div class="metric-label">ESTADO NUTRICIONAL</div>
-                        <div class="highlight-number highlight-blue" style="font-size: 1.8rem;">{estado_nutricional}</div>
-                        <div style="font-size: 0.9rem; color: #6b7280; margin-top: 5px;">
-                        <strong>Recomendación:</strong> {"🚨 ATENCIÓN URGENTE" if estado_nutricional in ["DESNUTRICIÓN CRÓNICA", "DESNUTRICIÓN AGUDA"] else "⚠️ NECESITA SEGUIMIENTO" if estado_nutricional == "SOBREPESO" else "✅ NORMAL, continuar seguimiento"}
-                        </div>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
+                    """, unsafe_allow_html=True)
             
             # INTERPRETACIÓN HEMATOLÓGICA
             st.markdown('<div class="section-title-green">🔬 Interpretación Hematológica Automática</div>', unsafe_allow_html=True)
