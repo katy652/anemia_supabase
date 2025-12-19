@@ -968,14 +968,6 @@ if submitted:
         es_no_evaluable = "NO EVALUABLE" in estado_nutricional or "NO EVALUADA" in estado_nutricional
         
         parametros_simulados = generar_parametros_hematologicos(hemoglobina_ajustada, edad_meses)
-        interpretacion_auto = interpretar_analisis_hematologico(
-            parametros_simulados['ferritina'],
-            parametros_simulados['chcm'],
-            parametros_simulados['reticulocitos'], 
-            parametros_simulados['transferrina'],
-            hemoglobina_ajustada,
-            edad_meses
-        )
         
         # Mostrar resultados
         st.markdown("---")
@@ -1003,38 +995,38 @@ if submitted:
             st.markdown('<div class="section-title-blue" style="font-size: 1.2rem;">🍎 Estado Nutricional</div>', unsafe_allow_html=True)
             
             if es_no_evaluable:
-                # CUADRO ESPECIAL PARA "NO EVALUABLE" (como en la imagen)
+                # CUADRO ESPECIAL PARA "NO EVALUABLE" - EN VERDE
                 st.markdown(f"""
-                <div class="metric-card-yellow">
+                <div class="metric-card-green">
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                         <div>
                             <div class="metric-label">EDAD</div>
-                            <div class="highlight-number highlight-yellow">{edad_meses} meses</div>
+                            <div class="highlight-number highlight-green">{edad_meses} meses</div>
                         </div>
                         <div>
                             <div class="metric-label">GÉNERO</div>
-                            <div class="highlight-number highlight-yellow">{'Niña' if genero == 'F' else 'Niño'}</div>
+                            <div class="highlight-number highlight-green">{'Niña' if genero == 'F' else 'Niño'}</div>
                         </div>
                     </div>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px;">
                         <div>
                             <div class="metric-label">PESO</div>
-                            <div class="highlight-number highlight-yellow">{peso_kg} kg</div>
-                            <div style="font-size: 0.8rem; color: #92400e;">Estado: {estado_peso}</div>
+                            <div class="highlight-number highlight-green">{peso_kg} kg</div>
+                            <div style="font-size: 0.8rem; color: #065f46;">Estado: {estado_peso}</div>
                         </div>
                         <div>
                             <div class="metric-label">TALLA</div>
-                            <div class="highlight-number highlight-yellow">{talla_cm} cm</div>
-                            <div style="font-size: 0.8rem; color: #92400e;">Estado: {estado_talla}</div>
+                            <div class="highlight-number highlight-green">{talla_cm} cm</div>
+                            <div style="font-size: 0.8rem; color: #065f46;">Estado: {estado_talla}</div>
                         </div>
                     </div>
-                    <div style="margin-top: 15px; padding-top: 15px; border-top: 2px dashed #d97706;">
+                    <div style="margin-top: 15px; padding-top: 15px; border-top: 2px dashed #16a34a;">
                         <div class="metric-label">ESTADO NUTRICIONAL</div>
-                        <div class="highlight-number highlight-yellow" style="font-size: 1.8rem; color: #92400e;">NO EVALUABLE</div>
-                        <div style="font-size: 0.9rem; color: #78350f; margin-top: 5px; font-weight: 600;">
+                        <div class="highlight-number highlight-green" style="font-size: 1.8rem; color: #16a34a;">INVALUABLE</div>
+                        <div style="font-size: 0.9rem; color: #065f46; margin-top: 5px; font-weight: 600;">
                         <strong>Recomendación:</strong> ED normal, continuar seguimiento
                         </div>
-                        <div style="font-size: 0.8rem; color: #92400e; margin-top: 10px; background: #fffbeb; padding: 8px; border-radius: 5px;">
+                        <div style="font-size: 0.8rem; color: #047857; margin-top: 10px; background: #d1fae5; padding: 8px; border-radius: 5px;">
                         <strong>⚠️ Nota:</strong> La edad ({edad_meses} meses) está fuera del rango de referencia disponible. 
                         Se recomienda evaluación antropométrica manual o usar tablas específicas.
                         </div>
@@ -1115,13 +1107,11 @@ if submitted:
                     "frecuencia_suplemento": frecuencia_suplemento if consume_hierro else None,
                     "antecedentes_anemia": antecedentes_anemia,
                     "enfermedades_cronicas": enfermedades_cronicas.strip() if enfermedades_cronicas else None,
-                    "interpretacion_hematologica": interpretacion_auto['interpretacion'],
                     "politicas_de_ris": region,
                     "riesgo": nivel_riesgo,
                     "fecha_alerta": datetime.now().strftime("%Y-%m-%d"),
                     "estado_alerta": estado,
-                    "sugerencias": sugerencias,
-                    "severidad_interpretacion": interpretacion_auto['severidad']
+                    "sugerencias": sugerencias
                 }
                 
                 resultado = insertar_datos_supabase(record)
