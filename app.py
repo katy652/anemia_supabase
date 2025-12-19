@@ -834,309 +834,316 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
 # PESTAÑA 1: REGISTRO COMPLETO (CORREGIDA)
 # ==================================================
 
-with tab1:
-    st.markdown('<div class="section-title-blue">📝 Registro Completo de Paciente</div>', unsafe_allow_html=True)
+with st.form("formulario_completo"):
+    col1, col2 = st.columns(2)
     
-    with st.form("formulario_completo"):
+    with col1:
+        st.markdown('<div class="section-title-blue" style="font-size: 1.4rem;">👤 Datos Personales</div>', unsafe_allow_html=True)
+        dni = st.text_input("DNI*", placeholder="Ej: 87654321")
+        nombre_completo = st.text_input("Nombre Completo*", placeholder="Ej: Ana García Pérez")
+        edad_meses = st.number_input("Edad (meses)*", 1, 240, 24)
+        peso_kg = st.number_input("Peso (kg)*", 0.0, 50.0, 12.5, 0.1)
+        talla_cm = st.number_input("Talla (cm)*", 0.0, 150.0, 85.0, 0.1)
+        genero = st.selectbox("Género*", GENEROS)
+        telefono = st.text_input("Teléfono", placeholder="Ej: 987654321")
+        estado_paciente = st.selectbox("Estado del Paciente", ESTADOS_PACIENTE)
+    
+    with col2:
+        st.markdown('<div class="section-title-blue" style="font-size: 1.4rem;">🌍 Datos Geográficos</div>', unsafe_allow_html=True)
+        region = st.selectbox("Región*", PERU_REGIONS)
+        departamento = st.text_input("Departamento/Distrito", placeholder="Ej: Lima Metropolitana")
+        
+        if region in ALTITUD_REGIONES:
+            altitud_info = ALTITUD_REGIONES[region]
+            altitud_auto = altitud_info["altitud_promedio"]
+            
+            st.markdown(f"""
+            <div class="metric-card-purple">
+                <h4 style="margin: 0 0 10px 0; color: #5b21b6;">🏔️ Altitud {region}</h4>
+                <p style="margin: 5px 0;"><strong>Rango:</strong> {altitud_info['altitud_min']} - {altitud_info['altitud_max']} msnm</p>
+                <p style="margin: 5px 0;"><strong>Promedio:</strong> {altitud_info['altitud_promedio']} msnm</p>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            altitud_msnm = st.number_input("Altitud (msnm)*", 0, 5000, altitud_auto)
+        else:
+            altitud_msnm = st.number_input("Altitud (msnm)*", 0, 5000, 500)
+        
+        st.markdown('<div class="section-title-blue" style="font-size: 1.4rem;">💰 Factores Socioeconómicos</div>', unsafe_allow_html=True)
+        nivel_educativo = st.selectbox("Nivel Educativo", NIVELES_EDUCATIVOS)
+        acceso_agua_potable = st.checkbox("Acceso a agua potable")
+        tiene_servicio_salud = st.checkbox("Tiene servicio de salud")
+    
+    st.markdown("---")
+    col3, col4 = st.columns(2)
+    
+    with col3:
+        st.markdown('<div class="section-title-blue" style="font-size: 1.4rem;">🩺 Parámetros Clínicos</div>', unsafe_allow_html=True)
+        hemoglobina_medida = st.number_input("Hemoglobina medida (g/dL)*", 5.0, 20.0, 11.0, 0.1)
+        
+        ajuste_hb = obtener_ajuste_hemoglobina(altitud_msnm)
+        hemoglobina_ajustada = calcular_hemoglobina_ajustada(hemoglobina_medida, altitud_msnm)
+        
+        clasificacion, recomendacion, tipo_alerta = clasificar_anemia(hemoglobina_ajustada, edad_meses)
+        
+        # Mostrar clasificación con estilo
+        if tipo_alerta == "error":
+            st.markdown(f"""
+            <div class="severity-critical">
+                <h4 style="margin: 0 0 10px 0; color: #dc2626;">{clasificacion}</h4>
+                <p style="margin: 0;">{recomendacion}</p>
+            </div>
+            """, unsafe_allow_html=True)
+        elif tipo_alerta == "warning":
+            st.markdown(f"""
+            <div class="severity-moderate">
+                <h4 style="margin: 0 0 10px 0; color: #d97706;">{clasificacion}</h4>
+                <p style="margin: 0;">{recomendacion}</p>
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown(f"""
+            <div class="severity-normal">
+                <h4 style="margin: 0 0 10px 0; color: #16a34a;">{clasificacion}</h4>
+                <p style="margin: 0;">{recomendacion}</p>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        # Métrica con estilo
+        st.markdown(f"""
+        <div class="metric-card-blue">
+            <div class="metric-label">HEMOGLOBINA AJUSTADA</div>
+            <div class="highlight-number highlight-blue">{hemoglobina_ajustada:.1f} g/dL</div>
+            <div style="font-size: 0.9rem; color: #6b7280;">
+            Ajuste por altitud: {ajuste_hb:+.1f} g/dL
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        necesita_seguimiento = necesita_seguimiento_automatico(hemoglobina_ajustada, edad_meses)
+        en_seguimiento = st.checkbox("Marcar para seguimiento activo", value=necesita_seguimiento)
+        
+        consume_hierro = st.checkbox("Consume suplemento de hierro")
+        if consume_hierro:
+            tipo_suplemento_hierro = st.text_input("Tipo de suplemento de hierro", placeholder="Ej: Sulfato ferroso")
+            frecuencia_suplemento = st.selectbox("Frecuencia de suplemento", FRECUENCIAS_SUPLEMENTO)
+        else:
+            tipo_suplemento_hierro = ""
+            frecuencia_suplemento = ""
+        
+        antecedentes_anemia = st.checkbox("Antecedentes de anemia")
+        enfermedades_cronicas = st.text_area("Enfermedades crónicas", placeholder="Ej: Asma, alergias, etc.")
+    
+    with col4:
+        st.markdown('<div class="section-title-blue" style="font-size: 1.4rem;">📋 Factores de Riesgo</div>', unsafe_allow_html=True)
+        
+        st.markdown('<div style="color: #1e40af; font-weight: 600; margin: 10px 0;">🏥 Factores Clínicos</div>', unsafe_allow_html=True)
+        factores_clinicos = st.multiselect("Seleccione factores clínicos:", FACTORES_CLINICOS)
+        
+        st.markdown('<div style="color: #1e40af; font-weight: 600; margin: 10px 0;">💰 Factores Socioeconómicos</div>', unsafe_allow_html=True)
+        factores_sociales = st.multiselect("Seleccione factores sociales:", FACTORES_SOCIOECONOMICOS)
+    
+    submitted = st.form_submit_button("🎯 ANALIZAR RIESGO Y GUARDAR", type="primary", use_container_width=True)
+
+if submitted:
+    if not dni or not nombre_completo:
+        st.error("❌ Complete DNI y nombre del paciente")
+    else:
+        # Cálculos
+        nivel_riesgo, puntaje, estado = calcular_riesgo_anemia(
+            hemoglobina_ajustada,
+            edad_meses,
+            factores_clinicos,
+            factores_sociales
+        )
+        
+        sugerencias = generar_sugerencias(nivel_riesgo, hemoglobina_ajustada, edad_meses)
+        
+        # Primero: Obtener el estado nutricional
+        estado_peso, estado_talla, estado_nutricional = evaluar_estado_nutricional(
+            edad_meses, peso_kg, talla_cm, genero
+        )
+        
+        # Verificar si es "NO EVALUABLE"
+        es_no_evaluable = "NO EVALUABLE" in estado_nutricional or "NO EVALUADA" in estado_nutricional
+        
+        # Mostrar resultados
+        st.markdown("---")
+        st.markdown('<div class="section-title-green">📊 EVALUACIÓN INTEGRAL DEL PACIENTE</div>', unsafe_allow_html=True)
+        
         col1, col2 = st.columns(2)
         
         with col1:
-            st.markdown('<div class="section-title-blue" style="font-size: 1.4rem;">👤 Datos Personales</div>', unsafe_allow_html=True)
-            dni = st.text_input("DNI*", placeholder="Ej: 87654321")
-            nombre_completo = st.text_input("Nombre Completo*", placeholder="Ej: Ana García Pérez")
-            edad_meses = st.number_input("Edad (meses)*", 1, 240, 24)
-            peso_kg = st.number_input("Peso (kg)*", 0.0, 50.0, 12.5, 0.1)
-            talla_cm = st.number_input("Talla (cm)*", 0.0, 150.0, 85.0, 0.1)
-            genero = st.selectbox("Género*", GENEROS)
-            telefono = st.text_input("Teléfono", placeholder="Ej: 987654321")
-            estado_paciente = st.selectbox("Estado del Paciente", ESTADOS_PACIENTE)
+            st.markdown('<div class="section-title-blue" style="font-size: 1.2rem;">🩺 Estado de Anemia</div>', unsafe_allow_html=True)
+            
+            if "ALTO" in nivel_riesgo:
+                st.markdown('<div class="metric-card-red">', unsafe_allow_html=True)
+            elif "MODERADO" in nivel_riesgo:
+                st.markdown('<div class="metric-card-yellow">', unsafe_allow_html=True)
+            else:
+                st.markdown('<div class="metric-card-green">', unsafe_allow_html=True)
+            
+            st.markdown(f'<div class="metric-label">RIESGO ANEMIA</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="highlight-number {"highlight-red" if "ALTO" in nivel_riesgo else "highlight-yellow" if "MODERADO" in nivel_riesgo else "highlight-green"}">{nivel_riesgo}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="font-size: 0.9rem; color: #6b7280;">Puntaje: {puntaje}/60 puntos | Alerta: {estado}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="font-size: 0.9rem; color: #6b7280;">Clasificación OMS: {clasificacion}</div>', unsafe_allow_html=True)
+            st.markdown('</div>', unsafe_allow_html=True)
         
         with col2:
-            st.markdown('<div class="section-title-blue" style="font-size: 1.4rem;">🌍 Datos Geográficos</div>', unsafe_allow_html=True)
-            region = st.selectbox("Región*", PERU_REGIONS)
-            departamento = st.text_input("Departamento/Distrito", placeholder="Ej: Lima Metropolitana")
+            st.markdown('<div class="section-title-blue" style="font-size: 1.2rem;">🍎 Estado Nutricional</div>', unsafe_allow_html=True)
             
-            if region in ALTITUD_REGIONES:
-                altitud_info = ALTITUD_REGIONES[region]
-                altitud_auto = altitud_info["altitud_promedio"]
-                
-                st.markdown(f"""
-                <div class="metric-card-purple">
-                    <h4 style="margin: 0 0 10px 0; color: #5b21b6;">🏔️ Altitud {region}</h4>
-                    <p style="margin: 5px 0;"><strong>Rango:</strong> {altitud_info['altitud_min']} - {altitud_info['altitud_max']} msnm</p>
-                    <p style="margin: 5px 0;"><strong>Promedio:</strong> {altitud_info['altitud_promedio']} msnm</p>
-                </div>
-                """, unsafe_allow_html=True)
-                
-                altitud_msnm = st.number_input("Altitud (msnm)*", 0, 5000, altitud_auto)
-            else:
-                altitud_msnm = st.number_input("Altitud (msnm)*", 0, 5000, 500)
-            
-            st.markdown('<div class="section-title-blue" style="font-size: 1.4rem;">💰 Factores Socioeconómicos</div>', unsafe_allow_html=True)
-            nivel_educativo = st.selectbox("Nivel Educativo", NIVELES_EDUCATIVOS)
-            acceso_agua_potable = st.checkbox("Acceso a agua potable")
-            tiene_servicio_salud = st.checkbox("Tiene servicio de salud")
-        
-        st.markdown("---")
-        col3, col4 = st.columns(2)
-        
-        with col3:
-            st.markdown('<div class="section-title-blue" style="font-size: 1.4rem;">🩺 Parámetros Clínicos</div>', unsafe_allow_html=True)
-            hemoglobina_medida = st.number_input("Hemoglobina medida (g/dL)*", 5.0, 20.0, 11.0, 0.1)
-            
-            ajuste_hb = obtener_ajuste_hemoglobina(altitud_msnm)
-            hemoglobina_ajustada = calcular_hemoglobina_ajustada(hemoglobina_medida, altitud_msnm)
-            
-            clasificacion, recomendacion, tipo_alerta = clasificar_anemia(hemoglobina_ajustada, edad_meses)
-            
-            # Mostrar clasificación con estilo
-            if tipo_alerta == "error":
-                st.markdown(f"""
-                <div class="severity-critical">
-                    <h4 style="margin: 0 0 10px 0; color: #dc2626;">{clasificacion}</h4>
-                    <p style="margin: 0;">{recomendacion}</p>
-                </div>
-                """, unsafe_allow_html=True)
-            elif tipo_alerta == "warning":
-                st.markdown(f"""
-                <div class="severity-moderate">
-                    <h4 style="margin: 0 0 10px 0; color: #d97706;">{clasificacion}</h4>
-                    <p style="margin: 0;">{recomendacion}</p>
-                </div>
-                """, unsafe_allow_html=True)
-            else:
-                st.markdown(f"""
-                <div class="severity-normal">
-                    <h4 style="margin: 0 0 10px 0; color: #16a34a;">{clasificacion}</h4>
-                    <p style="margin: 0;">{recomendacion}</p>
-                </div>
-                """, unsafe_allow_html=True)
-            
-            # Métrica con estilo
-            st.markdown(f"""
-            <div class="metric-card-blue">
-                <div class="metric-label">HEMOGLOBINA AJUSTADA</div>
-                <div class="highlight-number highlight-blue">{hemoglobina_ajustada:.1f} g/dL</div>
-                <div style="font-size: 0.9rem; color: #6b7280;">
-                Ajuste por altitud: {ajuste_hb:+.1f} g/dL
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            necesita_seguimiento = necesita_seguimiento_automatico(hemoglobina_ajustada, edad_meses)
-            en_seguimiento = st.checkbox("Marcar para seguimiento activo", value=necesita_seguimiento)
-            
-            consume_hierro = st.checkbox("Consume suplemento de hierro")
-            if consume_hierro:
-                tipo_suplemento_hierro = st.text_input("Tipo de suplemento de hierro", placeholder="Ej: Sulfato ferroso")
-                frecuencia_suplemento = st.selectbox("Frecuencia de suplemento", FRECUENCIAS_SUPLEMENTO)
-            else:
-                tipo_suplemento_hierro = ""
-                frecuencia_suplemento = ""
-            
-            antecedentes_anemia = st.checkbox("Antecedentes de anemia")
-            enfermedades_cronicas = st.text_area("Enfermedades crónicas", placeholder="Ej: Asma, alergias, etc.")
-        
-        with col4:
-            st.markdown('<div class="section-title-blue" style="font-size: 1.4rem;">📋 Factores de Riesgo</div>', unsafe_allow_html=True)
-            
-            st.markdown('<div style="color: #1e40af; font-weight: 600; margin: 10px 0;">🏥 Factores Clínicos</div>', unsafe_allow_html=True)
-            factores_clinicos = st.multiselect("Seleccione factores clínicos:", FACTORES_CLINICOS)
-            
-            st.markdown('<div style="color: #1e40af; font-weight: 600; margin: 10px 0;">💰 Factores Socioeconómicos</div>', unsafe_allow_html=True)
-            factores_sociales = st.multiselect("Seleccione factores sociales:", FACTORES_SOCIOECONOMICOS)
-        
-        submitted = st.form_submit_button("🎯 ANALIZAR RIESGO Y GUARDAR", type="primary", use_container_width=True)
-    
-    if submitted:
-        if not dni or not nombre_completo:
-            st.error("❌ Complete DNI y nombre del paciente")
-        else:
-            # Cálculos
-            nivel_riesgo, puntaje, estado = calcular_riesgo_anemia(
-                hemoglobina_ajustada,
-                edad_meses,
-                factores_clinicos,
-                factores_sociales
-            )
-            
-            sugerencias = generar_sugerencias(nivel_riesgo, hemoglobina_ajustada, edad_meses)
-            
-            # Primero: Obtener el estado nutricional
-            estado_peso, estado_talla, estado_nutricional = evaluar_estado_nutricional(
-                edad_meses, peso_kg, talla_cm, genero
-            )
-            
-            # Verificar si es "NO EVALUABLE"
-            es_no_evaluable = "NO EVALUABLE" in estado_nutricional or "NO EVALUADA" in estado_nutricional
-            
-            # Mostrar resultados
-            st.markdown("---")
-            st.markdown('<div class="section-title-green">📊 EVALUACIÓN INTEGRAL DEL PACIENTE</div>', unsafe_allow_html=True)
-            
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                st.markdown('<div class="section-title-blue" style="font-size: 1.2rem;">🩺 Estado de Anemia</div>', unsafe_allow_html=True)
-                
-                if "ALTO" in nivel_riesgo:
-                    st.markdown('<div class="metric-card-red">', unsafe_allow_html=True)
-                elif "MODERADO" in nivel_riesgo:
-                    st.markdown('<div class="metric-card-yellow">', unsafe_allow_html=True)
-                else:
-                    st.markdown('<div class="metric-card-green">', unsafe_allow_html=True)
-                
-                st.markdown(f'<div class="metric-label">RIESGO ANEMIA</div>', unsafe_allow_html=True)
-                st.markdown(f'<div class="highlight-number {"highlight-red" if "ALTO" in nivel_riesgo else "highlight-yellow" if "MODERADO" in nivel_riesgo else "highlight-green"}">{nivel_riesgo}</div>', unsafe_allow_html=True)
-                st.markdown(f'<div style="font-size: 0.9rem; color: #6b7280;">Puntaje: {puntaje}/60 puntos | Alerta: {estado}</div>', unsafe_allow_html=True)
-                st.markdown(f'<div style="font-size: 0.9rem; color: #6b7280;">Clasificación OMS: {clasificacion}</div>', unsafe_allow_html=True)
-                st.markdown('</div>', unsafe_allow_html=True)
-            
-            with col2:
-                st.markdown('<div class="section-title-blue" style="font-size: 1.2rem;">🍎 Estado Nutricional</div>', unsafe_allow_html=True)
-                
-                if es_no_evaluable:
-                    # CUADRO ESPECIAL PARA "NO EVALUABLE" - EN VERDE
-                    st.markdown(f"""
-                    <div class="metric-card-green">
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                            <div>
-                                <div class="metric-label">EDAD</div>
-                                <div class="highlight-number highlight-green">{edad_meses} meses</div>
-                            </div>
-                            <div>
-                                <div class="metric-label">GÉNERO</div>
-                                <div class="highlight-number highlight-green">{'Niña' if genero == 'F' else 'Niño'}</div>
-                            </div>
+            if es_no_evaluable:
+                # CUADRO ESPECIAL PARA "NO EVALUABLE" - EN VERDE
+                st.markdown(f'''
+                <div class="metric-card-green">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div>
+                            <div class="metric-label">EDAD</div>
+                            <div class="highlight-number highlight-green">{edad_meses} meses</div>
                         </div>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px;">
-                            <div>
-                                <div class="metric-label">PESO</div>
-                                <div class="highlight-number highlight-green">{peso_kg} kg</div>
-                                <div style="font-size: 0.8rem; color: #065f46;">Estado: {estado_peso}</div>
-                            </div>
-                            <div>
-                                <div class="metric-label">TALLA</div>
-                                <div class="highlight-number highlight-green">{talla_cm} cm</div>
-                                <div style="font-size: 0.8rem; color: #065f46;">Estado: {estado_talla}</div>
-                            </div>
-                        </div>
-                        <div style="margin-top: 15px; padding-top: 15px; border-top: 2px dashed #16a34a;">
-                            <div class="metric-label">ESTADO NUTRICIONAL</div>
-                            <div class="highlight-number highlight-green" style="font-size: 1.8rem; color: #16a34a;">INVALUABLE</div>
-                            <div style="font-size: 0.9rem; color: #065f46; margin-top: 5px; font-weight: 600;">
-                            <strong>Recomendación:</strong> ED normal, continuar seguimiento
-                            </div>
-                            <div style="font-size: 0.8rem; color: #047857; margin-top: 10px; background: #d1fae5; padding: 8px; border-radius: 5px;">
-                            <strong>⚠️ Nota:</strong> La edad ({edad_meses} meses) está fuera del rango de referencia disponible. 
-                            Se recomienda evaluación antropométrica manual o usar tablas específicas.
-                            </div>
+                        <div>
+                            <div class="metric-label">GÉNERO</div>
+                            <div class="highlight-number highlight-green">{"Niña" if genero == "F" else "Niño"}</div>
                         </div>
                     </div>
-                    """, unsafe_allow_html=True)
-                else:
-                    # CUADRO NORMAL (estado evaluable)
-                    st.markdown(f"""
-                    <div class="metric-card-blue">
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                            <div>
-                                <div class="metric-label">EDAD</div>
-                                <div class="highlight-number highlight-blue">{edad_meses} meses</div>
-                            </div>
-                            <div>
-                                <div class="metric-label">GÉNERO</div>
-                                <div class="highlight-number highlight-blue">{'Niña' if genero == 'F' else 'Niño'}</div>
-                            </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px;">
+                        <div>
+                            <div class="metric-label">PESO</div>
+                            <div class="highlight-number highlight-green">{peso_kg} kg</div>
+                            <div style="font-size: 0.8rem; color: #065f46;">Estado: {estado_peso}</div>
                         </div>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px;">
-                            <div>
-                                <div class="metric-label">PESO</div>
-                                <div class="highlight-number highlight-blue">{peso_kg} kg</div>
-                                <div style="font-size: 0.8rem; color: #6b7280;">Estado: {estado_peso}</div>
-                            </div>
-                            <div>
-                                <div class="metric-label">TALLA</div>
-                                <div class="highlight-number highlight-blue">{talla_cm} cm</div>
-                                <div style="font-size: 0.8rem; color: #6b7280;">Estado: {estado_talla}</div>
-                            </div>
-                        </div>
-                        <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e5e7eb;">
-                            <div class="metric-label">ESTADO NUTRICIONAL</div>
-                            <div class="highlight-number highlight-blue" style="font-size: 1.8rem;">{estado_nutricional}</div>
-                            <div style="font-size: 0.9rem; color: #6b7280; margin-top: 5px;">
-                            <strong>Recomendación:</strong> {"🚨 ATENCIÓN URGENTE" if estado_nutricional in ["DESNUTRICIÓN CRÓNICA", "DESNUTRICIÓN AGUDA"] else "⚠️ NECESITA SEGUIMIENTO" if estado_nutricional == "SOBREPESO" else "✅ NORMAL, continuar seguimiento"}
-                            </div>
+                        <div>
+                            <div class="metric-label">TALLA</div>
+                            <div class="highlight-number highlight-green">{talla_cm} cm</div>
+                            <div style="font-size: 0.8rem; color: #065f46;">Estado: {estado_talla}</div>
                         </div>
                     </div>
-                    """, unsafe_allow_html=True)
-            
-            # SUGERENCIAS
-            st.markdown('<div class="section-title-green">💡 Plan de Acción General</div>', unsafe_allow_html=True)
-            st.markdown(f"""
-            <div class="metric-card-yellow">
-                <div style="font-size: 1.1rem; color: #92400e; font-weight: 600; margin-bottom: 10px;">
-                📋 RECOMENDACIONES
+                    <div style="margin-top: 15px; padding-top: 15px; border-top: 2px dashed #16a34a;">
+                        <div class="metric-label">ESTADO NUTRICIONAL</div>
+                        <div class="highlight-number highlight-green" style="font-size: 1.8rem; color: #16a34a;">INVALUABLE</div>
+                        <div style="font-size: 0.9rem; color: #065f46; margin-top: 5px; font-weight: 600;">
+                        <strong>Recomendación:</strong> ED normal, continuar seguimiento
+                        </div>
+                        <div style="font-size: 0.8rem; color: #047857; margin-top: 10px; background: #d1fae5; padding: 8px; border-radius: 5px;">
+                        <strong>⚠️ Nota:</strong> La edad ({edad_meses} meses) está fuera del rango de referencia disponible. 
+                        Se recomienda evaluación antropométrica manual o usar tablas específicas.
+                        </div>
+                    </div>
                 </div>
-                <div style="color: #78350f;">
-                {sugerencias}
+                ''', unsafe_allow_html=True)
+            else:
+                # CUADRO NORMAL (estado evaluable)
+                st.markdown(f'''
+                <div class="metric-card-blue">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div>
+                            <div class="metric-label">EDAD</div>
+                            <div class="highlight-number highlight-blue">{edad_meses} meses</div>
+                        </div>
+                        <div>
+                            <div class="metric-label">GÉNERO</div>
+                            <div class="highlight-number highlight-blue">{"Niña" if genero == "F" else "Niño"}</div>
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px;">
+                        <div>
+                            <div class="metric-label">PESO</div>
+                            <div class="highlight-number highlight-blue">{peso_kg} kg</div>
+                            <div style="font-size: 0.8rem; color: #6b7280;">Estado: {estado_peso}</div>
+                        </div>
+                        <div>
+                            <div class="metric-label">TALLA</div>
+                            <div class="highlight-number highlight-blue">{talla_cm} cm</div>
+                            <div style="font-size: 0.8rem; color: #6b7280;">Estado: {estado_talla}</div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e5e7eb;">
+                        <div class="metric-label">ESTADO NUTRICIONAL</div>
+                        <div class="highlight-number highlight-blue" style="font-size: 1.8rem;">{estado_nutricional}</div>
+                        <div style="font-size: 0.9rem; color: #6b7280; margin-top: 5px;">
+                        <strong>Recomendación:</strong> {"🚨 ATENCIÓN URGENTE" if estado_nutricional in ["DESNUTRICIÓN CRÓNICA", "DESNUTRICIÓN AGUDA"] else "⚠️ NECESITA SEGUIMIENTO" if estado_nutricional == "SOBREPESO" else "✅ NORMAL, continuar seguimiento"}
+                        </div>
+                    </div>
                 </div>
+                ''', unsafe_allow_html=True)
+        
+        # SUGERENCIAS
+        st.markdown('<div class="section-title-green">💡 Plan de Acción General</div>', unsafe_allow_html=True)
+        st.markdown(f'''
+        <div class="metric-card-yellow">
+            <div style="font-size: 1.1rem; color: #92400e; font-weight: 600; margin-bottom: 10px;">
+            📋 RECOMENDACIONES
             </div>
-            """, unsafe_allow_html=True)
-            
-            # GUARDAR EN SUPABASE - CON MEJOR MANEJO DE ERRORES
-            if supabase:
-                with st.spinner("Verificando y guardando datos..."):
-                    try:
-                        # PRIMERO verificar si el DNI ya existe
-                        response = supabase.table("alertas_hemoglobin_aplay").select("dni").eq("dni", dni.strip()).execute()
-                        
-                        if response.data and len(response.data) > 0:
-                            st.error(f"❌ El DNI {dni} ya existe en la base de datos")
-                            st.info("Por favor, use un DNI diferente o edite el registro existente")
-                        else:
-                            # Si no existe, insertar nuevo registro
-                            record = {
-                                "dni": dni.strip(),
-                                "nombre_apellido": nombre_completo.strip(),
-                                "edad_meses": int(edad_meses),
-                                "peso_kg": float(peso_kg),
-                                "talla_cm": float(talla_cm),
-                                "genero": genero,
-                                "telefono": telefono.strip() if telefono else None,
-                                "estado_paciente": estado_paciente,
-                                "region": region,
-                                "departamento": departamento.strip() if departamento else None,
-                                "altitud_msnm": int(altitud_msnm),
-                                "nivel_educativo": nivel_educativo,
-                                "acceso_agua_potable": acceso_agua_potable,
-                                "tiene_servicio_salud": tiene_servicio_salud,
-                                "hemoglobina_dl1": float(hemoglobina_medida),
-                                "en_seguimiento": en_seguimiento,
-                                "consumir_hierro": consume_hierro,
-                                "tipo_suplemento_hierro": tipo_suplemento_hierro.strip() if consume_hierro and tipo_suplemento_hierro else None,
-                                "frecuencia_suplemento": frecuencia_suplemento if consume_hierro else None,
-                                "antecedentes_anemia": antecedentes_anemia,
-                                "enfermedades_cronicas": enfermedades_cronicas.strip() if enfermedades_cronicas else None,
-                                "politicas_de_ris": region,
-                                "riesgo": nivel_riesgo,
-                                "fecha_alerta": datetime.now().strftime("%Y-%m-%d"),
-                                "estado_alerta": estado,
-                                "sugerencias": sugerencias
-                            }
-                            
-                            resultado = supabase.table("alertas_hemoglobin_aplay").insert(record).execute()
-                            
-                            if resultado.data:
-                                st.success("✅ Datos guardados en Supabase correctamente")
-                                st.balloons()
-                                time.sleep(2)
-                                st.rerun()
+            <div style="color: #78350f;">
+            {sugerencias}
+            </div>
+        </div>
+        ''', unsafe_allow_html=True)
+        
+        # GUARDAR EN SUPABASE - SIMPLIFICADO PARA EVITAR ERRORES
+        if supabase:
+            with st.spinner("Guardando datos..."):
+                try:
+                    # Crear el registro
+                    record = {
+                        "dni": dni.strip(),
+                        "nombre_apellido": nombre_completo.strip(),
+                        "edad_meses": int(edad_meses),
+                        "peso_kg": float(peso_kg),
+                        "talla_cm": float(talla_cm),
+                        "genero": genero,
+                        "telefono": telefono.strip() if telefono else None,
+                        "estado_paciente": estado_paciente,
+                        "region": region,
+                        "departamento": departamento.strip() if departamento else None,
+                        "altitud_msnm": int(altitud_msnm),
+                        "nivel_educativo": nivel_educativo,
+                        "acceso_agua_potable": acceso_agua_potable,
+                        "tiene_servicio_salud": tiene_servicio_salud,
+                        "hemoglobina_dl1": float(hemoglobina_medida),
+                        "en_seguimiento": en_seguimiento,
+                        "consumir_hierro": consume_hierro,
+                        "tipo_suplemento_hierro": tipo_suplemento_hierro.strip() if consume_hierro and tipo_suplemento_hierro else None,
+                        "frecuencia_suplemento": frecuencia_suplemento if consume_hierro else None,
+                        "antecedentes_anemia": antecedentes_anemia,
+                        "enfermedades_cronicas": enfermedades_cronicas.strip() if enfermedades_cronicas else None,
+                        "politicas_de_ris": region,
+                        "riesgo": nivel_riesgo,
+                        "fecha_alerta": datetime.now().strftime("%Y-%m-%d"),
+                        "estado_alerta": estado,
+                        "sugerencias": sugerencias
+                    }
+                    
+                    # Intentar insertar directamente
+                    resultado = supabase.table("alertas_hemoglobin_aplay").insert(record).execute()
+                    
+                    if resultado.data:
+                        st.success("✅ Datos guardados en Supabase correctamente")
+                        st.balloons()
+                        time.sleep(1)
+                        st.rerun()
+                    else:
+                        if hasattr(resultado, 'error') and resultado.error:
+                            if "duplicate key" in str(resultado.error).lower():
+                                st.error(f"❌ El DNI {dni} ya existe en la base de datos")
+                                st.info("Por favor, use un DNI diferente o edite el registro existente")
                             else:
-                                st.error("❌ Error al guardar en Supabase")
-                    except Exception as e:
-                        st.error(f"❌ Error de conexión con Supabase: {str(e)}")
-            else:
-                st.error("🔴 No hay conexión a Supabase")
+                                st.error(f"❌ Error al guardar: {str(resultado.error)}")
+                        else:
+                            st.error("❌ Error desconocido al guardar")
+                    
+                except Exception as e:
+                    error_msg = str(e)
+                    if "duplicate key" in error_msg.lower() or "23505" in error_msg:
+                        st.error(f"❌ El DNI {dni} ya existe en la base de datos")
+                        st.info("Por favor, use un DNI diferente o edite el registro existente")
+                    elif "timeout" in error_msg.lower() or "temporarily unavailable" in error_msg.lower():
+                        st.error("⏳ Error de conexión temporal con la base de datos")
+                        st.info("Por favor, intente de nuevo en unos momentos")
+                    else:
+                        st.error(f"❌ Error de conexión: {error_msg}")
+        else:
+            st.error("🔴 No hay conexión a Supabase")
 # ==================================================
 # PESTAÑA 2: SEGUIMIENTO CLÍNICO COMPLETO (CON PARÁMETROS HEMATOLÓGICOS)
 # ==================================================
