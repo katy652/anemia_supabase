@@ -1093,24 +1093,109 @@ with tab1:
                         </div>
                         """, unsafe_allow_html=True)
                     
-                    # Mostrar evaluación nutricional
-                    st.markdown(f"""
-                    <div class="metric-card-yellow" style="margin-top: 1rem;">
-                        <div class="metric-label">EVALUACIÓN NUTRICIONAL</div>
-                        <div class="highlight-number highlight-yellow" style="font-size: 1.5rem;">{estado_nutricional}</div>
-                        <div style="font-size: 0.9rem; color: #6b7280; margin-top: 5px;">
-                        <strong>Peso:</strong> {estado_peso} | <strong>Talla:</strong> {estado_talla}
-                        </div>
-                        <div style="font-size: 0.9rem; color: #6b7280; margin-top: 5px;">
-                        <strong>Género:</strong> {genero}
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                
-                else:
-                    # Datos incompletos
-                    st.warning("⚠️ **DATOS NUTRICIONALES INCOMPLETOS**")
-                    st.info("Complete edad, peso y talla para evaluación nutricional")
+                   with col2:
+    st.markdown("---")
+    st.markdown('<div class="section-title-blue" style="font-size: 1.2rem;">🍎 ESTADO NUTRICIONAL</div>', unsafe_allow_html=True)
+    
+    # Verificar si tenemos datos para evaluar
+    if edad_meses > 0 and peso_kg > 0 and talla_cm > 0:
+        # Llamar a la función de evaluación nutricional
+        estado_peso, estado_talla, estado_nutricional = evaluar_estado_nutricional(
+            edad_meses, peso_kg, talla_cm, genero
+        )
+        
+        # Mostrar datos básicos
+        col_nut1, col_nut2, col_nut3 = st.columns(3)
+        
+        with col_nut1:
+            st.markdown(f"""
+            <div class="metric-card-blue">
+                <div class="metric-label">EDAD</div>
+                <div class="highlight-number highlight-blue">{edad_meses}</div>
+                <div style="font-size: 0.9rem; color: #6b7280;">meses</div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col_nut2:
+            st.markdown(f"""
+            <div class="metric-card-green">
+                <div class="metric-label">PESO</div>
+                <div class="highlight-number highlight-green">{peso_kg:.1f}</div>
+                <div style="font-size: 0.9rem; color: #6b7280;">kg</div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col_nut3:
+            st.markdown(f"""
+            <div class="metric-card-purple">
+                <div class="metric-label">TALLA</div>
+                <div class="highlight-number highlight-purple">{talla_cm:.1f}</div>
+                <div style="font-size: 0.9rem; color: #6b7280;">cm</div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        # Mostrar evaluación nutricional con colores según severidad
+        if "DESNUTRICIÓN" in estado_nutricional.upper() or "SEVER" in estado_nutricional.upper():
+            st.markdown(f"""
+            <div class="severity-critical" style="margin-top: 1rem; padding: 15px; border-radius: 10px;">
+                <div style="font-size: 1.5rem; color: #dc2626; font-weight: bold; text-align: center;">
+                ⚠️ {estado_nutricional}
+                </div>
+                <div style="font-size: 0.9rem; color: #6b7280; margin-top: 10px; text-align: center;">
+                <strong>Peso para edad:</strong> {estado_peso}<br>
+                <strong>Talla para edad:</strong> {estado_talla}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+        elif "BAJO PESO" in estado_nutricional.upper() or "RIESGO" in estado_nutricional.upper():
+            st.markdown(f"""
+            <div class="severity-moderate" style="margin-top: 1rem; padding: 15px; border-radius: 10px;">
+                <div style="font-size: 1.5rem; color: #d97706; font-weight: bold; text-align: center;">
+                ⚠️ {estado_nutricional}
+                </div>
+                <div style="font-size: 0.9rem; color: #6b7280; margin-top: 10px; text-align: center;">
+                <strong>Peso para edad:</strong> {estado_peso}<br>
+                <strong>Talla para edad:</strong> {estado_talla}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+        elif "SOBREPESO" in estado_nutricional.upper() or "OBESIDAD" in estado_nutricional.upper():
+            st.markdown(f"""
+            <div class="severity-mild" style="margin-top: 1rem; padding: 15px; border-radius: 10px;">
+                <div style="font-size: 1.5rem; color: #2563eb; font-weight: bold; text-align: center;">
+                ⚠️ {estado_nutricional}
+                </div>
+                <div style="font-size: 0.9rem; color: #6b7280; margin-top: 10px; text-align: center;">
+                <strong>Peso para edad:</strong> {estado_peso}<br>
+                <strong>Talla para edad:</strong> {estado_talla}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown(f"""
+            <div class="metric-card-yellow" style="margin-top: 1rem;">
+                <div class="metric-label">EVALUACIÓN NUTRICIONAL</div>
+                <div class="highlight-number highlight-yellow" style="font-size: 1.5rem;">{estado_nutricional}</div>
+                <div style="font-size: 0.9rem; color: #6b7280; margin-top: 5px;">
+                <strong>Peso para la edad:</strong> {estado_peso}
+                </div>
+                <div style="font-size: 0.9rem; color: #6b7280; margin-top: 5px;">
+                <strong>Talla para la edad:</strong> {estado_talla}
+                </div>
+                <div style="font-size: 0.9rem; color: #6b7280; margin-top: 5px;">
+                <strong>Género:</strong> {genero}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        # Mostrar alerta si hay problemas nutricionales
+        if estado_nutricional not in ["Normal", "Adecuado", "Saludable", "Normal"]:
+            st.warning(f"⚠️ **ALERTA NUTRICIONAL**: Se recomienda evaluación por especialista en nutrición pediátrica.")
+    
+    else:
+        # Datos incompletos
+        st.warning("⚠️ **DATOS NUTRICIONALES INCOMPLETOS**")
+        st.info("Complete edad, peso y talla para evaluación nutricional")
             
             # SUGERENCIAS
             st.markdown('<div class="section-title-green">💡 Plan de Acción General</div>', unsafe_allow_html=True)
