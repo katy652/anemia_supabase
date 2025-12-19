@@ -1023,68 +1023,7 @@ with tab1:
                 </div>
                 """.format(estado_peso, estado_talla, estado_nutricional, 'SÍ' if en_seguimiento else 'NO'), unsafe_allow_html=True)
             
-            # INTERPRETACIÓN HEMATOLÓGICA
-            st.markdown('<div class="section-title-green">🔬 Interpretación Hematológica Automática</div>', unsafe_allow_html=True)
-            
-            if interpretacion_auto['severidad'] == "CRITICO":
-                st.markdown('<div class="severity-critical">', unsafe_allow_html=True)
-            elif interpretacion_auto['severidad'] == "MODERADO":
-                st.markdown('<div class="severity-moderate">', unsafe_allow_html=True)
-            elif interpretacion_auto['severidad'] == "LEVE":
-                st.markdown('<div class="severity-mild">', unsafe_allow_html=True)
-            else:
-                st.markdown('<div class="severity-normal">', unsafe_allow_html=True)
-            
-            st.markdown(f"**📋 Análisis Integrado - {interpretacion_auto['severidad']}**")
-            st.markdown(f"**Interpretación:** {interpretacion_auto['interpretacion']}")
-            st.markdown(f"**💡 Plan Específico:** {interpretacion_auto['recomendacion']}")
-            st.markdown('</div>', unsafe_allow_html=True)
-            
-            # PARÁMETROS HEMATOLÓGICOS
-            st.markdown('<div class="section-title-green">🧪 Parámetros Hematológicos Estimados</div>', unsafe_allow_html=True)
-            
-            col_param1, col_param2, col_param3 = st.columns(3)
-            with col_param1:
-                st.markdown(f"""
-                <div class="metric-card-blue">
-                    <div class="metric-label">FERRITINA</div>
-                    <div class="highlight-number highlight-blue">{parametros_simulados['ferritina']} ng/mL</div>
-                </div>
-                """, unsafe_allow_html=True)
-                st.markdown(f"""
-                <div class="metric-card-blue">
-                    <div class="metric-label">CHCM</div>
-                    <div class="highlight-number highlight-blue">{parametros_simulados['chcm']} g/dL</div>
-                </div>
-                """, unsafe_allow_html=True)
-            
-            with col_param2:
-                st.markdown(f"""
-                <div class="metric-card-green">
-                    <div class="metric-label">TRANSFERRINA</div>
-                    <div class="highlight-number highlight-green">{parametros_simulados['transferrina']} mg/dL</div>
-                </div>
-                """, unsafe_allow_html=True)
-                st.markdown(f"""
-                <div class="metric-card-green">
-                    <div class="metric-label">VCM</div>
-                    <div class="highlight-number highlight-green">{parametros_simulados['vcm']} fL</div>
-                </div>
-                """, unsafe_allow_html=True)
-            
-            with col_param3:
-                st.markdown(f"""
-                <div class="metric-card-purple">
-                    <div class="metric-label">RETICULOCITOS</div>
-                    <div class="highlight-number highlight-purple">{parametros_simulados['reticulocitos']} %</div>
-                </div>
-                """, unsafe_allow_html=True)
-                st.markdown(f"""
-                <div class="metric-card-purple">
-                    <div class="metric-label">HCM</div>
-                    <div class="highlight-number highlight-purple">{parametros_simulados['hcm']} pg</div>
-                </div>
-                """, unsafe_allow_html=True)
+           
             
             # SUGERENCIAS
             st.markdown('<div class="section-title-green">💡 Plan de Acción General</div>', unsafe_allow_html=True)
