@@ -496,30 +496,58 @@ def calcular_hemoglobina_ajustada(hemoglobina_medida, altitud):
 # SISTEMA DE INTERPRETACIÓN AUTOMÁTICA
 # ==================================================
 
-def generar_interpretacion_completa(hemoglobina_ajustada, edad_meses):
+def interpretar_analisis_hematologico(ferritina, chcm, reticulocitos, transferrina, hemoglobina_ajustada, edad_meses):
+    """Sistema de interpretación automática de parámetros hematológicos"""
+    
     interpretacion = ""
+    severidad = ""
+    recomendacion = ""
+    codigo_color = ""
     
-    # 1. CLASIFICACIÓN DE ANEMIA
-    clasificacion_hb, rango_min, rango_max = clasificar_anemia(hemoglobina_ajustada, edad_meses)
-    interpretacion += f"📊 **CLASIFICACIÓN HEMOGLOBINA: {clasificacion_hb}**\n\n"
-    
-    # 2. DETERMINAR SEVERIDAD BASADA EN LA CLASIFICACIÓN
-    if clasificacion_hb == "ANEMIA GRAVE":
+    # EVALUAR FERRITINA
+    if ferritina < 15:
+        interpretacion += "🚨 **DEFICIT SEVERO DE HIERRO**. "
         severidad = "CRITICO"
-    elif clasificacion_hb == "ANEMIA MODERADA":
+    elif ferritina < 30:
+        interpretacion += "⚠️ **DEFICIT MODERADO DE HIERRO**. "
         severidad = "MODERADO"
-    elif clasificacion_hb == "ANEMIA LEVE":
+    elif ferritina < 100:
+        interpretacion += "🔄 **RESERVAS DE HIERRO LIMITE**. "
         severidad = "LEVE"
-    else:  # NORMAL, OTROS CASOS
+    else:
+        interpretacion += "✅ **RESERVAS DE HIERRO ADECUADAS**. "
         severidad = "NORMAL"
     
-    # 3. AGREGAR INFORMACIÓN ADICIONAL A LA INTERPRETACIÓN
-    interpretacion += f"📈 **Nivel de hemoglobina**: {hemoglobina_ajustada} g/dL\n"
-    interpretacion += f"📅 **Edad**: {edad_meses} meses\n"
-    interpretacion += f"🎯 **Rango normal esperado**: {rango_min} - {rango_max} g/dL\n"
-    interpretacion += f"⚠️ **Nivel de severidad**: {severidad}\n\n"
+    # EVALUAR CHCM
+    if chcm < 32:
+        interpretacion += "🚨 **HIPOCROMÍA SEVERA** - Deficiencia avanzada de hierro. "
+        severidad = "CRITICO" if severidad != "CRITICO" else severidad
+    elif chcm >= 32 and chcm <= 36:
+        interpretacion += "✅ **NORMOCROMÍA** - Estado normal. "
+    else:
+        interpretacion += "🔄 **HIPERCROMÍA** - Posible esferocitosis. "
     
-    # 4. GENERAR RECOMENDACIÓN SEGÚN SEVERIDAD
+    # EVALUAR RETICULOCITOS
+    if reticulocitos < 0.5:
+        interpretacion += "⚠️ **HIPOPROLIFERACIÓN MEDULAR** - Respuesta insuficiente. "
+    elif reticulocitos > 1.5:
+        interpretacion += "🔄 **HIPERPRODUCCIÓN COMPENSATORIA** - Respuesta aumentada. "
+    else:
+        interpretacion += "✅ **PRODUCCIÓN MEDULAR NORMAL**. "
+    
+    # EVALUAR TRANSFERRINA
+    if transferrina < 200:
+        interpretacion += "⚠️ **SATURACIÓN BAJA** - Transporte disminuido. "
+    elif transferrina > 400:
+        interpretacion += "🔄 **SATURACIÓN AUMENTADA** - Compensación por deficiencia. "
+    else:
+        interpretacion += "✅ **TRANSPORTE ADECUADO**. "
+    
+    # CLASIFICACIÓN DE ANEMIA
+    clasificacion_hb, _, _ = clasificar_anemia(hemoglobina_ajustada, edad_meses)
+    interpretacion += f"📊 **CLASIFICACIÓN HEMOGLOBINA: {clasificacion_hb}**"
+    
+    # GENERAR RECOMENDACIÓN
     if severidad == "CRITICO":
         recomendacion = "🚨 **INTERVENCIÓN INMEDIATA**: Suplementación con hierro elemental 3-6 mg/kg/día + Control en 15 días + Evaluación médica urgente"
         codigo_color = "#DC2626"
@@ -533,19 +561,43 @@ def generar_interpretacion_completa(hemoglobina_ajustada, edad_meses):
         recomendacion = "✅ **SEGUIMIENTO RUTINARIO**: Mantener alimentación balanceada + Control preventivo cada 6 meses"
         codigo_color = "#16A34A"
     
-    # 5. AGREGAR RECOMENDACIÓN A LA INTERPRETACIÓN
-    interpretacion += f"💡 **RECOMENDACIÓN**: {recomendacion}"
-    
     return {
         "interpretacion": interpretacion,
         "severidad": severidad,
         "recomendacion": recomendacion,
         "codigo_color": codigo_color,
-        "clasificacion_hemoglobina": clasificacion_hb,
-        "hemoglobina": hemoglobina_ajustada,
-        "edad_meses": edad_meses,
-        "rango_min": rango_min,
-        "rango_max": rango_max
+        "clasificacion_hemoglobina": clasificacion_hb
+    }
+
+def generar_parametros_hematologicos(hemoglobina_ajustada, edad_meses):
+    """Genera parámetros hematológicos simulados"""
+    
+    if hemoglobina_ajustada < 9.0:
+        ferritina = np.random.uniform(5, 15)
+        chcm = np.random.uniform(28, 31)
+        reticulocitos = np.random.uniform(0.5, 1.0)
+        transferrina = np.random.uniform(350, 450)
+    elif hemoglobina_ajustada < 11.0:
+        ferritina = np.random.uniform(15, 50)
+        chcm = np.random.uniform(31, 33)
+        reticulocitos = np.random.uniform(1.0, 1.8)
+        transferrina = np.random.uniform(300, 400)
+    else:
+        ferritina = np.random.uniform(80, 150)
+        chcm = np.random.uniform(33, 36)
+        reticulocitos = np.random.uniform(0.8, 1.5)
+        transferrina = np.random.uniform(200, 350)
+    
+    vcm = (chcm / 33) * np.random.uniform(75, 95)
+    hcm = (chcm / 33) * np.random.uniform(27, 32)
+    
+    return {
+        'vcm': round(vcm, 1),
+        'hcm': round(hcm, 1),
+        'chcm': round(chcm, 1),
+        'ferritina': round(ferritina, 1),
+        'transferrina': round(transferrina, 0),
+        'reticulocitos': round(reticulocitos, 1)
     }
 
 # ==================================================
