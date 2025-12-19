@@ -831,7 +831,7 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
 ])
 
 # ==================================================
-# PESTAÑA 1: REGISTRO COMPLETO
+# PESTAÑA 1: REGISTRO COMPLETO (CORREGIDA)
 # ==================================================
 
 with tab1:
@@ -1001,27 +1001,44 @@ with tab1:
             with col2:
                 st.markdown('<div class="section-title-blue" style="font-size: 1.2rem;">🍎 Estado Nutricional</div>', unsafe_allow_html=True)
                 
-                st.markdown("""
+                # Calcular estado nutricional con los datos REALES ingresados
+                estado_peso, estado_talla, estado_nutricional = evaluar_estado_nutricional(
+                    edad_meses, peso_kg, talla_cm, genero
+                )
+                
+                st.markdown(f"""
                 <div class="metric-card-blue">
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                         <div>
+                            <div class="metric-label">EDAD</div>
+                            <div class="highlight-number highlight-blue">{edad_meses} meses</div>
+                        </div>
+                        <div>
+                            <div class="metric-label">GÉNERO</div>
+                            <div class="highlight-number highlight-blue">{'Niña' if genero == 'F' else 'Niño'}</div>
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px;">
+                        <div>
                             <div class="metric-label">PESO</div>
-                            <div class="highlight-number highlight-blue">{}</div>
+                            <div class="highlight-number highlight-blue">{peso_kg} kg</div>
+                            <div style="font-size: 0.8rem; color: #6b7280;">Estado: {estado_peso}</div>
                         </div>
                         <div>
                             <div class="metric-label">TALLA</div>
-                            <div class="highlight-number highlight-blue">{}</div>
+                            <div class="highlight-number highlight-blue">{talla_cm} cm</div>
+                            <div style="font-size: 0.8rem; color: #6b7280;">Estado: {estado_talla}</div>
                         </div>
                     </div>
                     <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e5e7eb;">
                         <div class="metric-label">ESTADO NUTRICIONAL</div>
-                        <div class="highlight-number highlight-blue" style="font-size: 1.8rem;">{}</div>
+                        <div class="highlight-number highlight-blue" style="font-size: 1.8rem;">{estado_nutricional}</div>
                         <div style="font-size: 0.9rem; color: #6b7280; margin-top: 5px;">
-                        Seguimiento activo: {}
+                        <strong>Recomendación:</strong> {"🚨 ATENCIÓN URGENTE" if estado_nutricional in ["DESNUTRICIÓN CRÓNICA", "DESNUTRICIÓN AGUDA"] else "⚠️ NECESITA SEGUIMIENTO" if estado_nutricional == "SOBREPESO" else "✅ NORMAL, continuar seguimiento"}
                         </div>
                     </div>
                 </div>
-                """.format(estado_peso, estado_talla, estado_nutricional, 'SÍ' if en_seguimiento else 'NO'), unsafe_allow_html=True)
+                """, unsafe_allow_html=True)
             
             # INTERPRETACIÓN HEMATOLÓGICA
             st.markdown('<div class="section-title-green">🔬 Interpretación Hematológica Automática</div>', unsafe_allow_html=True)
@@ -1039,52 +1056,6 @@ with tab1:
             st.markdown(f"**Interpretación:** {interpretacion_auto['interpretacion']}")
             st.markdown(f"**💡 Plan Específico:** {interpretacion_auto['recomendacion']}")
             st.markdown('</div>', unsafe_allow_html=True)
-            
-            # PARÁMETROS HEMATOLÓGICOS
-            st.markdown('<div class="section-title-green">🧪 Parámetros Hematológicos Estimados</div>', unsafe_allow_html=True)
-            
-            col_param1, col_param2, col_param3 = st.columns(3)
-            with col_param1:
-                st.markdown(f"""
-                <div class="metric-card-blue">
-                    <div class="metric-label">FERRITINA</div>
-                    <div class="highlight-number highlight-blue">{parametros_simulados['ferritina']} ng/mL</div>
-                </div>
-                """, unsafe_allow_html=True)
-                st.markdown(f"""
-                <div class="metric-card-blue">
-                    <div class="metric-label">CHCM</div>
-                    <div class="highlight-number highlight-blue">{parametros_simulados['chcm']} g/dL</div>
-                </div>
-                """, unsafe_allow_html=True)
-            
-            with col_param2:
-                st.markdown(f"""
-                <div class="metric-card-green">
-                    <div class="metric-label">TRANSFERRINA</div>
-                    <div class="highlight-number highlight-green">{parametros_simulados['transferrina']} mg/dL</div>
-                </div>
-                """, unsafe_allow_html=True)
-                st.markdown(f"""
-                <div class="metric-card-green">
-                    <div class="metric-label">VCM</div>
-                    <div class="highlight-number highlight-green">{parametros_simulados['vcm']} fL</div>
-                </div>
-                """, unsafe_allow_html=True)
-            
-            with col_param3:
-                st.markdown(f"""
-                <div class="metric-card-purple">
-                    <div class="metric-label">RETICULOCITOS</div>
-                    <div class="highlight-number highlight-purple">{parametros_simulados['reticulocitos']} %</div>
-                </div>
-                """, unsafe_allow_html=True)
-                st.markdown(f"""
-                <div class="metric-card-purple">
-                    <div class="metric-label">HCM</div>
-                    <div class="highlight-number highlight-purple">{parametros_simulados['hcm']} pg</div>
-                </div>
-                """, unsafe_allow_html=True)
             
             # SUGERENCIAS
             st.markdown('<div class="section-title-green">💡 Plan de Acción General</div>', unsafe_allow_html=True)
@@ -1150,7 +1121,7 @@ with tab1:
                 st.error("🔴 No hay conexión a Supabase")
 
 # ==================================================
-# PESTAÑA 2: SEGUIMIENTO CLÍNICO COMPLETO
+# PESTAÑA 2: SEGUIMIENTO CLÍNICO COMPLETO (CON PARÁMETROS HEMATOLÓGICOS)
 # ==================================================
 
 with tab2:
@@ -1293,6 +1264,106 @@ with tab2:
                     </p>
                 </div>
                 """, unsafe_allow_html=True)
+            
+            st.markdown("---")
+            
+            # ============================================
+            # PARÁMETROS HEMATOLÓGICOS ESTIMADOS (AGREGADOS AQUÍ)
+            # ============================================
+            st.markdown('<div class="section-title-green">🧪 Parámetros Hematológicos Estimados</div>', unsafe_allow_html=True)
+            
+            # Generar parámetros hematológicos basados en la hemoglobina
+            parametros_hematologicos = generar_parametros_hematologicos(
+                hb_ajustada, 
+                paciente_data['edad_meses']
+            )
+            
+            col_hemat1, col_hemat2, col_hemat3 = st.columns(3)
+            
+            with col_hemat1:
+                st.markdown(f"""
+                <div class="metric-card-blue">
+                    <div class="metric-label">FERRITINA</div>
+                    <div class="highlight-number highlight-blue">{parametros_hematologicos['ferritina']} ng/mL</div>
+                    <div style="font-size: 0.8rem; color: #6b7280;">
+                    Reservas de hierro
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                st.markdown(f"""
+                <div class="metric-card-blue">
+                    <div class="metric-label">CHCM</div>
+                    <div class="highlight-number highlight-blue">{parametros_hematologicos['chcm']} g/dL</div>
+                    <div style="font-size: 0.8rem; color: #6b7280;">
+                    Concentración Hb
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            with col_hemat2:
+                st.markdown(f"""
+                <div class="metric-card-green">
+                    <div class="metric-label">TRANSFERRINA</div>
+                    <div class="highlight-number highlight-green">{parametros_hematologicos['transferrina']} mg/dL</div>
+                    <div style="font-size: 0.8rem; color: #6b7280;">
+                    Transporte de hierro
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                st.markdown(f"""
+                <div class="metric-card-green">
+                    <div class="metric-label">VCM</div>
+                    <div class="highlight-number highlight-green">{parametros_hematologicos['vcm']} fL</div>
+                    <div style="font-size: 0.8rem; color: #6b7280;">
+                    Volumen corpuscular
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            with col_hemat3:
+                st.markdown(f"""
+                <div class="metric-card-purple">
+                    <div class="metric-label">RETICULOCITOS</div>
+                    <div class="highlight-number highlight-purple">{parametros_hematologicos['reticulocitos']} %</div>
+                    <div style="font-size: 0.8rem; color: #6b7280;">
+                    Producción medular
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                st.markdown(f"""
+                <div class="metric-card-purple">
+                    <div class="metric-label">HCM</div>
+                    <div class="highlight-number highlight-purple">{parametros_hematologicos['hcm']} pg</div>
+                    <div style="font-size: 0.8rem; color: #6b7280;">
+                    Hemoglobina corpuscular
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            # Interpretación de los parámetros
+            interpretacion = interpretar_analisis_hematologico(
+                parametros_hematologicos['ferritina'],
+                parametros_hematologicos['chcm'],
+                parametros_hematologicos['reticulocitos'],
+                parametros_hematologicos['transferrina'],
+                hb_ajustada,
+                paciente_data['edad_meses']
+            )
+            
+            st.markdown(f"""
+            <div class="metric-card-yellow">
+                <div class="metric-label">INTERPRETACIÓN AUTOMÁTICA</div>
+                <div style="font-size: 1rem; color: #78350f; margin-top: 10px;">
+                {interpretacion['interpretacion']}
+                </div>
+                <div style="font-size: 0.9rem; color: #92400e; margin-top: 10px; font-weight: 600;">
+                {interpretacion['recomendacion']}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
             
             st.markdown("---")
             
@@ -2743,9 +2814,8 @@ with tab4:
                 st.metric("Total citas", total_citas)
             
             with col_stat2:
-                # CORRECCIÓN: Cambiar "con_anaeia" por "con_anemia"
                 con_anemia = len(citas_filtradas[citas_filtradas['clasificacion_anemia'].isin(["Leve", "Moderada", "Severa"])])
-                st.metric("Con anemia", con_anemia)  # ← CORREGIDO
+                st.metric("Con anemia", con_anemia)
             
             with col_stat3:
                 severas = len(citas_filtradas[citas_filtradas['clasificacion_anemia'] == "Severa"])
