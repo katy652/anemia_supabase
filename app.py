@@ -1057,67 +1057,119 @@ with tab1:
                 </div>
                 """, unsafe_allow_html=True)
 
-            with col2:
-                st.markdown("---")
-                st.markdown('<div class="section-title-blue" style="font-size: 1.2rem;">🍎 ESTADO NUTRICIONAL</div>', unsafe_allow_html=True)
+            def evaluar_estado_nutricional(edad_meses, peso_kg, talla_cm, genero):
+    """
+    Evalúa el estado nutricional del niño basado en estándares OMS
+    Retorna: (estado_peso, estado_talla, estado_nutricional)
+    """
+    try:
+        # Validación básica de datos
+        if edad_meses <= 0 or peso_kg <= 0 or talla_cm <= 0:
+            return "No evaluable", "No evaluable", "DATOS INCOMPLETOS"
+        
+        if edad_meses > 240:  # Más de 20 años
+            return "Fuera de rango", "Fuera de rango", "EDAD NO VÁLIDA"
+        
+        # Calcular IMC
+        altura_m = talla_cm / 100
+        if altura_m <= 0:
+            return "Error cálculo", "Error cálculo", "ERROR TALLA"
+        
+        imc = peso_kg / (altura_m ** 2)
+        
+        # Evaluación según edad
+        if edad_meses < 24:  # Menor de 2 años
+            # Para menores de 2 años, usar percentiles peso/edad y talla/edad
+            if peso_kg < 8:
+                estado_peso = "Bajo peso"
+                estado_nutricional = "RIESGO NUTRICIONAL"
+            elif peso_kg < 12:
+                estado_peso = "Normal"
+                estado_nutricional = "NORMAL"
+            else:
+                estado_peso = "Sobrepeso"
+                estado_nutricional = "SOBREPESO"
+            
+            # Evaluación talla
+            if talla_cm < 75:
+                estado_talla = "Baja talla"
+            elif talla_cm < 85:
+                estado_talla = "Normal"
+            else:
+                estado_talla = "Alta talla"
                 
-                # Verificar si tenemos datos para evaluar
-                if edad_meses > 0 and peso_kg > 0 and talla_cm > 0:
-                    # Mostrar datos básicos
-                    col_nut1, col_nut2, col_nut3 = st.columns(3)
-                    
-                    with col_nut1:
-                        st.markdown(f"""
-                        <div class="metric-card-blue">
-                            <div class="metric-label">EDAD</div>
-                            <div class="highlight-number highlight-blue">{edad_meses}</div>
-                            <div style="font-size: 0.9rem; color: #6b7280;">meses</div>
-                        </div>
-                        """, unsafe_allow_html=True)
-                    
-                    with col_nut2:
-                        st.markdown(f"""
-                        <div class="metric-card-green">
-                            <div class="metric-label">PESO</div>
-                            <div class="highlight-number highlight-green">{peso_kg:.1f}</div>
-                            <div style="font-size: 0.9rem; color: #6b7280;">kg</div>
-                        </div>
-                        """, unsafe_allow_html=True)
-                    
-                    with col_nut3:
-                        st.markdown(f"""
-                        <div class="metric-card-purple">
-                            <div class="metric-label">TALLA</div>
-                            <div class="highlight-number highlight-purple">{talla_cm:.1f}</div>
-                            <div style="font-size: 0.9rem; color: #6b7280;">cm</div>
-                        </div>
-                        """, unsafe_allow_html=True)
-                    
-                    # Mostrar evaluación nutricional
-                    st.markdown(f"""
-                    <div class="metric-card-yellow" style="margin-top: 1rem;">
-                        <div class="metric-label">EVALUACIÓN NUTRICIONAL</div>
-                        <div class="highlight-number highlight-yellow" style="font-size: 1.5rem;">{estado_nutricional}</div>
-                        <div style="font-size: 0.9rem; color: #6b7280; margin-top: 5px;">
-                        <strong>Peso para la edad:</strong> {estado_peso}
-                        </div>
-                        <div style="font-size: 0.9rem; color: #6b7280; margin-top: 5px;">
-                        <strong>Talla para la edad:</strong> {estado_talla}
-                        </div>
-                        <div style="font-size: 0.9rem; color: #6b7280; margin-top: 5px;">
-                        <strong>Género:</strong> {genero}
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                    
-                    # Mostrar alerta si hay problemas nutricionales
-                    if estado_nutricional not in ["Normal", "Adecuado", "Saludable"]:
-                        st.warning(f"⚠️ **ALERTA NUTRICIONAL**: Se recomienda evaluación por especialista en nutrición pediátrica.")
+        elif edad_meses <= 60:  # 2-5 años
+            # Evaluación simplificada OMS 2-5 años
+            if imc < 14:
+                estado_peso = "Bajo peso severo"
+                estado_nutricional = "DESNUTRICIÓN"
+            elif imc < 15:
+                estado_peso = "Bajo peso"
+                estado_nutricional = "RIESGO NUTRICIONAL"
+            elif imc < 17:
+                estado_peso = "Normal"
+                estado_nutricional = "NORMAL"
+            elif imc < 18.5:
+                estado_peso = "Riesgo sobrepeso"
+                estado_nutricional = "RIESGO SOBREPESO"
+            elif imc < 20:
+                estado_peso = "Sobrepeso"
+                estado_nutricional = "SOBREPESO"
+            else:
+                estado_peso = "Obesidad"
+                estado_nutricional = "OBESIDAD"
+            
+            # Evaluación talla para edad 2-5 años
+            if talla_cm < 85:
+                estado_talla = "Baja talla"
+            elif talla_cm < 110:
+                estado_talla = "Normal"
+            else:
+                estado_talla = "Alta talla"
                 
+        else:  # Mayores de 5 años
+            # Evaluación para niños mayores
+            if imc < 16:
+                estado_peso = "Delgadez severa"
+                estado_nutricional = "DESNUTRICIÓN SEVERA"
+            elif imc < 17:
+                estado_peso = "Delgadez moderada"
+                estado_nutricional = "DESNUTRICIÓN MODERADA"
+            elif imc < 18.5:
+                estado_peso = "Delgadez leve"
+                estado_nutricional = "RIESGO NUTRICIONAL"
+            elif imc < 25:
+                estado_peso = "Normal"
+                estado_nutricional = "NORMAL"
+            elif imc < 30:
+                estado_peso = "Sobrepeso"
+                estado_nutricional = "SOBREPESO"
+            else:
+                estado_peso = "Obesidad"
+                estado_nutricional = "OBESIDAD"
+            
+            # Evaluación talla aproximada
+            if genero == "Masculino":
+                if talla_cm < (edad_meses * 0.5 + 75):  # Fórmula simplificada
+                    estado_talla = "Baja talla"
+                elif talla_cm > (edad_meses * 0.5 + 85):
+                    estado_talla = "Alta talla"
                 else:
-                    # Datos incompletos
-                    st.warning("⚠️ **DATOS NUTRICIONALES INCOMPLETOS**")
-                    st.info("Complete edad, peso y talla para evaluación nutricional")
+                    estado_talla = "Normal"
+            else:  # Femenino
+                if talla_cm < (edad_meses * 0.48 + 73):
+                    estado_talla = "Baja talla"
+                elif talla_cm > (edad_meses * 0.48 + 83):
+                    estado_talla = "Alta talla"
+                else:
+                    estado_talla = "Normal"
+        
+        return estado_peso, estado_talla, estado_nutricional
+        
+    except Exception as e:
+        # En caso de error, devolver valores por defecto
+        print(f"Error en evaluación nutricional: {str(e)}")
+        return "Error en evaluación", "Error en evaluación", "ERROR DE CÁLCULO"
             
             # SUGERENCIAS
             st.markdown('<div class="section-title-green">💡 Plan de Acción General</div>', unsafe_allow_html=True)
