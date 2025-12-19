@@ -962,12 +962,12 @@ with tab1:
             
             sugerencias = generar_sugerencias(nivel_riesgo, hemoglobina_ajustada, edad_meses)
             
-            # Obtener el estado nutricional CORREGIDO
+            # Obtener el estado nutricional
             estado_peso, estado_talla, estado_nutricional = evaluar_estado_nutricional(
                 edad_meses, peso_kg, talla_cm, genero
             )
             
-            # Verificar si es "NO EVALUABLE" - SOLUCIÓN DIRECTA
+            # Verificar si es "NO EVALUABLE"
             es_no_evaluable = False
             if estado_nutricional and isinstance(estado_nutricional, str):
                 es_no_evaluable = "NO EVALUABLE" in estado_nutricional.upper() or "NO EVALUADA" in estado_nutricional.upper()
@@ -1001,10 +1001,10 @@ with tab1:
                 st.markdown('<div class="section-title-blue" style="font-size: 1.2rem;">🍎 Estado Nutricional</div>', unsafe_allow_html=True)
                 
                 if es_no_evaluable:
-                    # CUADRO SIMPLIFICADO - NO EVALUABLE
+                    # CUADRO "NO EVALUABLE" - EN VERDE
                     st.markdown(f'''
                     <div class="metric-card-green">
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                             <div>
                                 <div class="metric-label">EDAD</div>
                                 <div class="highlight-number highlight-green">{edad_meses} meses</div>
@@ -1014,17 +1014,27 @@ with tab1:
                                 <div class="highlight-number highlight-green">{"Niña" if genero == "F" else "Niño"}</div>
                             </div>
                         </div>
-                        <div style="text-align: center; padding: 20px;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px;">
+                            <div>
+                                <div class="metric-label">PESO</div>
+                                <div class="highlight-number highlight-green">{peso_kg} kg</div>
+                            </div>
+                            <div>
+                                <div class="metric-label">TALLA</div>
+                                <div class="highlight-number highlight-green">{talla_cm} cm</div>
+                            </div>
+                        </div>
+                        <div style="margin-top: 15px; padding-top: 15px; border-top: 2px dashed #16a34a;">
                             <div class="metric-label">ESTADO NUTRICIONAL</div>
-                            <div class="highlight-number highlight-green" style="font-size: 2rem; color: #16a34a;">{estado_nutricional}</div>
-                            <div style="font-size: 0.9rem; color: #065f46; margin-top: 10px;">
-                            La edad está fuera del rango de referencia estándar
+                            <div class="highlight-number highlight-green" style="font-size: 1.8rem; color: #16a34a;">{estado_nutricional}</div>
+                            <div style="font-size: 0.8rem; color: #047857; margin-top: 10px;">
+                            Evaluación fuera de rango de referencia estándar
                             </div>
                         </div>
                     </div>
                     ''', unsafe_allow_html=True)
                 else:
-                    # CUADRO NORMAL - SIMPLIFICADO
+                    # CUADRO NORMAL
                     st.markdown(f'''
                     <div class="metric-card-blue">
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
@@ -1037,59 +1047,93 @@ with tab1:
                                 <div class="highlight-number highlight-blue">{"Niña" if genero == "F" else "Niño"}</div>
                             </div>
                         </div>
-                        <div style="margin-top: 15px; text-align: center;">
-                            <div class="metric-label">ESTADO NUTRICIONAL</div>
-                            <div class="highlight-number highlight-blue" style="font-size: 2rem;">{estado_nutricional}</div>
-                            <div style="font-size: 0.9rem; color: #6b7280; margin-top: 10px;">
-                            Evaluado según tablas de referencia OMS
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px;">
+                            <div>
+                                <div class="metric-label">PESO</div>
+                                <div class="highlight-number highlight-blue">{peso_kg} kg</div>
                             </div>
+                            <div>
+                                <div class="metric-label">TALLA</div>
+                                <div class="highlight-number highlight-blue">{talla_cm} cm</div>
+                            </div>
+                        </div>
+                        <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e5e7eb;">
+                            <div class="metric-label">ESTADO NUTRICIONAL</div>
+                            <div class="highlight-number highlight-blue" style="font-size: 1.8rem;">{estado_nutricional}</div>
                         </div>
                     </div>
                     ''', unsafe_allow_html=True)
             
-            # SUGERENCIAS SIMPLIFICADAS
-            st.markdown('<div class="section-title-green">💡 Recomendaciones</div>', unsafe_allow_html=True)
+            # RECOMENDACIONES
+            st.markdown('<div class="section-title-green">💡 Plan de Acción</div>', unsafe_allow_html=True)
             st.markdown(f'''
-            <div style="background-color: #fef3c7; padding: 20px; border-radius: 10px; border-left: 5px solid #d97706;">
-                <h4 style="color: #92400e; margin-top: 0;">Plan de Acción</h4>
-                <p style="color: #78350f;">{sugerencias}</p>
+            <div style="background: #fffbeb; padding: 15px; border-radius: 10px; border-left: 5px solid #d97706;">
+                {sugerencias}
             </div>
             ''', unsafe_allow_html=True)
             
-            # GUARDAR EN SUPABASE - SIMPLIFICADO
+            # GUARDAR EN SUPABASE - TABLA CORRECTA: alertas_hemoglobina
             if supabase:
-                with st.spinner("Guardando registro..."):
+                with st.spinner("Guardando en base de datos..."):
                     try:
-                        record = {
+                        # DATOS PARA SUPABASE
+                        paciente_data = {
                             "dni": dni.strip(),
                             "nombre_apellido": nombre_completo.strip(),
                             "edad_meses": int(edad_meses),
                             "peso_kg": float(peso_kg),
                             "talla_cm": float(talla_cm),
                             "genero": genero,
+                            "telefono": telefono.strip() if telefono else None,
+                            "estado_paciente": estado_paciente,
+                            "region": region,
+                            "departamento": departamento.strip() if departamento else None,
+                            "altitud_msnm": int(altitud_msnm),
+                            "nivel_educativo": nivel_educativo,
+                            "acceso_agua_potable": acceso_agua_potable,
+                            "tiene_servicio_salud": tiene_servicio_salud,
                             "hemoglobina_dl1": float(hemoglobina_medida),
+                            "hemoglobina_ajustada": float(hemoglobina_ajustada),
+                            "en_seguimiento": en_seguimiento,
+                            "consumir_hierro": consume_hierro,
+                            "tipo_suplemento_hierro": tipo_suplemento_hierro.strip() if consume_hierro and tipo_suplemento_hierro else None,
+                            "frecuencia_suplemento": frecuencia_suplemento if consume_hierro else None,
+                            "antecedentes_anemia": antecedentes_anemia,
+                            "enfermedades_cronicas": enfermedades_cronicas.strip() if enfermedades_cronicas else None,
+                            "clasificacion_anemia": clasificacion,
+                            "estado_nutricional": estado_nutricional,
                             "riesgo": nivel_riesgo,
-                            "fecha_alerta": datetime.now().strftime("%Y-%m-%d"),
-                            "estado_alerta": estado,
-                            "sugerencias": sugerencias
+                            "puntaje_riesgo": int(puntaje),
+                            "sugerencias": sugerencias,
+                            "fecha_registro": datetime.now().isoformat(),
+                            "estado_alerta": estado
                         }
                         
-                        resultado = supabase.table("alertas_hemoglobin_aplay").insert(record).execute()
+                        # INSERTAR EN LA TABLA CORRECTA: alertas_hemoglobina
+                        response = supabase.table("alertas_hemoglobina").insert(paciente_data).execute()
                         
-                        if resultado.data:
-                            st.success("✅ Registro guardado correctamente")
-                            time.sleep(1)
+                        if response.data:
+                            st.success("✅ Paciente guardado exitosamente en Supabase")
+                            st.balloons()
+                            time.sleep(2)
                             st.rerun()
                         else:
-                            st.error("❌ Error al guardar")
+                            st.error("❌ Error al insertar en Supabase")
+                            
                     except Exception as e:
                         error_msg = str(e)
                         if "duplicate" in error_msg.lower():
                             st.error(f"⚠️ El DNI {dni} ya está registrado")
+                        elif "timeout" in error_msg.lower():
+                            st.error("⏳ Error de conexión. Intente nuevamente.")
                         else:
-                            st.error("⚠️ Error de conexión con la base de datos")
+                            st.error(f"❌ Error: {error_msg}")
+                            
+                            # Mostrar datos que intentó guardar
+                            with st.expander("Ver datos del error"):
+                                st.json(paciente_data)
             else:
-                st.warning("ℹ️ Modo demo: Los datos no se guardarán")
+                st.error("🔴 No hay conexión a Supabase")
 # ==================================================
 # PESTAÑA 2: SEGUIMIENTO CLÍNICO COMPLETO (CON PARÁMETROS HEMATOLÓGICOS)
 # ==================================================
