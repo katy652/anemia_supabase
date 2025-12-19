@@ -831,7 +831,7 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
 ])
 
 # ==================================================
-# PESTAÑA 1: REGISTRO COMPLETO (CORREGIDA)
+# PESTAÑA 1: REGISTRO COMPLETO
 # ==================================================
 
 with tab1:
@@ -952,63 +952,17 @@ with tab1:
         if not dni or not nombre_completo:
             st.error("❌ Complete DNI y nombre del paciente")
         else:
-            # ============================================
-            # FUNCIONES CORREGIDAS (REEMPLAZAR)
-            # ============================================
-            
-            # 1. CALCULAR RIESGO DE ANEMIA - CORREGIDA
-            def calcular_riesgo_anemia_corregida(hb_ajustada, edad_meses, factores_clinicos, factores_sociales):
-                puntaje = 0
-                
-                # Puntaje por hemoglobina
-                if hb_ajustada < 7.0: puntaje += 30
-                elif hb_ajustada < 9.0: puntaje += 20
-                elif hb_ajustada < 11.0: puntaje += 10
-                
-                # Puntaje por factores
-                puntaje += len(factores_clinicos) * 4
-                puntaje += len(factores_sociales) * 3
-                
-                # Clasificar
-                if puntaje >= 30:
-                    return "ALTO RIESGO", puntaje, "URGENTE"
-                elif puntaje >= 20:
-                    return "MODERADO RIESGO", puntaje, "PRIORITARIO"
-                elif puntaje >= 10:
-                    return "BAJO RIESGO", puntaje, "SEGUIMIENTO"
-                else:
-                    return "RIESGO MÍNIMO", puntaje, "VIGILANCIA"
-            
-            # 2. GENERAR SUGERENCIAS - CORREGIDA
-            def generar_sugerencias_corregida(nivel_riesgo, hemoglobina_ajustada, edad_meses):
-                if "ALTO" in nivel_riesgo:
-                    return "• **ACCION URGENTE**: Suplementación con hierro elemental 3-6 mg/kg/día\n• **Control médico**: En 7 días\n• **Seguimiento**: Semanal hasta mejoría"
-                elif "MODERADO" in nivel_riesgo:
-                    return "• **ACCION PRIORITARIA**: Iniciar suplementación con hierro\n• **Control médico**: En 15 días\n• **Seguimiento**: Mensual"
-                elif "BAJO" in nivel_riesgo:
-                    return "• **EDUCACION NUTRICIONAL**: Dieta rica en hierro\n• **Control**: Cada 3 meses\n• **Prevención**: Alimentos ricos en hierro"
-                else:
-                    return "• **PREVENCION**: Mantener alimentación balanceada\n• **Control preventivo**: Cada 6 meses\n• **Monitoreo**: Crecimiento normal"
-            
-            # 3. EVALUAR ESTADO NUTRICIONAL - CORREGIDA
-            def evaluar_estado_nutricional_corregida(edad_meses, peso_kg, talla_cm, genero):
-                # Simplemente devolver "NUTRICIÓN ADECUADA" para evitar errores
-                return "PESO ADECUADO", "TALLA ADECUADA", "NUTRICIÓN ADECUADA"
-            
-            # ============================================
-            # USAR LAS FUNCIONES CORREGIDAS
-            # ============================================
-            
-            nivel_riesgo, puntaje, estado = calcular_riesgo_anemia_corregida(
+            # Cálculos
+            nivel_riesgo, puntaje, estado = calcular_riesgo_anemia(
                 hemoglobina_ajustada,
                 edad_meses,
                 factores_clinicos,
                 factores_sociales
             )
             
-            sugerencias = generar_sugerencias_corregida(nivel_riesgo, hemoglobina_ajustada, edad_meses)
+            sugerencias = generar_sugerencias(nivel_riesgo, hemoglobina_ajustada, edad_meses)
             
-            estado_peso, estado_talla, estado_nutricional = evaluar_estado_nutricional_corregida(
+            estado_peso, estado_talla, estado_nutricional = evaluar_estado_nutricional(
                 edad_meses, peso_kg, talla_cm, genero
             )
             
@@ -1047,26 +1001,27 @@ with tab1:
             with col2:
                 st.markdown('<div class="section-title-blue" style="font-size: 1.2rem;">🍎 Estado Nutricional</div>', unsafe_allow_html=True)
                 
-                st.markdown(f'''
+                st.markdown("""
                 <div class="metric-card-blue">
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                         <div>
                             <div class="metric-label">PESO</div>
-                            <div class="highlight-number highlight-blue">{peso_kg} kg</div>
-                            <div style="font-size: 0.8rem; color: #6b7280;">{estado_peso}</div>
+                            <div class="highlight-number highlight-blue">{}</div>
                         </div>
                         <div>
                             <div class="metric-label">TALLA</div>
-                            <div class="highlight-number highlight-blue">{talla_cm} cm</div>
-                            <div style="font-size: 0.8rem; color: #6b7280;">{estado_talla}</div>
+                            <div class="highlight-number highlight-blue">{}</div>
                         </div>
                     </div>
-                    <div style="text-align: center; padding-top: 15px; border-top: 1px solid #e5e7eb;">
+                    <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e5e7eb;">
                         <div class="metric-label">ESTADO NUTRICIONAL</div>
-                        <div class="highlight-number highlight-blue" style="font-size: 1.8rem;">{estado_nutricional}</div>
+                        <div class="highlight-number highlight-blue" style="font-size: 1.8rem;">{}</div>
+                        <div style="font-size: 0.9rem; color: #6b7280; margin-top: 5px;">
+                        Seguimiento activo: {}
+                        </div>
                     </div>
                 </div>
-                ''', unsafe_allow_html=True)
+                """.format(estado_peso, estado_talla, estado_nutricional, 'SÍ' if en_seguimiento else 'NO'), unsafe_allow_html=True)
             
             # INTERPRETACIÓN HEMATOLÓGICA
             st.markdown('<div class="section-title-green">🔬 Interpretación Hematológica Automática</div>', unsafe_allow_html=True)
@@ -1193,8 +1148,9 @@ with tab1:
                         st.error("❌ Error al guardar en Supabase")
             else:
                 st.error("🔴 No hay conexión a Supabase")
+
 # ==================================================
-# PESTAÑA 2: SEGUIMIENTO CLÍNICO COMPLETO (CON PARÁMETROS HEMATOLÓGICOS)
+# PESTAÑA 2: SEGUIMIENTO CLÍNICO COMPLETO
 # ==================================================
 
 with tab2:
@@ -1337,106 +1293,6 @@ with tab2:
                     </p>
                 </div>
                 """, unsafe_allow_html=True)
-            
-            st.markdown("---")
-            
-            # ============================================
-            # PARÁMETROS HEMATOLÓGICOS ESTIMADOS (AGREGADOS AQUÍ)
-            # ============================================
-            st.markdown('<div class="section-title-green">🧪 Parámetros Hematológicos Estimados</div>', unsafe_allow_html=True)
-            
-            # Generar parámetros hematológicos basados en la hemoglobina
-            parametros_hematologicos = generar_parametros_hematologicos(
-                hb_ajustada, 
-                paciente_data['edad_meses']
-            )
-            
-            col_hemat1, col_hemat2, col_hemat3 = st.columns(3)
-            
-            with col_hemat1:
-                st.markdown(f"""
-                <div class="metric-card-blue">
-                    <div class="metric-label">FERRITINA</div>
-                    <div class="highlight-number highlight-blue">{parametros_hematologicos['ferritina']} ng/mL</div>
-                    <div style="font-size: 0.8rem; color: #6b7280;">
-                    Reservas de hierro
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-                
-                st.markdown(f"""
-                <div class="metric-card-blue">
-                    <div class="metric-label">CHCM</div>
-                    <div class="highlight-number highlight-blue">{parametros_hematologicos['chcm']} g/dL</div>
-                    <div style="font-size: 0.8rem; color: #6b7280;">
-                    Concentración Hb
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-            
-            with col_hemat2:
-                st.markdown(f"""
-                <div class="metric-card-green">
-                    <div class="metric-label">TRANSFERRINA</div>
-                    <div class="highlight-number highlight-green">{parametros_hematologicos['transferrina']} mg/dL</div>
-                    <div style="font-size: 0.8rem; color: #6b7280;">
-                    Transporte de hierro
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-                
-                st.markdown(f"""
-                <div class="metric-card-green">
-                    <div class="metric-label">VCM</div>
-                    <div class="highlight-number highlight-green">{parametros_hematologicos['vcm']} fL</div>
-                    <div style="font-size: 0.8rem; color: #6b7280;">
-                    Volumen corpuscular
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-            
-            with col_hemat3:
-                st.markdown(f"""
-                <div class="metric-card-purple">
-                    <div class="metric-label">RETICULOCITOS</div>
-                    <div class="highlight-number highlight-purple">{parametros_hematologicos['reticulocitos']} %</div>
-                    <div style="font-size: 0.8rem; color: #6b7280;">
-                    Producción medular
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-                
-                st.markdown(f"""
-                <div class="metric-card-purple">
-                    <div class="metric-label">HCM</div>
-                    <div class="highlight-number highlight-purple">{parametros_hematologicos['hcm']} pg</div>
-                    <div style="font-size: 0.8rem; color: #6b7280;">
-                    Hemoglobina corpuscular
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-            
-            # Interpretación de los parámetros
-            interpretacion = interpretar_analisis_hematologico(
-                parametros_hematologicos['ferritina'],
-                parametros_hematologicos['chcm'],
-                parametros_hematologicos['reticulocitos'],
-                parametros_hematologicos['transferrina'],
-                hb_ajustada,
-                paciente_data['edad_meses']
-            )
-            
-            st.markdown(f"""
-            <div class="metric-card-yellow">
-                <div class="metric-label">INTERPRETACIÓN AUTOMÁTICA</div>
-                <div style="font-size: 1rem; color: #78350f; margin-top: 10px;">
-                {interpretacion['interpretacion']}
-                </div>
-                <div style="font-size: 0.9rem; color: #92400e; margin-top: 10px; font-weight: 600;">
-                {interpretacion['recomendacion']}
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
             
             st.markdown("---")
             
@@ -2887,8 +2743,9 @@ with tab4:
                 st.metric("Total citas", total_citas)
             
             with col_stat2:
+                # CORRECCIÓN: Cambiar "con_anaeia" por "con_anemia"
                 con_anemia = len(citas_filtradas[citas_filtradas['clasificacion_anemia'].isin(["Leve", "Moderada", "Severa"])])
-                st.metric("Con anemia", con_anemia)
+                st.metric("Con anemia", con_anemia)  # ← CORREGIDO
             
             with col_stat3:
                 severas = len(citas_filtradas[citas_filtradas['clasificacion_anemia'] == "Severa"])
