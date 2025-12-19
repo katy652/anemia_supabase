@@ -889,35 +889,42 @@ with tab1:
             
             clasificacion, recomendacion, tipo_alerta = clasificar_anemia(hemoglobina_ajustada, edad_meses)
             
-            # Mostrar clasificación con estilo
-            if tipo_alerta == "error":
+            # Mostrar clasificación con estilo y COLORES CORRECTOS
+            if tipo_alerta == "error" or "SEVERA" in clasificacion.upper():
                 st.markdown(f"""
                 <div class="severity-critical">
-                    <h4 style="margin: 0 0 10px 0; color: #dc2626;">{clasificacion}</h4>
-                    <p style="margin: 0;">{recomendacion}</p>
+                    <h4 style="margin: 0 0 10px 0; color: #dc2626;">🔴 {clasificacion}</h4>
+                    <p style="margin: 0; color: #dc2626;">{recomendacion}</p>
                 </div>
                 """, unsafe_allow_html=True)
-            elif tipo_alerta == "warning":
+            elif tipo_alerta == "warning" or "MODERADA" in clasificacion.upper():
                 st.markdown(f"""
                 <div class="severity-moderate">
-                    <h4 style="margin: 0 0 10px 0; color: #d97706;">{clasificacion}</h4>
-                    <p style="margin: 0;">{recomendacion}</p>
+                    <h4 style="margin: 0 0 10px 0; color: #d97706;">🟠 {clasificacion}</h4>
+                    <p style="margin: 0; color: #d97706;">{recomendacion}</p>
+                </div>
+                """, unsafe_allow_html=True)
+            elif "LEVE" in clasificacion.upper():
+                st.markdown(f"""
+                <div class="severity-mild">
+                    <h4 style="margin: 0 0 10px 0; color: #2563eb;">🔵 {clasificacion}</h4>
+                    <p style="margin: 0; color: #2563eb;">{recomendacion}</p>
                 </div>
                 """, unsafe_allow_html=True)
             else:
                 st.markdown(f"""
                 <div class="severity-normal">
-                    <h4 style="margin: 0 0 10px 0; color: #16a34a;">{clasificacion}</h4>
-                    <p style="margin: 0;">{recomendacion}</p>
+                    <h4 style="margin: 0 0 10px 0; color: #16a34a;">🟢 {clasificacion}</h4>
+                    <p style="margin: 0; color: #16a34a;">{recomendacion}</p>
                 </div>
                 """, unsafe_allow_html=True)
             
-            # Métrica con estilo
+            # Métrica con estilo AZUL
             st.markdown(f"""
             <div class="metric-card-blue">
-                <div class="metric-label">HEMOGLOBINA AJUSTADA</div>
-                <div class="highlight-number highlight-blue">{hemoglobina_ajustada:.1f} g/dL</div>
-                <div style="font-size: 0.9rem; color: #6b7280;">
+                <div class="metric-label" style="color: #1e40af;">HEMOGLOBINA AJUSTADA</div>
+                <div class="highlight-number" style="color: #1d4ed8; font-size: 2rem;">{hemoglobina_ajustada:.1f} g/dL</div>
+                <div style="font-size: 0.9rem; color: #4b5563;">
                 Ajuste por altitud: {ajuste_hb:+.1f} g/dL
                 </div>
             </div>
@@ -976,210 +983,200 @@ with tab1:
                 edad_meses
             )
             
-            # Mostrar resultados
+            # Mostrar resultados con COLORES CORRECTOS
             st.markdown("---")
-            st.markdown('<div class="section-title-green">📊 EVALUACIÓN INTEGRAL DEL PACIENTE</div>', unsafe_allow_html=True)
+            st.markdown('<div class="section-title-green" style="color: #059669; font-size: 1.5rem;">📊 EVALUACIÓN INTEGRAL DEL PACIENTE</div>', unsafe_allow_html=True)
 
             col1, col2 = st.columns(2)
 
-            # ESTADO DE ANEMIA
-            st.markdown('<div class="section-title-blue" style="font-size: 1.2rem;">🩺 ESTADO DE ANEMIA</div>', unsafe_allow_html=True)
+            # ESTADO DE ANEMIA - IZQUIERDA
+            with col1:
+                st.markdown('<div class="section-title-blue" style="font-size: 1.2rem; color: #1e40af;">🩺 ESTADO DE ANEMIA</div>', unsafe_allow_html=True)
 
-            # Clasificación OMS
-            if clasificacion == "ANEMIA SEVERA":
-                st.markdown(f"""
-                <div class="severity-critical">
-                    <h4 style="margin: 0 0 10px 0; color: #dc2626;">🔴 {clasificacion}</h4>
-                    <p style="margin: 0;"><strong>Hemoglobina:</strong> {hemoglobina_ajustada:.1f} g/dL</p>
-                    <p style="margin: 5px 0;"><strong>Edad:</strong> {edad_meses} meses</p>
-                    <p style="margin: 5px 0;"><strong>Seguimiento:</strong> {recomendacion}</p>
-                </div>
-                """, unsafe_allow_html=True)
-            elif clasificacion == "ANEMIA MODERADA":
-                st.markdown(f"""
-                <div class="severity-moderate">
-                    <h4 style="margin: 0 0 10px 0; color: #d97706;">🟠 {clasificacion}</h4>
-                    <p style="margin: 0;"><strong>Hemoglobina:</strong> {hemoglobina_ajustada:.1f} g/dL</p>
-                    <p style="margin: 5px 0;"><strong>Edad:</strong> {edad_meses} meses</p>
-                    <p style="margin: 5px 0;"><strong>Seguimiento:</strong> {recomendacion}</p>
-                </div>
-                """, unsafe_allow_html=True)
-            elif clasificacion == "ANEMIA LEVE":
-                st.markdown(f"""
-                <div class="severity-mild">
-                    <h4 style="margin: 0 0 10px 0; color: #2563eb;">🟡 {clasificacion}</h4>
-                    <p style="margin: 0;"><strong>Hemoglobina:</strong> {hemoglobina_ajustada:.1f} g/dL</p>
-                    <p style="margin: 5px 0;"><strong>Edad:</strong> {edad_meses} meses</p>
-                    <p style="margin: 5px 0;"><strong>Seguimiento:</strong> {recomendacion}</p>
-                </div>
-                """, unsafe_allow_html=True)
-            else:
-                st.markdown(f"""
-                <div class="severity-normal">
-                    <h4 style="margin: 0 0 10px 0; color: #16a34a;">🟢 {clasificacion}</h4>
-                    <p style="margin: 0;"><strong>Hemoglobina:</strong> {hemoglobina_ajustada:.1f} g/dL</p>
-                    <p style="margin: 5px 0;"><strong>Edad:</strong> {edad_meses} meses</p>
-                    <p style="margin: 5px 0;"><strong>Seguimiento:</strong> {recomendacion}</p>
-                </div>
-                """, unsafe_allow_html=True)
-
-            # NIVEL DE RIESGO SIMPLIFICADA
-            st.markdown("---")
-
-            if "ALTO" in nivel_riesgo:
-                st.markdown(f"""
-                <div class="metric-card-red">
-                    <div class="metric-label">RIESGO DE ANEMIA</div>
-                    <div class="highlight-number highlight-red">🚨 {nivel_riesgo}</div>
-                    <div style="font-size: 0.9rem; color: #6b7280; margin-top: 5px;">
-                    Puntaje: {puntaje}/60 | Alerta: {estado}
+                # Clasificación OMS con COLORES DIFERENTES
+                if clasificacion == "ANEMIA SEVERA":
+                    st.markdown(f"""
+                    <div style="background-color: #fee2e2; border-left: 5px solid #dc2626; padding: 15px; border-radius: 8px; margin: 10px 0;">
+                        <h4 style="margin: 0 0 10px 0; color: #dc2626;">🔴 {clasificacion}</h4>
+                        <p style="margin: 0;"><strong>Hemoglobina:</strong> {hemoglobina_ajustada:.1f} g/dL</p>
+                        <p style="margin: 5px 0;"><strong>Edad:</strong> {edad_meses} meses</p>
+                        <p style="margin: 5px 0; color: #dc2626;"><strong>⚠️ {recomendacion}</strong></p>
                     </div>
-                </div>
-                """, unsafe_allow_html=True)
-            elif "MODERADO" in nivel_riesgo:
-                st.markdown(f"""
-                <div class="metric-card-yellow">
-                    <div class="metric-label">RIESGO DE ANEMIA</div>
-                    <div class="highlight-number highlight-yellow">⚠️ {nivel_riesgo}</div>
-                    <div style="font-size: 0.9rem; color: #6b7280; margin-top: 5px;">
-                    Puntaje: {puntaje}/60 | Alerta: {estado}
+                    """, unsafe_allow_html=True)
+                elif clasificacion == "ANEMIA MODERADA":
+                    st.markdown(f"""
+                    <div style="background-color: #fef3c7; border-left: 5px solid #d97706; padding: 15px; border-radius: 8px; margin: 10px 0;">
+                        <h4 style="margin: 0 0 10px 0; color: #d97706;">🟠 {clasificacion}</h4>
+                        <p style="margin: 0;"><strong>Hemoglobina:</strong> {hemoglobina_ajustada:.1f} g/dL</p>
+                        <p style="margin: 5px 0;"><strong>Edad:</strong> {edad_meses} meses</p>
+                        <p style="margin: 5px 0; color: #d97706;"><strong>⚠️ {recomendacion}</strong></p>
                     </div>
-                </div>
-                """, unsafe_allow_html=True)
-            else:
-                st.markdown(f"""
-                <div class="metric-card-green">
-                    <div class="metric-label">RIESGO DE ANEMIA</div>
-                    <div class="highlight-number highlight-green">✅ {nivel_riesgo}</div>
-                    <div style="font-size: 0.9rem; color: #6b7280; margin-top: 5px;">
-                    Puntaje: {puntaje}/60 | Alerta: {estado}
+                    """, unsafe_allow_html=True)
+                elif clasificacion == "ANEMIA LEVE":
+                    st.markdown(f"""
+                    <div style="background-color: #dbeafe; border-left: 5px solid #2563eb; padding: 15px; border-radius: 8px; margin: 10px 0;">
+                        <h4 style="margin: 0 0 10px 0; color: #2563eb;">🔵 {clasificacion}</h4>
+                        <p style="margin: 0;"><strong>Hemoglobina:</strong> {hemoglobina_ajustada:.1f} g/dL</p>
+                        <p style="margin: 5px 0;"><strong>Edad:</strong> {edad_meses} meses</p>
+                        <p style="margin: 5px 0; color: #2563eb;"><strong>⚠️ {recomendacion}</strong></p>
                     </div>
-                </div>
-                """, unsafe_allow_html=True)
-
-            def evaluar_estado_nutricional(edad_meses, peso_kg, talla_cm, genero):
-    """
-    Evalúa el estado nutricional del niño basado en estándares OMS
-    Retorna: (estado_peso, estado_talla, estado_nutricional)
-    """
-    try:
-        # Validación básica de datos
-        if edad_meses <= 0 or peso_kg <= 0 or talla_cm <= 0:
-            return "No evaluable", "No evaluable", "DATOS INCOMPLETOS"
-        
-        if edad_meses > 240:  # Más de 20 años
-            return "Fuera de rango", "Fuera de rango", "EDAD NO VÁLIDA"
-        
-        # Calcular IMC
-        altura_m = talla_cm / 100
-        if altura_m <= 0:
-            return "Error cálculo", "Error cálculo", "ERROR TALLA"
-        
-        imc = peso_kg / (altura_m ** 2)
-        
-        # Evaluación según edad
-        if edad_meses < 24:  # Menor de 2 años
-            # Para menores de 2 años, usar percentiles peso/edad y talla/edad
-            if peso_kg < 8:
-                estado_peso = "Bajo peso"
-                estado_nutricional = "RIESGO NUTRICIONAL"
-            elif peso_kg < 12:
-                estado_peso = "Normal"
-                estado_nutricional = "NORMAL"
-            else:
-                estado_peso = "Sobrepeso"
-                estado_nutricional = "SOBREPESO"
-            
-            # Evaluación talla
-            if talla_cm < 75:
-                estado_talla = "Baja talla"
-            elif talla_cm < 85:
-                estado_talla = "Normal"
-            else:
-                estado_talla = "Alta talla"
-                
-        elif edad_meses <= 60:  # 2-5 años
-            # Evaluación simplificada OMS 2-5 años
-            if imc < 14:
-                estado_peso = "Bajo peso severo"
-                estado_nutricional = "DESNUTRICIÓN"
-            elif imc < 15:
-                estado_peso = "Bajo peso"
-                estado_nutricional = "RIESGO NUTRICIONAL"
-            elif imc < 17:
-                estado_peso = "Normal"
-                estado_nutricional = "NORMAL"
-            elif imc < 18.5:
-                estado_peso = "Riesgo sobrepeso"
-                estado_nutricional = "RIESGO SOBREPESO"
-            elif imc < 20:
-                estado_peso = "Sobrepeso"
-                estado_nutricional = "SOBREPESO"
-            else:
-                estado_peso = "Obesidad"
-                estado_nutricional = "OBESIDAD"
-            
-            # Evaluación talla para edad 2-5 años
-            if talla_cm < 85:
-                estado_talla = "Baja talla"
-            elif talla_cm < 110:
-                estado_talla = "Normal"
-            else:
-                estado_talla = "Alta talla"
-                
-        else:  # Mayores de 5 años
-            # Evaluación para niños mayores
-            if imc < 16:
-                estado_peso = "Delgadez severa"
-                estado_nutricional = "DESNUTRICIÓN SEVERA"
-            elif imc < 17:
-                estado_peso = "Delgadez moderada"
-                estado_nutricional = "DESNUTRICIÓN MODERADA"
-            elif imc < 18.5:
-                estado_peso = "Delgadez leve"
-                estado_nutricional = "RIESGO NUTRICIONAL"
-            elif imc < 25:
-                estado_peso = "Normal"
-                estado_nutricional = "NORMAL"
-            elif imc < 30:
-                estado_peso = "Sobrepeso"
-                estado_nutricional = "SOBREPESO"
-            else:
-                estado_peso = "Obesidad"
-                estado_nutricional = "OBESIDAD"
-            
-            # Evaluación talla aproximada
-            if genero == "Masculino":
-                if talla_cm < (edad_meses * 0.5 + 75):  # Fórmula simplificada
-                    estado_talla = "Baja talla"
-                elif talla_cm > (edad_meses * 0.5 + 85):
-                    estado_talla = "Alta talla"
+                    """, unsafe_allow_html=True)
                 else:
-                    estado_talla = "Normal"
-            else:  # Femenino
-                if talla_cm < (edad_meses * 0.48 + 73):
-                    estado_talla = "Baja talla"
-                elif talla_cm > (edad_meses * 0.48 + 83):
-                    estado_talla = "Alta talla"
+                    st.markdown(f"""
+                    <div style="background-color: #d1fae5; border-left: 5px solid #16a34a; padding: 15px; border-radius: 8px; margin: 10px 0;">
+                        <h4 style="margin: 0 0 10px 0; color: #16a34a;">🟢 {clasificacion}</h4>
+                        <p style="margin: 0;"><strong>Hemoglobina:</strong> {hemoglobina_ajustada:.1f} g/dL</p>
+                        <p style="margin: 5px 0;"><strong>Edad:</strong> {edad_meses} meses</p>
+                        <p style="margin: 5px 0; color: #16a34a;"><strong>✅ {recomendacion}</strong></p>
+                    </div>
+                    """, unsafe_allow_html=True)
+
+                # NIVEL DE RIESGO con COLORES DIFERENTES
+                st.markdown("---")
+                st.markdown('<div class="section-title-blue" style="font-size: 1.2rem; color: #1e40af;">📈 NIVEL DE RIESGO</div>', unsafe_allow_html=True)
+
+                if "ALTO" in nivel_riesgo:
+                    st.markdown(f"""
+                    <div style="background-color: #fee2e2; border: 2px solid #dc2626; padding: 20px; border-radius: 10px; margin: 10px 0; text-align: center;">
+                        <div style="font-size: 1.2rem; color: #dc2626; font-weight: bold; margin-bottom: 10px;">
+                        🚨 RIESGO DE ANEMIA
+                        </div>
+                        <div style="font-size: 2rem; color: #dc2626; font-weight: bold;">
+                        {nivel_riesgo}
+                        </div>
+                        <div style="font-size: 0.9rem; color: #6b7280; margin-top: 10px;">
+                        Puntaje: {puntaje}/60 | Estado: {estado}
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                elif "MODERADO" in nivel_riesgo:
+                    st.markdown(f"""
+                    <div style="background-color: #fef3c7; border: 2px solid #d97706; padding: 20px; border-radius: 10px; margin: 10px 0; text-align: center;">
+                        <div style="font-size: 1.2rem; color: #d97706; font-weight: bold; margin-bottom: 10px;">
+                        ⚠️ RIESGO DE ANEMIA
+                        </div>
+                        <div style="font-size: 2rem; color: #d97706; font-weight: bold;">
+                        {nivel_riesgo}
+                        </div>
+                        <div style="font-size: 0.9rem; color: #6b7280; margin-top: 10px;">
+                        Puntaje: {puntaje}/60 | Estado: {estado}
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
                 else:
-                    estado_talla = "Normal"
-        
-        return estado_peso, estado_talla, estado_nutricional
-        
-    except Exception as e:
-        # En caso de error, devolver valores por defecto
-        print(f"Error en evaluación nutricional: {str(e)}")
-        return "Error en evaluación", "Error en evaluación", "ERROR DE CÁLCULO"
+                    st.markdown(f"""
+                    <div style="background-color: #d1fae5; border: 2px solid #16a34a; padding: 20px; border-radius: 10px; margin: 10px 0; text-align: center;">
+                        <div style="font-size: 1.2rem; color: #16a34a; font-weight: bold; margin-bottom: 10px;">
+                        ✅ RIESGO DE ANEMIA
+                        </div>
+                        <div style="font-size: 2rem; color: #16a34a; font-weight: bold;">
+                        {nivel_riesgo}
+                        </div>
+                        <div style="font-size: 0.9rem; color: #6b7280; margin-top: 10px;">
+                        Puntaje: {puntaje}/60 | Estado: {estado}
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+
+            # ESTADO NUTRICIONAL - DERECHA
+            with col2:
+                st.markdown("---")
+                st.markdown('<div class="section-title-blue" style="font-size: 1.2rem; color: #1e40af;">🍎 ESTADO NUTRICIONAL</div>', unsafe_allow_html=True)
+                
+                # Verificar si tenemos datos para evaluar
+                if edad_meses > 0 and peso_kg > 0 and talla_cm > 0:
+                    # Mostrar datos básicos
+                    col_nut1, col_nut2, col_nut3 = st.columns(3)
+                    
+                    with col_nut1:
+                        st.markdown(f"""
+                        <div style="background-color: #dbeafe; border-radius: 8px; padding: 10px; text-align: center;">
+                            <div style="font-size: 0.9rem; color: #1e40af; font-weight: bold;">EDAD</div>
+                            <div style="font-size: 1.5rem; color: #1d4ed8; font-weight: bold;">{edad_meses}</div>
+                            <div style="font-size: 0.8rem; color: #6b7280;">meses</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    
+                    with col_nut2:
+                        st.markdown(f"""
+                        <div style="background-color: #d1fae5; border-radius: 8px; padding: 10px; text-align: center;">
+                            <div style="font-size: 0.9rem; color: #059669; font-weight: bold;">PESO</div>
+                            <div style="font-size: 1.5rem; color: #10b981; font-weight: bold;">{peso_kg:.1f}</div>
+                            <div style="font-size: 0.8rem; color: #6b7280;">kg</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    
+                    with col_nut3:
+                        st.markdown(f"""
+                        <div style="background-color: #f3e8ff; border-radius: 8px; padding: 10px; text-align: center;">
+                            <div style="font-size: 0.9rem; color: #6d28d9; font-weight: bold;">TALLA</div>
+                            <div style="font-size: 1.5rem; color: #7c3aed; font-weight: bold;">{talla_cm:.1f}</div>
+                            <div style="font-size: 0.8rem; color: #6b7280;">cm</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    
+                    # Mostrar evaluación nutricional con COLORES según severidad
+                    if "DESNUTRICIÓN" in estado_nutricional.upper() or "SEVER" in estado_nutricional.upper():
+                        color_fondo = "#fee2e2"
+                        color_borde = "#dc2626"
+                        color_texto = "#dc2626"
+                        icono = "🔴"
+                    elif "BAJO PESO" in estado_nutricional.upper() or "RIESGO" in estado_nutricional.upper():
+                        color_fondo = "#fef3c7"
+                        color_borde = "#d97706"
+                        color_texto = "#d97706"
+                        icono = "🟠"
+                    elif "SOBREPESO" in estado_nutricional.upper() or "OBESIDAD" in estado_nutricional.upper():
+                        color_fondo = "#fef3c7"
+                        color_borde = "#d97706"
+                        color_texto = "#d97706"
+                        icono = "🟠"
+                    else:
+                        color_fondo = "#d1fae5"
+                        color_borde = "#16a34a"
+                        color_texto = "#16a34a"
+                        icono = "🟢"
+                    
+                    st.markdown(f"""
+                    <div style="background-color: {color_fondo}; border-left: 5px solid {color_borde}; padding: 15px; border-radius: 8px; margin-top: 1rem;">
+                        <div style="font-size: 1.1rem; color: {color_texto}; font-weight: bold; margin-bottom: 10px;">
+                        {icono} EVALUACIÓN NUTRICIONAL
+                        </div>
+                        <div style="font-size: 1.5rem; color: {color_texto}; font-weight: bold; text-align: center;">
+                        {estado_nutricional}
+                        </div>
+                        <div style="font-size: 0.9rem; color: #6b7280; margin-top: 10px;">
+                        <strong>Peso para la edad:</strong> {estado_peso}
+                        </div>
+                        <div style="font-size: 0.9rem; color: #6b7280; margin-top: 5px;">
+                        <strong>Talla para la edad:</strong> {estado_talla}
+                        </div>
+                        <div style="font-size: 0.9rem; color: #6b7280; margin-top: 5px;">
+                        <strong>Género:</strong> {genero}
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
+                    # Mostrar alerta si hay problemas nutricionales
+                    if estado_nutricional not in ["Normal", "Adecuado", "Saludable", "NORMAL"]:
+                        st.warning(f"⚠️ **ALERTA NUTRICIONAL**: Se recomienda evaluación por especialista en nutrición pediátrica.")
+                
+                else:
+                    # Datos incompletos
+                    st.warning("⚠️ **DATOS NUTRICIONALES INCOMPLETOS**")
+                    st.info("Complete edad, peso y talla para evaluación nutricional")
             
-            # SUGERENCIAS
-            st.markdown('<div class="section-title-green">💡 Plan de Acción General</div>', unsafe_allow_html=True)
+            # SUGERENCIAS - ANCHO COMPLETO
+            st.markdown('<div class="section-title-green" style="color: #059669; font-size: 1.3rem; margin-top: 20px;">💡 PLAN DE ACCIÓN Y RECOMENDACIONES</div>', unsafe_allow_html=True)
+            
+            # Contenedor para sugerencias con color AMARILLO suave
             st.markdown(f"""
-            <div class="metric-card-yellow">
-                <div style="font-size: 1.1rem; color: #92400e; font-weight: 600; margin-bottom: 10px;">
-                📋 RECOMENDACIONES
+            <div style="background-color: #fef3c7; border: 2px solid #d97706; padding: 20px; border-radius: 10px; margin: 10px 0;">
+                <div style="font-size: 1.2rem; color: #92400e; font-weight: bold; margin-bottom: 15px;">
+                📋 RECOMENDACIONES ESPECÍFICAS
                 </div>
-                <div style="color: #78350f;">
-                {sugerencias}
+                <div style="color: #78350f; line-height: 1.6;">
+                {sugerencias.replace(chr(10), '<br>')}
                 </div>
             </div>
             """, unsafe_allow_html=True)
