@@ -493,81 +493,8 @@ def calcular_hemoglobina_ajustada(hemoglobina_medida, altitud):
     return hemoglobina_medida + ajuste
 
 # ==================================================
-# SISTEMA DE INTERPRETACIÓN AUTOMÁTICA
+# FUNCIONES DE PARÁMETROS HEMATOLÓGICOS
 # ==================================================
-
-def interpretar_analisis_hematologico(ferritina, chcm, reticulocitos, transferrina, hemoglobina_ajustada, edad_meses):
-    """Sistema de interpretación automática de parámetros hematológicos"""
-    
-    interpretacion = ""
-    severidad = ""
-    recomendacion = ""
-    codigo_color = ""
-    
-    # EVALUAR FERRITINA
-    if ferritina < 15:
-        interpretacion += "🚨 **DEFICIT SEVERO DE HIERRO**. "
-        severidad = "CRITICO"
-    elif ferritina < 30:
-        interpretacion += "⚠️ **DEFICIT MODERADO DE HIERRO**. "
-        severidad = "MODERADO"
-    elif ferritina < 100:
-        interpretacion += "🔄 **RESERVAS DE HIERRO LIMITE**. "
-        severidad = "LEVE"
-    else:
-        interpretacion += "✅ **RESERVAS DE HIERRO ADECUADAS**. "
-        severidad = "NORMAL"
-    
-    # EVALUAR CHCM
-    if chcm < 32:
-        interpretacion += "🚨 **HIPOCROMÍA SEVERA** - Deficiencia avanzada de hierro. "
-        severidad = "CRITICO" if severidad != "CRITICO" else severidad
-    elif chcm >= 32 and chcm <= 36:
-        interpretacion += "✅ **NORMOCROMÍA** - Estado normal. "
-    else:
-        interpretacion += "🔄 **HIPERCROMÍA** - Posible esferocitosis. "
-    
-    # EVALUAR RETICULOCITOS
-    if reticulocitos < 0.5:
-        interpretacion += "⚠️ **HIPOPROLIFERACIÓN MEDULAR** - Respuesta insuficiente. "
-    elif reticulocitos > 1.5:
-        interpretacion += "🔄 **HIPERPRODUCCIÓN COMPENSATORIA** - Respuesta aumentada. "
-    else:
-        interpretacion += "✅ **PRODUCCIÓN MEDULAR NORMAL**. "
-    
-    # EVALUAR TRANSFERRINA
-    if transferrina < 200:
-        interpretacion += "⚠️ **SATURACIÓN BAJA** - Transporte disminuido. "
-    elif transferrina > 400:
-        interpretacion += "🔄 **SATURACIÓN AUMENTADA** - Compensación por deficiencia. "
-    else:
-        interpretacion += "✅ **TRANSPORTE ADECUADO**. "
-    
-    # CLASIFICACIÓN DE ANEMIA
-    clasificacion_hb, _, _ = clasificar_anemia(hemoglobina_ajustada, edad_meses)
-    interpretacion += f"📊 **CLASIFICACIÓN HEMOGLOBINA: {clasificacion_hb}**"
-    
-    # GENERAR RECOMENDACIÓN
-    if severidad == "CRITICO":
-        recomendacion = "🚨 **INTERVENCIÓN INMEDIATA**: Suplementación con hierro elemental 3-6 mg/kg/día + Control en 15 días + Evaluación médica urgente"
-        codigo_color = "#DC2626"
-    elif severidad == "MODERADO":
-        recomendacion = "⚠️ **ACCIÓN PRIORITARIA**: Iniciar suplementación con hierro + Control mensual + Educación nutricional"
-        codigo_color = "#D97706"
-    elif severidad == "LEVE":
-        recomendacion = "🔄 **VIGILANCIA ACTIVA**: Suplementación preventiva + Modificación dietética + Control cada 3 meses"
-        codigo_color = "#2563EB"
-    else:
-        recomendacion = "✅ **SEGUIMIENTO RUTINARIO**: Mantener alimentación balanceada + Control preventivo cada 6 meses"
-        codigo_color = "#16A34A"
-    
-    return {
-        "interpretacion": interpretacion,
-        "severidad": severidad,
-        "recomendacion": recomendacion,
-        "codigo_color": codigo_color,
-        "clasificacion_hemoglobina": clasificacion_hb
-    }
 
 def generar_parametros_hematologicos(hemoglobina_ajustada, edad_meses):
     """Genera parámetros hematológicos simulados"""
@@ -640,6 +567,93 @@ def clasificar_anemia(hemoglobina_ajustada, edad_meses):
 def necesita_seguimiento_automatico(hemoglobina_ajustada, edad_meses):
     clasificacion, _, _ = clasificar_anemia(hemoglobina_ajustada, edad_meses)
     return clasificacion in ["ANEMIA MODERADA", "ANEMIA SEVERA"]
+
+# ==================================================
+# SISTEMA DE INTERPRETACIÓN AUTOMÁTICA
+# ==================================================
+
+def interpretar_analisis_hematologico(ferritina, chcm, reticulocitos, transferrina, hemoglobina_ajustada, edad_meses):
+    """Sistema de interpretación automática de parámetros hematológicos"""
+    
+    interpretacion = ""
+    severidad = ""
+    recomendacion = ""
+    codigo_color = ""
+    
+    # EVALUAR FERRITINA
+    if ferritina < 15:
+        interpretacion += "🚨 **DEFICIT SEVERO DE HIERRO**. "
+        severidad = "CRITICO"
+    elif ferritina < 30:
+        interpretacion += "⚠️ **DEFICIT MODERADO DE HIERRO**. "
+        severidad = "MODERADO"
+    elif ferritina < 100:
+        interpretacion += "🔄 **RESERVAS DE HIERRO LIMITE**. "
+        severidad = "LEVE"
+    else:
+        interpretacion += "✅ **RESERVAS DE HIERRO ADECUADAS**. "
+        severidad = "NORMAL"
+    
+    # EVALUAR CHCM
+    if chcm < 32:
+        interpretacion += "🚨 **HIPOCROMÍA SEVERA** - Deficiencia avanzada de hierro. "
+        severidad = "CRITICO" if severidad != "CRITICO" else severidad
+    elif chcm >= 32 and chcm <= 36:
+        interpretacion += "✅ **NORMOCROMÍA** - Estado normal. "
+    else:
+        interpretacion += "🔄 **HIPERCROMÍA** - Posible esferocitosis. "
+    
+    # EVALUAR RETICULOCITOS
+    if reticulocitos < 0.5:
+        interpretacion += "⚠️ **HIPOPROLIFERACIÓN MEDULAR** - Respuesta insuficiente. "
+    elif reticulocitos > 1.5:
+        interpretacion += "🔄 **HIPERPRODUCCIÓN COMPENSATORIA** - Respuesta aumentada. "
+    else:
+        interpretacion += "✅ **PRODUCCIÓN MEDULAR NORMAL**. "
+    
+    # EVALUAR TRANSFERRINA
+    if transferrina < 200:
+        interpretacion += "⚠️ **SATURACIÓN BAJA** - Transporte disminuido. "
+    elif transferrina > 400:
+        interpretacion += "🔄 **SATURACIÓN AUMENTADA** - Compensación por deficiencia. "
+    else:
+        interpretacion += "✅ **TRANSPORTE ADECUADO**. "
+    
+    # CLASIFICACIÓN DE ANEMIA
+    clasificacion_hb, _, _ = clasificar_anemia(hemoglobina_ajustada, edad_meses)
+    interpretacion += f"📊 **CLASIFICACIÓN HEMOGLOBINA: {clasificacion_hb}**"
+    
+    # CORRECCIÓN: DETERMINAR SEVERIDAD BASADA EN LA CLASIFICACIÓN DE HEMOGLOBINA
+    if clasificacion_hb == "ANEMIA SEVERA":
+        severidad = "CRITICO"
+    elif clasificacion_hb == "ANEMIA MODERADA":
+        severidad = "MODERADO"
+    elif clasificacion_hb == "ANEMIA LEVE":
+        severidad = "LEVE"
+    else:
+        severidad = "NORMAL"
+    
+    # GENERAR RECOMENDACIÓN (ahora severidad está definida)
+    if severidad == "CRITICO":
+        recomendacion = "🚨 **INTERVENCIÓN INMEDIATA**: Suplementación con hierro elemental 3-6 mg/kg/día + Control en 15 días + Evaluación médica urgente"
+        codigo_color = "#DC2626"
+    elif severidad == "MODERADO":
+        recomendacion = "⚠️ **ACCIÓN PRIORITARIA**: Iniciar suplementación con hierro + Control mensual + Educación nutricional"
+        codigo_color = "#D97706"
+    elif severidad == "LEVE":
+        recomendacion = "🔄 **VIGILANCIA ACTIVA**: Suplementación preventiva + Modificación dietética + Control cada 3 meses"
+        codigo_color = "#2563EB"
+    else:
+        recomendacion = "✅ **SEGUIMIENTO RUTINARIO**: Mantener alimentación balanceada + Control preventivo cada 6 meses"
+        codigo_color = "#16A34A"
+    
+    return {
+        "interpretacion": interpretacion,
+        "severidad": severidad,
+        "recomendacion": recomendacion,
+        "codigo_color": codigo_color,
+        "clasificacion_hemoglobina": clasificacion_hb
+    }
 
 # ==================================================
 # FUNCIONES DE EVALUACIÓN NUTRICIONAL
@@ -1040,51 +1054,9 @@ with tab1:
             st.markdown(f"**💡 Plan Específico:** {interpretacion_auto['recomendacion']}")
             st.markdown('</div>', unsafe_allow_html=True)
             
-            # PARÁMETROS HEMATOLÓGICOS
-            st.markdown('<div class="section-title-green">🧪 Parámetros Hematológicos Estimados</div>', unsafe_allow_html=True)
-            
-            col_param1, col_param2, col_param3 = st.columns(3)
-            with col_param1:
-                st.markdown(f"""
-                <div class="metric-card-blue">
-                    <div class="metric-label">FERRITINA</div>
-                    <div class="highlight-number highlight-blue">{parametros_simulados['ferritina']} ng/mL</div>
-                </div>
-                """, unsafe_allow_html=True)
-                st.markdown(f"""
-                <div class="metric-card-blue">
-                    <div class="metric-label">CHCM</div>
-                    <div class="highlight-number highlight-blue">{parametros_simulados['chcm']} g/dL</div>
-                </div>
-                """, unsafe_allow_html=True)
-            
-            with col_param2:
-                st.markdown(f"""
-                <div class="metric-card-green">
-                    <div class="metric-label">TRANSFERRINA</div>
-                    <div class="highlight-number highlight-green">{parametros_simulados['transferrina']} mg/dL</div>
-                </div>
-                """, unsafe_allow_html=True)
-                st.markdown(f"""
-                <div class="metric-card-green">
-                    <div class="metric-label">VCM</div>
-                    <div class="highlight-number highlight-green">{parametros_simulados['vcm']} fL</div>
-                </div>
-                """, unsafe_allow_html=True)
-            
-            with col_param3:
-                st.markdown(f"""
-                <div class="metric-card-purple">
-                    <div class="metric-label">RETICULOCITOS</div>
-                    <div class="highlight-number highlight-purple">{parametros_simulados['reticulocitos']} %</div>
-                </div>
-                """, unsafe_allow_html=True)
-                st.markdown(f"""
-                <div class="metric-card-purple">
-                    <div class="metric-label">HCM</div>
-                    <div class="highlight-number highlight-purple">{parametros_simulados['hcm']} pg</div>
-                </div>
-                """, unsafe_allow_html=True)
+            # ============================================
+            # NOTA: PARÁMETROS HEMATOLÓGICOS SE MOVIERON A LA PESTAÑA DE SEGUIMIENTO
+            # ============================================
             
             # SUGERENCIAS
             st.markdown('<div class="section-title-green">💡 Plan de Acción General</div>', unsafe_allow_html=True)
@@ -1729,6 +1701,107 @@ with tab2:
                         st.warning("📊 **Se necesitan al menos 2 mediciones para mostrar el gráfico de progreso**")
                         st.info("Por favor, ingrese mediciones anteriores en la sección de Laboratorio del paciente")
                     
+                    # ============================================
+                    # PARÁMETROS HEMATOLÓGICOS ESTIMADOS (MOVIDOS AQUÍ)
+                    # ============================================
+                    st.markdown("---")
+                    st.markdown('<div class="section-title-green">🧪 PARÁMETROS HEMATOLÓGICOS ESTIMADOS</div>', unsafe_allow_html=True)
+                    
+                    # Generar parámetros simulados
+                    parametros_simulados = generar_parametros_hematologicos(hb_ajustada, paciente_data['edad_meses'])
+                    
+                    col_param1, col_param2, col_param3 = st.columns(3)
+                    
+                    with col_param1:
+                        st.markdown(f"""
+                        <div class="metric-card-blue">
+                            <div class="metric-label">FERRITINA</div>
+                            <div class="highlight-number highlight-blue">{parametros_simulados['ferritina']} ng/mL</div>
+                            <div style="font-size: 0.9rem; color: #6b7280; margin-top: 5px;">
+                            Reservas de hierro corporal
+                            </div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                        
+                        st.markdown(f"""
+                        <div class="metric-card-blue">
+                            <div class="metric-label">CHCM</div>
+                            <div class="highlight-number highlight-blue">{parametros_simulados['chcm']} g/dL</div>
+                            <div style="font-size: 0.9rem; color: #6b7280; margin-top: 5px;">
+                            Concentración Hb corpuscular
+                            </div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    
+                    with col_param2:
+                        st.markdown(f"""
+                        <div class="metric-card-green">
+                            <div class="metric-label">TRANSFERRINA</div>
+                            <div class="highlight-number highlight-green">{parametros_simulados['transferrina']} mg/dL</div>
+                            <div style="font-size: 0.9rem; color: #6b7280; margin-top: 5px;">
+                            Proteína transportadora hierro
+                            </div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                        
+                        st.markdown(f"""
+                        <div class="metric-card-green">
+                            <div class="metric-label">VCM</div>
+                            <div class="highlight-number highlight-green">{parametros_simulados['vcm']} fL</div>
+                            <div style="font-size: 0.9rem; color: #6b7280; margin-top: 5px;">
+                            Volumen corpuscular medio
+                            </div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    
+                    with col_param3:
+                        st.markdown(f"""
+                        <div class="metric-card-purple">
+                            <div class="metric-label">RETICULOCITOS</div>
+                            <div class="highlight-number highlight-purple">{parametros_simulados['reticulocitos']} %</div>
+                            <div style="font-size: 0.9rem; color: #6b7280; margin-top: 5px;">
+                            Producción medular activa
+                            </div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                        
+                        st.markdown(f"""
+                        <div class="metric-card-purple">
+                            <div class="metric-label">HCM</div>
+                            <div class="highlight-number highlight-purple">{parametros_simulados['hcm']} pg</div>
+                            <div style="font-size: 0.9rem; color: #6b7280; margin-top: 5px;">
+                            Hemoglobina corpuscular media
+                            </div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    
+                    # Información adicional
+                    with st.expander("📖 Interpretación de parámetros"):
+                        st.markdown("""
+                        ### 📊 Guía de interpretación:
+                        
+                        **Ferritina (ng/mL):**
+                        - **< 15**: Deficiencia severa de hierro
+                        - **15-30**: Deficiencia moderada
+                        - **30-100**: Reservas límite
+                        - **> 100**: Adecuado
+                        
+                        **CHCM (g/dL):**
+                        - **< 32**: Hipocromía (deficiencia)
+                        - **32-36**: Normocromía (normal)
+                        - **> 36**: Hipercromía (posible esferocitosis)
+                        
+                        **Transferrina (mg/dL):**
+                        - **< 200**: Saturación baja
+                        - **200-400**: Adecuado
+                        - **> 400**: Saturación aumentada (compensación)
+                        
+                        **Reticulocitos (%):**
+                        - **< 0.5**: Hipoproliferación
+                        - **0.5-1.5**: Normal
+                        - **> 1.5**: Hiperproducción
+                        """)
+            
             # ============================================
             # SECCIÓN CONDICIONAL: SEGUIMIENTO NUTRICIONAL
             # ============================================
@@ -2743,9 +2816,8 @@ with tab4:
                 st.metric("Total citas", total_citas)
             
             with col_stat2:
-                # CORRECCIÓN: Cambiar "con_anaeia" por "con_anemia"
                 con_anemia = len(citas_filtradas[citas_filtradas['clasificacion_anemia'].isin(["Leve", "Moderada", "Severa"])])
-                st.metric("Con anemia", con_anemia)  # ← CORREGIDO
+                st.metric("Con anemia", con_anemia)
             
             with col_stat3:
                 severas = len(citas_filtradas[citas_filtradas['clasificacion_anemia'] == "Severa"])
