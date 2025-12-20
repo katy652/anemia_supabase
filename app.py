@@ -1275,7 +1275,41 @@ with tab1:
     error_nombre = None
     error_telefono = None
     
-    with st.form("formulario_completo"):
+    # Variable para controlar si se mostró el resultado
+    resultado_mostrado = False
+    
+    # Inicializar session state para limpiar
+    if 'limpiar_formulario' not in st.session_state:
+        st.session_state.limpiar_formulario = False
+    
+    # Función para limpiar formulario
+    def limpiar_formulario():
+        st.session_state.dni_input = ""
+        st.session_state.nombre_input = ""
+        st.session_state.telefono_input = ""
+        st.session_state.edad_input = 24
+        st.session_state.peso_input = 12.5
+        st.session_state.talla_input = 85.0
+        st.session_state.genero_input = GENEROS[0] if GENEROS else ""
+        st.session_state.estado_input = ESTADOS_PACIENTE[0] if ESTADOS_PACIENTE else ""
+        st.session_state.region_input = PERU_REGIONS[0] if PERU_REGIONS else ""
+        st.session_state.departamento_input = ""
+        st.session_state.altitud_input = 500
+        st.session_state.nivel_input = NIVELES_EDUCATIVOS[0] if NIVELES_EDUCATIVOS else ""
+        st.session_state.agua_input = False
+        st.session_state.salud_input = False
+        st.session_state.hemoglobina_input = 11.0
+        st.session_state.seguimiento_input = False
+        st.session_state.hierro_input = False
+        st.session_state.tipo_suplemento_input = ""
+        st.session_state.frecuencia_input = ""
+        st.session_state.antecedentes_input = False
+        st.session_state.enfermedades_input = ""
+        st.session_state.factores_clinicos_input = []
+        st.session_state.factores_sociales_input = []
+        st.rerun()
+    
+    with st.form("formulario_completo", clear_on_submit=False):
         col1, col2 = st.columns(2)
         
         with col1:
@@ -1290,7 +1324,7 @@ with tab1:
                 help="Ingrese 8 dígitos numéricos"
             )
             
-            # Mostrar error debajo si hay problema
+            # Validar DNI cuando el usuario presiona Enter o termina de escribir
             if dni_input:
                 # FILTRAR: solo números
                 dni_input = ''.join(filter(str.isdigit, dni_input))
@@ -1507,21 +1541,49 @@ with tab1:
             else:
                 st.info("ℹ️ Ingrese teléfono")
         
-        # Deshabilitar botón si hay errores
-        tiene_errores = any([error_dni, error_nombre, error_telefono])
+        # Tres botones en una fila: Limpiar, Analizar, Guardar
+        st.markdown("---")
+        col_b1, col_b2, col_b3, col_b4 = st.columns([1, 1, 1, 2])
         
-        submitted = st.form_submit_button(
-            "🎯 ANALIZAR RIESGO Y GUARDAR", 
-            type="primary", 
-            use_container_width=True,
-            disabled=tiene_errores
-        )
+        with col_b1:
+            btn_limpiar = st.form_submit_button(
+                "🧹 Limpiar", 
+                type="secondary", 
+                use_container_width=True
+            )
+        
+        with col_b2:
+            # Deshabilitar botón Analizar si hay errores
+            tiene_errores = any([error_dni, error_nombre, error_telefono])
+            
+            btn_analizar = st.form_submit_button(
+                "📊 Analizar Riesgo", 
+                type="primary", 
+                use_container_width=True,
+                disabled=tiene_errores
+            )
+        
+        with col_b3:
+            btn_guardar = st.form_submit_button(
+                "💾 Guardar", 
+                type="primary", 
+                use_container_width=True,
+                disabled=tiene_errores
+            )
     
     # ============================================
-    # VALIDACIONES AL ENVIAR EL FORMULARIO
+    # ACCIONES FUERA DEL FORMULARIO
     # ============================================
-    if submitted:
-        # Verificar si hay errores
+    
+    # Acción 1: Limpiar formulario
+    if btn_limpiar:
+        limpiar_formulario()
+        st.success("✅ Formulario limpiado correctamente")
+        st.rerun()
+    
+    # Acción 2: Analizar Riesgo
+    if btn_analizar:
+        # Validar todos los campos primero
         errores_finales = []
         
         # Validar DNI
@@ -1779,9 +1841,71 @@ with tab1:
                 </div>
                 """, unsafe_allow_html=True)
                 
+                # Guardar en session state para usar en el botón Guardar
+                st.session_state.datos_analizados = {
+                    "nivel_riesgo": nivel_riesgo,
+                    "puntaje": puntaje,
+                    "estado": estado,
+                    "sugerencias": sugerencias,
+                    "estado_peso": estado_peso,
+                    "estado_talla": estado_talla,
+                    "estado_nutricional": estado_nutricional,
+                    "interpretacion_auto": interpretacion_auto,
+                    "parametros_simulados": parametros_simulados
+                }
+                
+                st.success("✅ Análisis completado. Puede guardar los datos.")
+                resultado_mostrado = True
+                    
+            except Exception as e:
+                st.error(f"❌ Error al procesar los datos: {str(e)}")
+    
+    # Acción 3: Guardar en Supabase
+    if btn_guardar:
+        # Verificar si se hizo el análisis primero
+        if 'datos_analizados' not in st.session_state:
+            st.error("⚠️ Primero debe hacer el análisis de riesgo antes de guardar")
+        else:
+            # Validar todos los campos primero
+            errores_finales = []
+            
+            # Validar DNI
+            if not dni_input:
+                errores_finales.append("❌ El DNI es obligatorio")
+            elif len(dni_input) != 8 or not dni_input.isdigit():
+                errores_finales.append("❌ El DNI debe tener 8 dígitos exactos")
+            
+            # Validar Nombre
+            if not nombre_input:
+                errores_finales.append("❌ El nombre completo es obligatorio")
+            elif any(char.isdigit() for char in nombre_input):
+                errores_finales.append("❌ El nombre no debe contener números")
+            elif len(nombre_input.strip().split()) < 2:
+                errores_finales.append("❌ Ingrese al menos nombre y apellido")
+            
+            # Validar Teléfono
+            if not telefono_input:
+                errores_finales.append("❌ El teléfono es obligatorio")
+            elif len(telefono_input) != 9 or not telefono_input.isdigit():
+                errores_finales.append("❌ El teléfono debe tener 9 dígitos exactos")
+            
+            # Validar peso y talla razonables
+            if peso_kg < 1.0:
+                errores_finales.append("❌ El peso debe ser mayor a 1.0 kg")
+            if talla_cm < 30.0:
+                errores_finales.append("❌ La talla debe ser mayor a 30.0 cm")
+            
+            # Mostrar todos los errores si los hay
+            if errores_finales:
+                st.error("### ❌ Errores encontrados:")
+                for error in errores_finales:
+                    st.error(error)
+            else:
                 # GUARDAR EN SUPABASE
                 if supabase:
                     with st.spinner("Verificando y guardando datos..."):
+                        datos = st.session_state.datos_analizados
+                        
                         record = {
                             "dni": dni_input.strip(),
                             "nombre_apellido": nombre_input.strip(),
@@ -1804,13 +1928,13 @@ with tab1:
                             "frecuencia_suplemento": frecuencia_suplemento if consume_hierro else None,
                             "antecedentes_anemia": antecedentes_anemia,
                             "enfermedades_cronicas": enfermedades_cronicas.strip() if enfermedades_cronicas else None,
-                            "interpretacion_hematologica": interpretacion_auto['interpretacion'],
+                            "interpretacion_hematologica": datos["interpretacion_auto"]['interpretacion'],
                             "politicas_de_ris": region,
-                            "riesgo": nivel_riesgo,
+                            "riesgo": datos["nivel_riesgo"],
                             "fecha_alerta": datetime.now().strftime("%Y-%m-%d"),
-                            "estado_alerta": estado,
-                            "sugerencias": sugerencias,
-                            "severidad_interpretacion": interpretacion_auto['severidad']
+                            "estado_alerta": datos["estado"],
+                            "sugerencias": datos["sugerencias"],
+                            "severidad_interpretacion": datos["interpretacion_auto"]['severidad']
                         }
                         
                         resultado = insertar_datos_supabase(record)
@@ -1822,15 +1946,16 @@ with tab1:
                             else:
                                 st.success("✅ Datos guardados en Supabase correctamente")
                                 st.balloons()
-                                time.sleep(2)
-                                st.rerun()
+                                
+                                # Opción para limpiar después de guardar
+                                if st.button("🧹 Limpiar formulario y continuar"):
+                                    limpiar_formulario()
+                                    del st.session_state.datos_analizados
+                                    st.rerun()
                         else:
                             st.error("❌ Error al guardar en Supabase")
                 else:
                     st.error("🔴 No hay conexión a Supabase")
-                    
-            except Exception as e:
-                st.error(f"❌ Error al procesar los datos: {str(e)}")
 # ==================================================
 # PESTAÑA 2: SEGUIMIENTO CLÍNICO COMPLETO
 # ==================================================
