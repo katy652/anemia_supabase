@@ -1264,7 +1264,7 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
 ])
 
 # ==================================================
-# PESTAÑA 1: REGISTRO COMPLETO
+# PESTAÑA 1: REGISTRO COMPLETO (CON VALIDACIONES)
 # ==================================================
 
 with tab1:
@@ -1275,13 +1275,33 @@ with tab1:
         
         with col1:
             st.markdown('<div class="section-title-blue" style="font-size: 1.4rem;">👤 Datos Personales</div>', unsafe_allow_html=True)
-            dni = st.text_input("DNI*", placeholder="Ej: 87654321")
-            nombre_completo = st.text_input("Nombre Completo*", placeholder="Ej: Ana García Pérez")
+            
+            # DNI: solo números, 8 dígitos
+            dni = st.text_input("DNI*", placeholder="Ej: 87654321 (8 dígitos)")
+            
+            # Nombre completo: solo letras y espacios
+            nombre_completo = st.text_input("Nombre Completo*", placeholder="Ej: Ana García Pérez (solo letras)")
+            
+            # Validación de nombre mientras se escribe
+            if nombre_completo and any(char.isdigit() for char in nombre_completo):
+                st.warning("⚠️ El nombre debe contener solo letras")
+            
+            # Edad, peso, talla
             edad_meses = st.number_input("Edad (meses)*", 1, 240, 24)
             peso_kg = st.number_input("Peso (kg)*", 0.0, 50.0, 12.5, 0.1)
             talla_cm = st.number_input("Talla (cm)*", 0.0, 150.0, 85.0, 0.1)
             genero = st.selectbox("Género*", GENEROS)
-            telefono = st.text_input("Teléfono", placeholder="Ej: 987654321")
+            
+            # Teléfono: solo números, 9 dígitos
+            telefono = st.text_input("Teléfono (9 dígitos)*", placeholder="Ej: 987654321")
+            
+            # Validación de teléfono mientras se escribe
+            if telefono:
+                if not telefono.isdigit():
+                    st.warning("⚠️ El teléfono debe contener solo números")
+                elif len(telefono) != 9:
+                    st.warning("⚠️ El teléfono debe tener 9 dígitos")
+            
             estado_paciente = st.selectbox("Estado del Paciente", ESTADOS_PACIENTE)
         
         with col2:
@@ -1305,8 +1325,8 @@ with tab1:
             else:
                 altitud_msnm = st.number_input("Altitud (msnm)*", 0, 5000, 500)
             
-            st.markdown('<div class="section-title-blue" style="font-size: 1.4rem;">💰 Factores Socioeconómicos</div>', unsafe_allow_html=True)
-            nivel_educativo = st.selectbox("Nivel Educativo", NIVELES_EDUCATIVOS)
+            st.markdown('<div class="section-title-blue" style="font-size: 1.4rem;">💰 Factores Socioeconómicos del Apoderado</div>', unsafe_allow_html=True)
+            nivel_educativo = st.selectbox("Nivel Educativo del Apoderado", NIVELES_EDUCATIVOS)
             acceso_agua_potable = st.checkbox("Acceso a agua potable")
             tiene_servicio_salud = st.checkbox("Tiene servicio de salud")
         
@@ -1383,15 +1403,53 @@ with tab1:
             st.markdown('<div style="color: #1e40af; font-weight: 600; margin: 10px 0;">🏥 Factores Clínicos</div>', unsafe_allow_html=True)
             factores_clinicos = st.multiselect("Seleccione factores clínicos:", FACTORES_CLINICOS)
             
-            st.markdown('<div style="color: #1e40af; font-weight: 600; margin: 10px 0;">💰 Factores Socioeconómicos</div>', unsafe_allow_html=True)
-            factores_sociales = st.multiselect("Seleccione factores sociales:", FACTORES_SOCIOECONOMICOS)
+            st.markdown('<div style="color: #1e40af; font-weight: 600; margin: 10px 0;">💰 Factores Socioeconómicos del Apoderado</div>', unsafe_allow_html=True)
+            factores_sociales = st.multiselect("Seleccione factores socioeconómicos:", [
+                "Bajo nivel educativo del apoderado",
+                "Ingresos familiares reducidos",
+                "Hacinamiento en vivienda",
+                "Acceso limitado a agua potable",
+                "Zona rural o alejada",
+                "Trabajo informal o precario del apoderado",
+                "Falta de acceso a servicios básicos"
+            ])
         
         submitted = st.form_submit_button("🎯 ANALIZAR RIESGO Y GUARDAR", type="primary", use_container_width=True)
     
     if submitted:
-        if not dni or not nombre_completo:
-            st.error("❌ Complete DNI y nombre del paciente")
+        # ============================================
+        # VALIDACIONES COMPLETAS AL ENVIAR
+        # ============================================
+        errores = []
+        
+        # 1. Validar DNI (solo números, 8 dígitos)
+        if not dni:
+            errores.append("❌ El DNI es obligatorio")
+        elif not dni.isdigit():
+            errores.append("❌ El DNI debe contener solo números")
+        elif len(dni) != 8:
+            errores.append("❌ El DNI debe tener exactamente 8 dígitos")
+        
+        # 2. Validar Nombre (solo letras y espacios)
+        if not nombre_completo:
+            errores.append("❌ El nombre completo es obligatorio")
+        elif any(char.isdigit() for char in nombre_completo):
+            errores.append("❌ El nombre debe contener solo letras y espacios")
+        
+        # 3. Validar Teléfono (solo números, 9 dígitos)
+        if not telefono:
+            errores.append("❌ El teléfono es obligatorio")
+        elif not telefono.isdigit():
+            errores.append("❌ El teléfono debe contener solo números")
+        elif len(telefono) != 9:
+            errores.append("❌ El teléfono debe tener 9 dígitos")
+        
+        # Mostrar todos los errores
+        if errores:
+            for error in errores:
+                st.error(error)
         else:
+            # Si no hay errores, proceder con los cálculos
             # Cálculos
             nivel_riesgo, puntaje, estado = calcular_riesgo_anemia(
                 hemoglobina_ajustada,
@@ -1624,7 +1682,7 @@ with tab1:
                         "peso_kg": float(peso_kg),
                         "talla_cm": float(talla_cm),
                         "genero": genero,
-                        "telefono": telefono.strip() if telefono else None,
+                        "telefono": telefono.strip(),
                         "estado_paciente": estado_paciente,
                         "region": region,
                         "departamento": departamento.strip() if departamento else None,
@@ -1663,8 +1721,6 @@ with tab1:
                         st.error("❌ Error al guardar en Supabase")
             else:
                 st.error("🔴 No hay conexión a Supabase")
-
-# ... (el resto de tu código original continúa igual)
 # ==================================================
 # PESTAÑA 2: SEGUIMIENTO CLÍNICO COMPLETO
 # ==================================================
