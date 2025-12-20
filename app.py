@@ -1264,11 +1264,161 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
 ])
 
 # ==================================================
-# PESTAÑA 1: REGISTRO COMPLETO (CON VALIDACIONES EN TIEMPO REAL)
+# PESTAÑA 1: REGISTRO COMPLETO (CON VALIDACIÓN QUE BLOQUEA CARACTERES)
 # ==================================================
 
 with tab1:
     st.markdown('<div class="section-title-blue">📝 Registro Completo de Paciente</div>', unsafe_allow_html=True)
+    
+    # Inyectar JavaScript para bloquear caracteres no deseados
+    st.markdown("""
+    <script>
+    function bloquearNumerosEnNombre(e) {
+        // Permitir: letras, espacios, tildes, ñ, puntos, guiones, borrar, tab, enter
+        const teclasPermitidas = [
+            8,  // backspace
+            9,  // tab
+            13, // enter
+            32, // espacio
+            46, // punto
+            45, // guion
+            189 // guion (alternativo)
+        ];
+        
+        // Si es una tecla permitida, permitir
+        if (teclasPermitidas.includes(e.keyCode)) {
+            return true;
+        }
+        
+        // Permitir solo letras (a-z, A-Z) y caracteres con tildes
+        const tecla = e.key;
+        const esLetra = /^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ]$/.test(tecla);
+        
+        if (!esLetra) {
+            e.preventDefault();
+            return false;
+        }
+        return true;
+    }
+    
+    function bloquearLetrasEnDNI(e) {
+        // Permitir: números, borrar, tab, enter
+        const teclasPermitidas = [
+            8,  // backspace
+            9,  // tab
+            13, // enter
+            46, // delete
+            37, // izquierda
+            38, // arriba
+            39, // derecha
+            40  // abajo
+        ];
+        
+        // Si es una tecla permitida, permitir
+        if (teclasPermitidas.includes(e.keyCode)) {
+            return true;
+        }
+        
+        // Permitir solo números (0-9)
+        const esNumero = e.keyCode >= 48 && e.keyCode <= 57; // números normales
+        const esNumPad = e.keyCode >= 96 && e.keyCode <= 105; // teclado numérico
+        
+        if (!esNumero && !esNumPad) {
+            e.preventDefault();
+            return false;
+        }
+        return true;
+    }
+    
+    function limitarDNI(input) {
+        // Limitar a 8 caracteres
+        if (input.value.length > 8) {
+            input.value = input.value.slice(0, 8);
+        }
+    }
+    
+    function bloquearLetrasEnTelefono(e) {
+        // Permitir: números, borrar, tab, enter
+        const teclasPermitidas = [
+            8,  // backspace
+            9,  // tab
+            13, // enter
+            46, // delete
+            37, // izquierda
+            38, // arriba
+            39, // derecha
+            40  // abajo
+        ];
+        
+        // Si es una tecla permitida, permitir
+        if (teclasPermitidas.includes(e.keyCode)) {
+            return true;
+        }
+        
+        // Permitir solo números (0-9)
+        const esNumero = e.keyCode >= 48 && e.keyCode <= 57; // números normales
+        const esNumPad = e.keyCode >= 96 && e.keyCode <= 105; // teclado numérico
+        
+        if (!esNumero && !esNumPad) {
+            e.preventDefault();
+            return false;
+        }
+        return true;
+    }
+    
+    function limitarTelefono(input) {
+        // Limitar a 9 caracteres
+        if (input.value.length > 9) {
+            input.value = input.value.slice(0, 9);
+        }
+    }
+    
+    // Aplicar cuando la página cargue
+    document.addEventListener('DOMContentLoaded', function() {
+        // Buscar inputs por sus placeholders o nombres
+        setTimeout(function() {
+            const inputs = document.querySelectorAll('input[type="text"], input[type="number"]');
+            
+            inputs.forEach(input => {
+                // Identificar por placeholder o label
+                const placeholder = input.placeholder || '';
+                const parentText = input.parentElement.textContent || '';
+                
+                // DNI
+                if (placeholder.includes('87654321') || parentText.includes('DNI')) {
+                    input.maxLength = 8;
+                    input.addEventListener('keydown', bloquearLetrasEnDNI);
+                    input.addEventListener('input', function() {
+                        limitarDNI(this);
+                        // Solo números
+                        this.value = this.value.replace(/\D/g, '');
+                    });
+                }
+                
+                // Nombre
+                if (placeholder.includes('Ana García') || parentText.includes('Nombre')) {
+                    input.addEventListener('keydown', bloquearNumerosEnNombre);
+                    input.addEventListener('input', function() {
+                        // Remover números si se pegan
+                        this.value = this.value.replace(/[0-9]/g, '');
+                    });
+                }
+                
+                // Teléfono
+                if (placeholder.includes('987654321') || parentText.includes('Teléfono')) {
+                    input.maxLength = 9;
+                    input.addEventListener('keydown', bloquearLetrasEnTelefono);
+                    input.addEventListener('input', function() {
+                        limitarTelefono(this);
+                        // Solo números
+                        this.value = this.value.replace(/\D/g, '');
+                    });
+                }
+            });
+        }, 1000);
+    });
+    </script>
+    """, unsafe_allow_html=True)
     
     # Variables para mostrar errores
     error_dni = None
@@ -1281,39 +1431,39 @@ with tab1:
         with col1:
             st.markdown('<div class="section-title-blue" style="font-size: 1.4rem;">👤 Datos Personales</div>', unsafe_allow_html=True)
             
-            # DNI: solo números, 8 dígitos
-            dni_input = st.text_input("DNI*", placeholder="Ej: 87654321 (8 dígitos)", key="dni_input")
+            # DNI: solo números, 8 dígitos - CON VALIDACIÓN EN TIEMPO REAL MEJORADA
+            dni_input = st.text_input("DNI*", placeholder="Ej: 87654321 (solo 8 números)", 
+                                     key="dni_input", max_chars=8)
             
-            # Validación de DNI EN TIEMPO REAL
+            # Mostrar error debajo si hay problema
             if dni_input:
                 if not dni_input.isdigit():
-                    error_dni = "❌ El DNI debe contener solo números"
-                    st.markdown(f'<div style="color: #dc2626; font-size: 0.9rem; margin-top: -10px; margin-bottom: 15px;">{error_dni}</div>', unsafe_allow_html=True)
+                    error_dni = "❌ Solo se permiten números"
+                    st.markdown(f'<div style="color: #dc2626; font-size: 0.9rem; margin-top: -15px; margin-bottom: 15px; background: #fee2e2; padding: 5px; border-radius: 4px;">{error_dni}</div>', unsafe_allow_html=True)
                 elif len(dni_input) != 8:
-                    error_dni = "❌ El DNI debe tener exactamente 8 dígitos"
-                    st.markdown(f'<div style="color: #dc2626; font-size: 0.9rem; margin-top: -10px; margin-bottom: 15px;">{error_dni}</div>', unsafe_allow_html=True)
+                    error_dni = f"⚠️ Necesita {8 - len(dni_input)} dígito(s) más (8 en total)"
+                    st.markdown(f'<div style="color: #d97706; font-size: 0.9rem; margin-top: -15px; margin-bottom: 15px; background: #fef3c7; padding: 5px; border-radius: 4px;">{error_dni}</div>', unsafe_allow_html=True)
                 else:
                     # Validar que no sea un DNI repetido
                     if verificar_duplicado(dni_input):
                         error_dni = "⚠️ Este DNI ya existe en la base de datos"
-                        st.markdown(f'<div style="color: #d97706; font-size: 0.9rem; margin-top: -10px; margin-bottom: 15px;">{error_dni}</div>', unsafe_allow_html=True)
+                        st.markdown(f'<div style="color: #d97706; font-size: 0.9rem; margin-top: -15px; margin-bottom: 15px; background: #fef3c7; padding: 5px; border-radius: 4px;">{error_dni}</div>', unsafe_allow_html=True)
             
-            # Nombre completo: solo letras y espacios
-            nombre_input = st.text_input("Nombre Completo*", placeholder="Ej: Ana García Pérez (solo letras)", key="nombre_input")
+            # Nombre completo: solo letras y espacios - CON VALIDACIÓN EN TIEMPO REAL
+            nombre_input = st.text_input("Nombre Completo*", 
+                                        placeholder="Ej: Ana García Pérez (solo letras)", 
+                                        key="nombre_input")
             
             # Validación de nombre EN TIEMPO REAL
             if nombre_input:
-                # Permitir letras, espacios, tildes y puntos
                 import re
-                # Patrón que permite letras (incluyendo ñ, tildes), espacios, puntos y guiones
-                patron_nombre = r'^[A-Za-zÁÉÍÓÚáéíóúÑñÜü\s\.\-]+$'
-                
-                if not re.match(patron_nombre, nombre_input.strip()):
-                    error_nombre = "⚠️ El nombre debe contener solo letras, espacios, puntos y guiones"
-                    st.markdown(f'<div style="color: #d97706; font-size: 0.9rem; margin-top: -10px; margin-bottom: 15px;">{error_nombre}</div>', unsafe_allow_html=True)
+                # Buscar números en el nombre
+                if re.search(r'\d', nombre_input):
+                    error_nombre = "❌ No se permiten números en el nombre"
+                    st.markdown(f'<div style="color: #dc2626; font-size: 0.9rem; margin-top: -15px; margin-bottom: 15px; background: #fee2e2; padding: 5px; border-radius: 4px;">{error_nombre}</div>', unsafe_allow_html=True)
                 elif len(nombre_input.strip().split()) < 2:
                     error_nombre = "⚠️ Ingrese al menos nombre y apellido"
-                    st.markdown(f'<div style="color: #d97706; font-size: 0.9rem; margin-top: -10px; margin-bottom: 15px;">{error_nombre}</div>', unsafe_allow_html=True)
+                    st.markdown(f'<div style="color: #d97706; font-size: 0.9rem; margin-top: -15px; margin-bottom: 15px; background: #fef3c7; padding: 5px; border-radius: 4px;">{error_nombre}</div>', unsafe_allow_html=True)
             
             # Edad, peso, talla
             edad_meses = st.number_input("Edad (meses)*", 1, 240, 24, key="edad_input")
@@ -1321,20 +1471,22 @@ with tab1:
             talla_cm = st.number_input("Talla (cm)*", 0.0, 150.0, 85.0, 0.1, key="talla_input")
             genero = st.selectbox("Género*", GENEROS, key="genero_input")
             
-            # Teléfono: solo números, 9 dígitos
-            telefono_input = st.text_input("Teléfono (9 dígitos)*", placeholder="Ej: 987654321", key="telefono_input")
+            # Teléfono: solo números, 9 dígitos - CON VALIDACIÓN EN TIEMPO REAL
+            telefono_input = st.text_input("Teléfono (9 dígitos)*", 
+                                          placeholder="Ej: 987654321 (solo 9 números)", 
+                                          key="telefono_input", max_chars=9)
             
             # Validación de teléfono EN TIEMPO REAL
             if telefono_input:
                 if not telefono_input.isdigit():
-                    error_telefono = "❌ El teléfono debe contener solo números"
-                    st.markdown(f'<div style="color: #dc2626; font-size: 0.9rem; margin-top: -10px; margin-bottom: 15px;">{error_telefono}</div>', unsafe_allow_html=True)
+                    error_telefono = "❌ Solo se permiten números"
+                    st.markdown(f'<div style="color: #dc2626; font-size: 0.9rem; margin-top: -15px; margin-bottom: 15px; background: #fee2e2; padding: 5px; border-radius: 4px;">{error_telefono}</div>', unsafe_allow_html=True)
                 elif len(telefono_input) != 9:
-                    error_telefono = "❌ El teléfono debe tener 9 dígitos"
-                    st.markdown(f'<div style="color: #dc2626; font-size: 0.9rem; margin-top: -10px; margin-bottom: 15px;">{error_telefono}</div>', unsafe_allow_html=True)
+                    error_telefono = f"⚠️ Necesita {9 - len(telefono_input)} dígito(s) más (9 en total)"
+                    st.markdown(f'<div style="color: #d97706; font-size: 0.9rem; margin-top: -15px; margin-bottom: 15px; background: #fef3c7; padding: 5px; border-radius: 4px;">{error_telefono}</div>', unsafe_allow_html=True)
                 elif not telefono_input.startswith('9'):
                     error_telefono = "⚠️ Los números peruanos generalmente empiezan con 9"
-                    st.markdown(f'<div style="color: #d97706; font-size: 0.9rem; margin-top: -10px; margin-bottom: 15px;">{error_telefono}</div>', unsafe_allow_html=True)
+                    st.markdown(f'<div style="color: #d97706; font-size: 0.9rem; margin-top: -15px; margin-bottom: 15px; background: #fef3c7; padding: 5px; border-radius: 4px;">{error_telefono}</div>', unsafe_allow_html=True)
             
             estado_paciente = st.selectbox("Estado del Paciente", ESTADOS_PACIENTE, key="estado_input")
         
@@ -1448,28 +1600,58 @@ with tab1:
                 "Falta de acceso a servicios básicos"
             ], key="factores_sociales_input")
         
-        submitted = st.form_submit_button("🎯 ANALIZAR RIESGO Y GUARDAR", type="primary", use_container_width=True)
+        # Mostrar resumen de validación
+        st.markdown("---")
+        
+        # Panel de estado de validación
+        col_val1, col_val2, col_val3 = st.columns(3)
+        
+        with col_val1:
+            if dni_input:
+                if len(dni_input) == 8 and dni_input.isdigit():
+                    st.success("✅ DNI válido")
+                else:
+                    st.error("❌ DNI incompleto")
+            else:
+                st.info("ℹ️ Ingrese DNI")
+        
+        with col_val2:
+            if nombre_input:
+                if not any(char.isdigit() for char in nombre_input) and len(nombre_input.strip().split()) >= 2:
+                    st.success("✅ Nombre válido")
+                else:
+                    st.error("❌ Nombre inválido")
+            else:
+                st.info("ℹ️ Ingrese nombre")
+        
+        with col_val3:
+            if telefono_input:
+                if len(telefono_input) == 9 and telefono_input.isdigit():
+                    st.success("✅ Teléfono válido")
+                else:
+                    st.error("❌ Teléfono incompleto")
+            else:
+                st.info("ℹ️ Ingrese teléfono")
+        
+        submitted = st.form_submit_button("🎯 ANALIZAR RIESGO Y GUARDAR", type="primary", use_container_width=True,
+                                         disabled=(bool(error_dni) or bool(error_nombre) or bool(error_telefono)))
     
     # ============================================
     # VALIDACIONES AL ENVIAR EL FORMULARIO
     # ============================================
     if submitted:
-        # Verificar si hay errores previos de validación en tiempo real
+        # Verificar si hay errores
         errores_finales = []
         
         # Validar DNI
         if not dni_input:
             errores_finales.append("❌ El DNI es obligatorio")
-        elif error_dni:  # Si hay error de validación en tiempo real
-            errores_finales.append(error_dni)
         elif len(dni_input) != 8 or not dni_input.isdigit():
-            errores_finales.append("❌ El DNI debe tener exactamente 8 dígitos numéricos")
+            errores_finales.append("❌ El DNI debe tener 8 dígitos exactos")
         
         # Validar Nombre
         if not nombre_input:
             errores_finales.append("❌ El nombre completo es obligatorio")
-        elif error_nombre:  # Si hay error de validación en tiempo real
-            errores_finales.append(error_nombre)
         elif any(char.isdigit() for char in nombre_input):
             errores_finales.append("❌ El nombre no debe contener números")
         elif len(nombre_input.strip().split()) < 2:
@@ -1478,12 +1660,8 @@ with tab1:
         # Validar Teléfono
         if not telefono_input:
             errores_finales.append("❌ El teléfono es obligatorio")
-        elif error_telefono:  # Si hay error de validación en tiempo real
-            errores_finales.append(error_telefono)
-        elif not telefono_input.isdigit():
-            errores_finales.append("❌ El teléfono debe contener solo números")
-        elif len(telefono_input) != 9:
-            errores_finales.append("❌ El teléfono debe tener 9 dígitos")
+        elif len(telefono_input) != 9 or not telefono_input.isdigit():
+            errores_finales.append("❌ El teléfono debe tener 9 dígitos exactos")
         
         # Validar peso y talla razonables
         if peso_kg < 1.0:
@@ -1497,7 +1675,6 @@ with tab1:
                 st.error(error)
         else:
             # Si no hay errores, proceder con los cálculos
-            # Cálculos
             nivel_riesgo, puntaje, estado = calcular_riesgo_anemia(
                 hemoglobina_ajustada,
                 edad_meses,
@@ -1521,8 +1698,203 @@ with tab1:
                 edad_meses
             )
             
-            # Mostrar resultados (código de resultados igual al anterior)
-            # ... [Aquí va el mismo código de resultados que tenías antes]
+            # Mostrar resultados
+            st.markdown("---")
+            st.markdown('<div class="section-title-green" style="color: #059669; font-size: 1.5rem;">📊 EVALUACIÓN INTEGRAL DEL PACIENTE</div>', unsafe_allow_html=True)
+
+            col1, col2 = st.columns(2)
+
+            # ESTADO DE ANEMIA - IZQUIERDA
+            with col1:
+                st.markdown('<div class="section-title-blue" style="font-size: 1.2rem; color: #1e40af;">🩺 ESTADO DE ANEMIA</div>', unsafe_allow_html=True)
+
+                # Clasificación OMS
+                if clasificacion == "ANEMIA SEVERA":
+                    st.markdown(f"""
+                    <div style="background-color: #fee2e2; border-left: 5px solid #dc2626; padding: 15px; border-radius: 8px; margin: 10px 0;">
+                        <h4 style="margin: 0 0 10px 0; color: #dc2626;">🔴 {clasificacion}</h4>
+                        <p style="margin: 0;"><strong>Hemoglobina:</strong> {hemoglobina_ajustada:.1f} g/dL</p>
+                        <p style="margin: 5px 0;"><strong>Edad:</strong> {edad_meses} meses</p>
+                        <p style="margin: 5px 0; color: #dc2626;"><strong>⚠️ {recomendacion}</strong></p>
+                    </div>
+                    """, unsafe_allow_html=True)
+                elif clasificacion == "ANEMIA MODERADA":
+                    st.markdown(f"""
+                    <div style="background-color: #fef3c7; border-left: 5px solid #d97706; padding: 15px; border-radius: 8px; margin: 10px 0;">
+                        <h4 style="margin: 0 0 10px 0; color: #d97706;">🟠 {clasificacion}</h4>
+                        <p style="margin: 0;"><strong>Hemoglobina:</strong> {hemoglobina_ajustada:.1f} g/dL</p>
+                        <p style="margin: 5px 0;"><strong>Edad:</strong> {edad_meses} meses</p>
+                        <p style="margin: 5px 0; color: #d97706;"><strong>⚠️ {recomendacion}</strong></p>
+                    </div>
+                    """, unsafe_allow_html=True)
+                elif clasificacion == "ANEMIA LEVE":
+                    st.markdown(f"""
+                    <div style="background-color: #dbeafe; border-left: 5px solid #2563eb; padding: 15px; border-radius: 8px; margin: 10px 0;">
+                        <h4 style="margin: 0 0 10px 0; color: #2563eb;">🔵 {clasificacion}</h4>
+                        <p style="margin: 0;"><strong>Hemoglobina:</strong> {hemoglobina_ajustada:.1f} g/dL</p>
+                        <p style="margin: 5px 0;"><strong>Edad:</strong> {edad_meses} meses</p>
+                        <p style="margin: 5px 0; color: #2563eb;"><strong>⚠️ {recomendacion}</strong></p>
+                    </div>
+                    """, unsafe_allow_html=True)
+                else:
+                    st.markdown(f"""
+                    <div style="background-color: #d1fae5; border-left: 5px solid #16a34a; padding: 15px; border-radius: 8px; margin: 10px 0;">
+                        <h4 style="margin: 0 0 10px 0; color: #16a34a;">🟢 {clasificacion}</h4>
+                        <p style="margin: 0;"><strong>Hemoglobina:</strong> {hemoglobina_ajustada:.1f} g/dL</p>
+                        <p style="margin: 5px 0;"><strong>Edad:</strong> {edad_meses} meses</p>
+                        <p style="margin: 5px 0; color: #16a34a;"><strong>✅ {recomendacion}</strong></p>
+                    </div>
+                    """, unsafe_allow_html=True)
+
+                # NIVEL DE RIESGO
+                st.markdown("---")
+                st.markdown('<div class="section-title-blue" style="font-size: 1.2rem; color: #1e40af;">📈 NIVEL DE RIESGO</div>', unsafe_allow_html=True)
+
+                if "ALTO" in nivel_riesgo:
+                    st.markdown(f"""
+                    <div style="background-color: #fee2e2; border: 2px solid #dc2626; padding: 20px; border-radius: 10px; margin: 10px 0; text-align: center;">
+                        <div style="font-size: 1.2rem; color: #dc2626; font-weight: bold; margin-bottom: 10px;">
+                        🚨 RIESGO DE ANEMIA
+                        </div>
+                        <div style="font-size: 2rem; color: #dc2626; font-weight: bold;">
+                        {nivel_riesgo}
+                        </div>
+                        <div style="font-size: 0.9rem; color: #6b7280; margin-top: 10px;">
+                        Puntaje: {puntaje}/60 | Estado: {estado}
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                elif "MODERADO" in nivel_riesgo:
+                    st.markdown(f"""
+                    <div style="background-color: #fef3c7; border: 2px solid #d97706; padding: 20px; border-radius: 10px; margin: 10px 0; text-align: center;">
+                        <div style="font-size: 1.2rem; color: #d97706; font-weight: bold; margin-bottom: 10px;">
+                        ⚠️ RIESGO DE ANEMIA
+                        </div>
+                        <div style="font-size: 2rem; color: #d97706; font-weight: bold;">
+                        {nivel_riesgo}
+                        </div>
+                        <div style="font-size: 0.9rem; color: #6b7280; margin-top: 10px;">
+                        Puntaje: {puntaje}/60 | Estado: {estado}
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                else:
+                    st.markdown(f"""
+                    <div style="background-color: #d1fae5; border: 2px solid #16a34a; padding: 20px; border-radius: 10px; margin: 10px 0; text-align: center;">
+                        <div style="font-size: 1.2rem; color: #16a34a; font-weight: bold; margin-bottom: 10px;">
+                        ✅ RIESGO DE ANEMIA
+                        </div>
+                        <div style="font-size: 2rem; color: #16a34a; font-weight: bold;">
+                        {nivel_riesgo}
+                        </div>
+                        <div style="font-size: 0.9rem; color: #6b7280; margin-top: 10px;">
+                        Puntaje: {puntaje}/60 | Estado: {estado}
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+
+            # ESTADO NUTRICIONAL - DERECHA
+            with col2:
+                st.markdown("---")
+                st.markdown('<div class="section-title-blue" style="font-size: 1.2rem; color: #1e40af;">🍎 ESTADO NUTRICIONAL</div>', unsafe_allow_html=True)
+                
+                # Verificar si tenemos datos para evaluar
+                if edad_meses > 0 and peso_kg > 0 and talla_cm > 0:
+                    # Mostrar datos básicos
+                    col_nut1, col_nut2, col_nut3 = st.columns(3)
+                    
+                    with col_nut1:
+                        st.markdown(f"""
+                        <div style="background-color: #dbeafe; border-radius: 8px; padding: 10px; text-align: center;">
+                            <div style="font-size: 0.9rem; color: #1e40af; font-weight: bold;">EDAD</div>
+                            <div style="font-size: 1.5rem; color: #1d4ed8; font-weight: bold;">{edad_meses}</div>
+                            <div style="font-size: 0.8rem; color: #6b7280;">meses</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    
+                    with col_nut2:
+                        st.markdown(f"""
+                        <div style="background-color: #d1fae5; border-radius: 8px; padding: 10px; text-align: center;">
+                            <div style="font-size: 0.9rem; color: #059669; font-weight: bold;">PESO</div>
+                            <div style="font-size: 1.5rem; color: #10b981; font-weight: bold;">{peso_kg:.1f}</div>
+                            <div style="font-size: 0.8rem; color: #6b7280;">kg</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    
+                    with col_nut3:
+                        st.markdown(f"""
+                        <div style="background-color: #f3e8ff; border-radius: 8px; padding: 10px; text-align: center;">
+                            <div style="font-size: 0.9rem; color: #6d28d9; font-weight: bold;">TALLA</div>
+                            <div style="font-size: 1.5rem; color: #7c3aed; font-weight: bold;">{talla_cm:.1f}</div>
+                            <div style="font-size: 0.8rem; color: #6b7280;">cm</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    
+                    # Mostrar evaluación nutricional
+                    if "DESNUTRICIÓN" in estado_nutricional.upper() or "SEVER" in estado_nutricional.upper():
+                        color_fondo = "#fee2e2"
+                        color_borde = "#dc2626"
+                        color_texto = "#dc2626"
+                        icono = "🔴"
+                    elif "BAJO PESO" in estado_nutricional.upper() or "RIESGO" in estado_nutricional.upper():
+                        color_fondo = "#fef3c7"
+                        color_borde = "#d97706"
+                        color_texto = "#d97706"
+                        icono = "🟠"
+                    elif "SOBREPESO" in estado_nutricional.upper() or "OBESIDAD" in estado_nutricional.upper():
+                        color_fondo = "#fef3c7"
+                        color_borde = "#d97706"
+                        color_texto = "#d97706"
+                        icono = "🟠"
+                    else:
+                        color_fondo = "#d1fae5"
+                        color_borde = "#16a34a"
+                        color_texto = "#16a34a"
+                        icono = "🟢"
+                    
+                    st.markdown(f"""
+                    <div style="background-color: {color_fondo}; border-left: 5px solid {color_borde}; padding: 15px; border-radius: 8px; margin-top: 1rem;">
+                        <div style="font-size: 1.1rem; color: {color_texto}; font-weight: bold; margin-bottom: 10px;">
+                        {icono} EVALUACIÓN NUTRICIONAL
+                        </div>
+                        <div style="font-size: 1.5rem; color: {color_texto}; font-weight: bold; text-align: center;">
+                        {estado_nutricional}
+                        </div>
+                        <div style="font-size: 0.9rem; color: #6b7280; margin-top: 10px;">
+                        <strong>Peso para la edad:</strong> {estado_peso}
+                        </div>
+                        <div style="font-size: 0.9rem; color: #6b7280; margin-top: 5px;">
+                        <strong>Talla para la edad:</strong> {estado_talla}
+                        </div>
+                        <div style="font-size: 0.9rem; color: #6b7280; margin-top: 5px;">
+                        <strong>Género:</strong> {genero}
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
+                    # Mostrar alerta si hay problemas nutricionales
+                    if estado_nutricional not in ["Normal", "Adecuado", "Saludable", "NORMAL"]:
+                        st.warning(f"⚠️ **ALERTA NUTRICIONAL**: Se recomienda evaluación por especialista en nutrición pediátrica.")
+                
+                else:
+                    # Datos incompletos
+                    st.warning("⚠️ **DATOS NUTRICIONALES INCOMPLETOS**")
+                    st.info("Complete edad, peso y talla para evaluación nutricional")
+            
+            # SUGERENCIAS - ANCHO COMPLETO
+            st.markdown('<div class="section-title-green" style="color: #059669; font-size: 1.3rem; margin-top: 20px;">💡 PLAN DE ACCIÓN Y RECOMENDACIONES</div>', unsafe_allow_html=True)
+            
+            # Contenedor para sugerencias
+            st.markdown(f"""
+            <div style="background-color: #fef3c7; border: 2px solid #d97706; padding: 20px; border-radius: 10px; margin: 10px 0;">
+                <div style="font-size: 1.2rem; color: #92400e; font-weight: bold; margin-bottom: 15px;">
+                📋 RECOMENDACIONES ESPECÍFICAS
+                </div>
+                <div style="color: #78350f; line-height: 1.6;">
+                {sugerencias.replace(chr(10), '<br>')}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
             
             # GUARDAR EN SUPABASE
             if supabase:
