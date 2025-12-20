@@ -1974,71 +1974,60 @@ with tab2:
     """, unsafe_allow_html=True)
     
     # ============================================
-    # PASO 1: BÚSQUEDA AVANZADA DE PACIENTES
-    # ============================================
-    st.markdown("""
-    <div class="section-title-blue" style="margin-top: 0;">
-        👤 PASO 1: Búsqueda y Selección de Paciente
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # Inicializar estado de sesión para análisis
-    if 'analisis_completo' not in st.session_state:
-        st.session_state.analisis_completo = False
-    if 'seguimiento_nutricional' not in st.session_state:
-        st.session_state.seguimiento_nutricional = False
-    if 'paciente_actual' not in st.session_state:
-        st.session_state.paciente_actual = {}
-    
-    # Obtener lista de pacientes
-    pacientes_df = obtener_datos_supabase()
-    
-    if not pacientes_df.empty:
-        # Crear columnas para búsqueda
-        col_busqueda1, col_busqueda2, col_busqueda3 = st.columns([2, 2, 1])
-        
-        with col_busqueda1:
-            # Búsqueda por DNI
-            dni_busqueda = st.text_input("🔍 Buscar por DNI:", placeholder="Ingrese DNI exacto", key="busqueda_dni_tab2")
-        
-        with col_busqueda2:
-            # Búsqueda personalizada
-            busqueda_personalizada = st.text_input("🔍 Búsqueda personalizada:", 
-                                                  placeholder="Nombre, apellido, riesgo...", 
-                                                  key="busqueda_personal_tab2")
-        
-        with col_busqueda3:
-            # Selector de ordenamiento
-            ordenar_por = st.selectbox("Ordenar por:", 
-                                      ["Nombre", "DNI", "Edad", "Hemoglobina", "Riesgo"],
-                                      key="ordenar_por_tab2")
-        
-        # Filtrar pacientes según búsqueda
-        pacientes_filtrados = pacientes_df.copy()
-        
-        # Aplicar filtro por DNI si se especificó
-        if dni_busqueda:
-            pacientes_filtrados = pacientes_filtrados[pacientes_filtrados['dni'].astype(str).str.contains(dni_busqueda)]
-        
-        # Aplicar búsqueda personalizada
-        if busqueda_personalizada:
-            mask = pacientes_filtrados.apply(lambda row: row.astype(str).str.contains(busqueda_personalizada, case=False).any(), axis=1)
-            pacientes_filtrados = pacientes_filtrados[mask]
-        
-        # Ordenar resultados
-        if ordenar_por == "Nombre":
-            pacientes_filtrados = pacientes_filtrados.sort_values('nombre_apellido')
-        elif ordenar_por == "DNI":
-            pacientes_filtrados = pacientes_filtrados.sort_values('dni')
-        elif ordenar_por == "Edad":
-            pacientes_filtrados = pacientes_filtrados.sort_values('edad_meses')
-        elif ordenar_por == "Hemoglobina":
-            pacientes_filtrados = pacientes_filtrados.sort_values('hemoglobina_dl1', ascending=False)
-        elif ordenar_por == "Riesgo":
-            orden_riesgo = {'ALTO RIESGO': 1, 'RIESGO MODERADO': 2, 'BAJO RIESGO': 3}
-            pacientes_filtrados['riesgo_orden'] = pacientes_filtrados['riesgo'].map(orden_riesgo)
-            pacientes_filtrados = pacientes_filtrados.sort_values('riesgo_orden')
-        
+# SECCIÓN DE BÚSQUEDA CORREGIDA Y SEGURA
+# ============================================
+
+# Reemplaza toda la sección de ordenamiento con esto:
+
+with col_busqueda3:
+    # Selector de ordenamiento
+    ordenar_por = st.selectbox("Ordenar por:", 
+                              ["DNI", "Nombre", "Edad", "Hemoglobina", "Riesgo"],
+                              key="ordenar_por_tab2")
+
+# Aplicar filtros
+pacientes_filtrados = pacientes_df.copy()
+
+# Filtrar por DNI si se especificó
+if dni_busqueda:
+    # Convertir a string y buscar
+    pacientes_filtrados['dni_str'] = pacientes_filtrados['dni'].astype(str)
+    pacientes_filtrados = pacientes_filtrados[pacientes_filtrados['dni_str'].str.contains(dni_busqueda, na=False)]
+    pacientes_filtrados = pacientes_filtrados.drop('dni_str', axis=1)
+
+# Aplicar búsqueda personalizada
+if busqueda_personalizada and len(busqueda_personalizada) > 2:
+    try:
+        # Buscar en múltiples columnas
+        mask = (
+            pacientes_filtrados['nombre_apellido'].astype(str).str.contains(busqueda_personalizada, case=False, na=False) |
+            pacientes_filtrados['dni'].astype(str).str.contains(busqueda_personalizada, case=False, na=False) |
+            pacientes_filtrados['riesgo'].astype(str).str.contains(busqueda_personalizada, case=False, na=False) |
+            pacientes_filtrados['region'].astype(str).str.contains(busqueda_personalizada, case=False, na=False)
+        )
+        pacientes_filtrados = pacientes_filtrados[mask]
+    except:
+        pass
+
+# Ordenar resultados de forma segura
+try:
+    if ordenar_por == "Nombre":
+        pacientes_filtrados = pacientes_filtrados.sort_values('nombre_apellido')
+    elif ordenar_por == "DNI":
+        pacientes_filtrados = pacientes_filtrados.sort_values('dni')
+    elif ordenar_por == "Edad":
+        pacientes_filtrados = pacientes_filtrados.sort_values('edad_meses')
+    elif ordenar_por == "Hemoglobina":
+        pacientes_filtrados = pacientes_filtrados.sort_values('hemoglobina_dl1', ascending=False)
+    elif ordenar_por == "Riesgo":
+        # Crear orden numérico para riesgo
+        orden_riesgo = {'ALTO RIESGO': 1, 'RIESGO MODERADO': 2, 'BAJO RIESGO': 3}
+        pacientes_filtrados = pacientes_filtrados.copy()
+        pacientes_filtrados['_orden_temp'] = pacientes_filtrados['riesgo'].map(orden_riesgo)
+        pacientes_filtrados = pacientes_filtrados.sort_values('_orden_temp')
+        pacientes_filtrados = pacientes_filtrados.drop('_orden_temp', axis=1)
+except Exception as e:
+    st.warning(f"⚠️ No se pudo ordenar por '{ordenar_por}': {str(e)}")
         # Mostrar estadísticas de búsqueda
         col_stats1, col_stats2, col_stats3 = st.columns(3)
         with col_stats1:
