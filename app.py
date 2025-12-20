@@ -1282,34 +1282,48 @@ with tab1:
     if 'limpiar_formulario' not in st.session_state:
         st.session_state.limpiar_formulario = False
     
-    # Función para limpiar formulario
+    # Función para limpiar formulario - VERSIÓN CORREGIDA
     def limpiar_formulario():
-        st.session_state.dni_input = ""
-        st.session_state.nombre_input = ""
-        st.session_state.telefono_input = ""
-        st.session_state.edad_input = 24
-        st.session_state.peso_input = 12.5
-        st.session_state.talla_input = 85.0
-        st.session_state.genero_input = GENEROS[0] if GENEROS else ""
-        st.session_state.estado_input = ESTADOS_PACIENTE[0] if ESTADOS_PACIENTE else ""
-        st.session_state.region_input = PERU_REGIONS[0] if PERU_REGIONS else ""
-        st.session_state.departamento_input = ""
-        st.session_state.altitud_input = 500
-        st.session_state.nivel_input = NIVELES_EDUCATIVOS[0] if NIVELES_EDUCATIVOS else ""
-        st.session_state.agua_input = False
-        st.session_state.salud_input = False
-        st.session_state.hemoglobina_input = 11.0
-        st.session_state.seguimiento_input = False
-        st.session_state.hierro_input = False
-        st.session_state.tipo_suplemento_input = ""
-        st.session_state.frecuencia_input = ""
-        st.session_state.antecedentes_input = False
-        st.session_state.enfermedades_input = ""
-        st.session_state.factores_clinicos_input = []
-        st.session_state.factores_sociales_input = []
-        st.rerun()
+        """Limpia el formulario estableciendo valores predeterminados en session_state"""
+        # Valores predeterminados para el formulario
+        valores_default = {
+            'dni_input': "",
+            'nombre_input': "",
+            'telefono_input': "",
+            'edad_input': 24,
+            'peso_input': 12.5,
+            'talla_input': 85.0,
+            'genero_input': GENEROS[0] if GENEROS else "",
+            'estado_input': ESTADOS_PACIENTE[0] if ESTADOS_PACIENTE else "",
+            'region_input': PERU_REGIONS[0] if PERU_REGIONS else "",
+            'departamento_input': "",
+            'altitud_input': 500,
+            'nivel_input': NIVELES_EDUCATIVOS[0] if NIVELES_EDUCATIVOS else "",
+            'agua_input': False,
+            'salud_input': False,
+            'hemoglobina_input': 11.0,
+            'seguimiento_input': False,
+            'hierro_input': False,
+            'tipo_suplemento_input': "",
+            'frecuencia_input': "",
+            'antecedentes_input': False,
+            'enfermedades_input': "",
+            'factores_clinicos_input': [],
+            'factores_sociales_input': []
+        }
+        
+        # Aplicar valores predeterminados
+        for key, value in valores_default.items():
+            st.session_state[key] = value
+        
+        # Limpiar datos analizados si existen
+        if 'datos_analizados' in st.session_state:
+            del st.session_state.datos_analizados
     
-    with st.form("formulario_completo", clear_on_submit=False):
+    # Crear el formulario - VERSIÓN CORREGIDA
+    form_key = "formulario_completo"
+    
+    with st.form(form_key, clear_on_submit=False):
         col1, col2 = st.columns(2)
         
         with col1:
@@ -1549,7 +1563,8 @@ with tab1:
             btn_limpiar = st.form_submit_button(
                 "🧹 Limpiar", 
                 type="secondary", 
-                use_container_width=True
+                use_container_width=True,
+                on_click=lambda: limpiar_formulario()  # Usar on_click en lugar de manejar fuera del formulario
             )
         
         with col_b2:
@@ -1575,14 +1590,11 @@ with tab1:
     # ACCIONES FUERA DEL FORMULARIO
     # ============================================
     
-    # Acción 1: Limpiar formulario
-    if btn_limpiar:
-        limpiar_formulario()
-        st.success("✅ Formulario limpiado correctamente")
-        st.rerun()
+    # Acción 1: Limpiar formulario ya se maneja con on_click
+    # No necesitamos manejar btn_limpiar aquí porque se usa on_click
     
     # Acción 2: Analizar Riesgo
-    if btn_analizar:
+    if 'btn_analizar' in st.session_state and st.session_state.btn_analizar:
         # Validar todos los campos primero
         errores_finales = []
         
@@ -1861,7 +1873,7 @@ with tab1:
                 st.error(f"❌ Error al procesar los datos: {str(e)}")
     
     # Acción 3: Guardar en Supabase
-    if btn_guardar:
+    if 'btn_guardar' in st.session_state and st.session_state.btn_guardar:
         # Verificar si se hizo el análisis primero
         if 'datos_analizados' not in st.session_state:
             st.error("⚠️ Primero debe hacer el análisis de riesgo antes de guardar")
