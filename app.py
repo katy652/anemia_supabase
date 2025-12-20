@@ -1282,48 +1282,26 @@ with tab1:
     if 'limpiar_formulario' not in st.session_state:
         st.session_state.limpiar_formulario = False
     
-    # Función para limpiar formulario - VERSIÓN CORREGIDA
+    # Función para limpiar formulario - VERSIÓN SIMPLIFICADA Y SEGURA
     def limpiar_formulario():
-        """Limpia el formulario estableciendo valores predeterminados en session_state"""
-        # Valores predeterminados para el formulario
-        valores_default = {
-            'dni_input': "",
-            'nombre_input': "",
-            'telefono_input': "",
-            'edad_input': 24,
-            'peso_input': 12.5,
-            'talla_input': 85.0,
-            'genero_input': GENEROS[0] if GENEROS else "",
-            'estado_input': ESTADOS_PACIENTE[0] if ESTADOS_PACIENTE else "",
-            'region_input': PERU_REGIONS[0] if PERU_REGIONS else "",
-            'departamento_input': "",
-            'altitud_input': 500,
-            'nivel_input': NIVELES_EDUCATIVOS[0] if NIVELES_EDUCATIVOS else "",
-            'agua_input': False,
-            'salud_input': False,
-            'hemoglobina_input': 11.0,
-            'seguimiento_input': False,
-            'hierro_input': False,
-            'tipo_suplemento_input': "",
-            'frecuencia_input': "",
-            'antecedentes_input': False,
-            'enfermedades_input': "",
-            'factores_clinicos_input': [],
-            'factores_sociales_input': []
-        }
-        
-        # Aplicar valores predeterminados
-        for key, value in valores_default.items():
-            st.session_state[key] = value
-        
-        # Limpiar datos analizados si existen
-        if 'datos_analizados' in st.session_state:
-            del st.session_state.datos_analizados
+        """Limpia el formulario estableciendo valores predeterminados"""
+        try:
+            # Solo limpiar los datos analizados, NO los inputs
+            if 'datos_analizados' in st.session_state:
+                del st.session_state.datos_analizados
+            
+            # Mostrar mensaje de éxito
+            st.success("✅ Formulario listo para nuevo registro")
+            
+            # NO hacer rerun aquí - eso causaba el error
+            return True
+            
+        except Exception as e:
+            st.error(f"Error al limpiar: {e}")
+            return False
     
-    # Crear el formulario - VERSIÓN CORREGIDA
-    form_key = "formulario_completo"
-    
-    with st.form(form_key, clear_on_submit=False):
+    # Crear el formulario
+    with st.form("formulario_completo", clear_on_submit=False):
         col1, col2 = st.columns(2)
         
         with col1:
@@ -1563,8 +1541,7 @@ with tab1:
             btn_limpiar = st.form_submit_button(
                 "🧹 Limpiar", 
                 type="secondary", 
-                use_container_width=True,
-                on_click=lambda: limpiar_formulario()  # Usar on_click en lugar de manejar fuera del formulario
+                use_container_width=True
             )
         
         with col_b2:
@@ -1590,11 +1567,18 @@ with tab1:
     # ACCIONES FUERA DEL FORMULARIO
     # ============================================
     
-    # Acción 1: Limpiar formulario ya se maneja con on_click
-    # No necesitamos manejar btn_limpiar aquí porque se usa on_click
+    # Acción 1: Limpiar formulario
+    if btn_limpiar:
+        # Limpiar solo los datos analizados, no los campos del formulario
+        if 'datos_analizados' in st.session_state:
+            del st.session_state.datos_analizados
+        st.success("✅ Datos analizados limpiados. Puede llenar un nuevo formulario.")
+        # Opcional: puedes agregar un botón para recargar la página
+        if st.button("🔄 Recargar formulario"):
+            st.rerun()
     
     # Acción 2: Analizar Riesgo
-    if 'btn_analizar' in st.session_state and st.session_state.btn_analizar:
+    if btn_analizar:
         # Validar todos los campos primero
         errores_finales = []
         
@@ -1873,7 +1857,7 @@ with tab1:
                 st.error(f"❌ Error al procesar los datos: {str(e)}")
     
     # Acción 3: Guardar en Supabase
-    if 'btn_guardar' in st.session_state and st.session_state.btn_guardar:
+    if btn_guardar:
         # Verificar si se hizo el análisis primero
         if 'datos_analizados' not in st.session_state:
             st.error("⚠️ Primero debe hacer el análisis de riesgo antes de guardar")
@@ -1960,10 +1944,15 @@ with tab1:
                                 st.balloons()
                                 
                                 # Opción para limpiar después de guardar
-                                if st.button("🧹 Limpiar formulario y continuar"):
-                                    limpiar_formulario()
-                                    del st.session_state.datos_analizados
-                                    st.rerun()
+                                col_clean1, col_clean2 = st.columns(2)
+                                with col_clean1:
+                                    if st.button("🧹 Limpiar y nuevo registro"):
+                                        if 'datos_analizados' in st.session_state:
+                                            del st.session_state.datos_analizados
+                                        st.rerun()
+                                with col_clean2:
+                                    if st.button("📝 Continuar con mismo paciente"):
+                                        st.info("Puede modificar los datos y guardar nuevamente")
                         else:
                             st.error("❌ Error al guardar en Supabase")
                 else:
