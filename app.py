@@ -9,7 +9,281 @@ import time
 from datetime import datetime, timedelta
 
 # ==================================================
-# CONFIGURACIÓN E INICIALIZACIÓN
+# SISTEMA DE LOGIN PARA 5 USUARIOS DE SALUD
+# ==================================================
+
+# Configurar estado de sesión
+if 'logged_in' not in st.session_state:
+    st.session_state.logged_in = False
+    st.session_state.user_info = None
+    st.session_state.current_username = None
+
+# Diccionario de usuarios (5 profesionales de salud)
+USUARIOS_SALUD = {
+    "admin": {
+        "password": "Admin123",
+        "nombre": "Dr. Carlos Martínez",
+        "rol": "Administrador",
+        "especialidad": "Pediatría",
+        "email": "admin@hospital.com",
+        "acceso_total": True
+    },
+    "pediatra1": {
+        "password": "Pediatra123",
+        "nombre": "Dra. Ana López",
+        "rol": "Pediatra",
+        "especialidad": "Pediatría General",
+        "email": "pediatra1@hospital.com",
+        "acceso_total": True
+    },
+    "pediatra2": {
+        "password": "Pediatra456",
+        "nombre": "Dr. Juan Pérez",
+        "rol": "Pediatra",
+        "especialidad": "Nutrición Infantil",
+        "email": "pediatra2@hospital.com",
+        "acceso_total": True
+    },
+    "enfermero": {
+        "password": "Enfermero123",
+        "nombre": "Lic. María Gómez",
+        "rol": "Enfermero/a",
+        "especialidad": "Salud Pública",
+        "email": "enfermero@hospital.com",
+        "acceso_total": False
+    },
+    "tecnico": {
+        "password": "Tecnico123",
+        "nombre": "Téc. Luis Rodríguez",
+        "rol": "Técnico de Laboratorio",
+        "especialidad": "Hematología",
+        "email": "tecnico@hospital.com",
+        "acceso_total": False
+    }
+}
+
+def verificar_login(username, password):
+    """Verifica si el usuario y contraseña son correctos"""
+    if username in USUARIOS_SALUD and USUARIOS_SALUD[username]["password"] == password:
+        return USUARIOS_SALUD[username]
+    return None
+
+def logout():
+    """Cierra sesión del usuario"""
+    st.session_state.logged_in = False
+    st.session_state.user_info = None
+    st.session_state.current_username = None
+    st.rerun()
+
+def show_login_page():
+    """Muestra la página de login"""
+    
+    # Estilos CSS para el login
+    st.markdown("""
+    <style>
+    .login-container {
+        max-width: 500px;
+        margin: 80px auto;
+        padding: 40px;
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 15px 35px rgba(30, 64, 175, 0.1);
+        border: 2px solid #e0f2fe;
+    }
+    
+    .login-header {
+        text-align: center;
+        margin-bottom: 40px;
+    }
+    
+    .hospital-icon {
+        font-size: 60px;
+        margin-bottom: 20px;
+        color: #1e40af;
+    }
+    
+    .login-title {
+        color: #1e3a8a;
+        font-size: 2.2rem;
+        font-weight: 800;
+        margin: 0;
+        background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    
+    .login-subtitle {
+        color: #6b7280;
+        font-size: 1rem;
+        margin-top: 10px;
+        font-weight: 500;
+    }
+    
+    .stButton > button {
+        width: 100%;
+        background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+        color: white;
+        border: none;
+        padding: 16px 24px;
+        border-radius: 12px;
+        font-weight: 600;
+        font-size: 16px;
+        margin-top: 25px;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    
+    .stButton > button:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 20px rgba(30, 64, 175, 0.3);
+    }
+    
+    .user-card {
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        padding: 15px;
+        border-radius: 12px;
+        margin: 12px 0;
+        border-left: 5px solid #3b82f6;
+        transition: all 0.3s ease;
+        border: 1px solid #e2e8f0;
+    }
+    
+    .user-card:hover {
+        transform: translateX(5px);
+        background: #f0f9ff;
+        border-color: #dbeafe;
+    }
+    
+    .test-users {
+        margin-top: 30px;
+        padding: 20px;
+        background: #f0f9ff;
+        border-radius: 12px;
+        border: 2px solid #dbeafe;
+    }
+    
+    .role-badge {
+        background: #3b82f6;
+        color: white;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        margin-left: 10px;
+        display: inline-block;
+    }
+    
+    .form-label {
+        color: #374151;
+        font-weight: 600;
+        font-size: 0.95rem;
+        margin-bottom: 8px;
+        display: block;
+    }
+    
+    .stTextInput > div > div > input {
+        border-radius: 10px;
+        border: 2px solid #e5e7eb;
+        padding: 12px 16px;
+        font-size: 16px;
+    }
+    
+    .stTextInput > div > div > input:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    # Contenedor principal del login
+    st.markdown('<div class="login-container">', unsafe_allow_html=True)
+    
+    # Header con icono
+    st.markdown("""
+    <div class="login-header">
+        <div class="hospital-icon">🏥</div>
+        <h1 class="login-title">SISTEMA NIXON</h1>
+        <p class="login-subtitle">Control de Anemia y Nutrición Infantil</p>
+        <div style="height: 3px; width: 80px; background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); margin: 20px auto; border-radius: 10px;"></div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Formulario de login
+    with st.form("login_form"):
+        st.markdown('<div class="form-label">👤 Nombre de Usuario</div>', unsafe_allow_html=True)
+        username = st.text_input("", placeholder="Ingresa tu usuario", label_visibility="collapsed")
+        
+        st.markdown('<div class="form-label">🔒 Contraseña</div>', unsafe_allow_html=True)
+        password = st.text_input("", type="password", placeholder="Ingresa tu contraseña", label_visibility="collapsed")
+        
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            remember_me = st.checkbox("Recordar sesión", value=True)
+        
+        submit = st.form_submit_button("🚀 INICIAR SESIÓN", use_container_width=True)
+        
+        if submit:
+            if not username or not password:
+                st.error("❌ Por favor, ingresa usuario y contraseña")
+            else:
+                usuario_info = verificar_login(username, password)
+                if usuario_info:
+                    st.session_state.logged_in = True
+                    st.session_state.user_info = usuario_info
+                    st.session_state.current_username = username
+                    st.success(f"✅ ¡Bienvenido/a, {usuario_info['nombre']}!")
+                    time.sleep(1)
+                    st.rerun()
+                else:
+                    st.error("❌ Usuario o contraseña incorrectos")
+    
+    # Información de usuarios de prueba
+    with st.expander("👥 USUARIOS AUTORIZADOS DEL SISTEMA", expanded=True):
+        st.markdown('<div class="test-users">', unsafe_allow_html=True)
+        st.markdown("**Personal de Salud Autorizado:**")
+        
+        for username, info in USUARIOS_SALUD.items():
+            role_class = info['rol'].lower().replace("á", "a").replace("é", "e")
+            st.markdown(f"""
+            <div class="user-card">
+                <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                    <strong style="font-size: 1.1rem;">{info['nombre']}</strong>
+                    <span class="role-badge">{info['rol']}</span>
+                </div>
+                <div style="font-size: 0.9rem; color: #4b5563;">
+                    <div><strong>Especialidad:</strong> {info['especialidad']}</div>
+                    <div><strong>Usuario:</strong> <code>{username}</code></div>
+                    <div><strong>Contraseña:</strong> <code>{info['password']}</code></div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+    
+    # Footer del login
+    st.markdown("""
+    <div style="text-align: center; margin-top: 40px; color: #6b7280; font-size: 14px;">
+        <p>© 2024 Sistema Nixon - Control de Anemia Infantil</p>
+        <p>Sistema exclusivo para personal de salud autorizado</p>
+        <div style="height: 1px; background: #e5e7eb; margin: 20px 0;"></div>
+        <p style="font-size: 12px; margin-top: 20px;">
+            <strong>🔒 Acceso restringido:</strong> Solo personal médico autorizado<br>
+            <strong>📞 Soporte técnico:</strong> soporte@sistemasnixon.com
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown('</div>', unsafe_allow_html=True)
+
+# ==================================================
+# VERIFICAR SI EL USUARIO ESTÁ LOGUEADO
+# ==================================================
+
+if not st.session_state.logged_in:
+    show_login_page()
+    st.stop()  # Detener la ejecución del resto del código
+
+# ==================================================
+# CONFIGURACIÓN E INICIALIZACIÓN (solo se ejecuta si está logueado)
 # ==================================================
 
 st.set_page_config(
@@ -19,7 +293,7 @@ st.set_page_config(
 )
 
 # ==================================================
-# ESTILOS CSS MEJORADOS
+# ESTILOS CSS MEJORADOS (se agregan estilos para mostrar info del usuario)
 # ==================================================
 st.markdown("""
 <style>
@@ -33,6 +307,53 @@ st.markdown("""
         text-align: center;
         box-shadow: 0 10px 30px rgba(30, 58, 138, 0.2);
     }
+    
+    /* INFO USUARIO EN SIDEBAR */
+    .user-sidebar-info {
+        background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+        color: white;
+        padding: 1.5rem;
+        border-radius: 10px;
+        margin-bottom: 1.5rem;
+        text-align: center;
+        border: 2px solid rgba(255,255,255,0.1);
+    }
+    
+    .user-name {
+        font-size: 1.3rem;
+        font-weight: 700;
+        margin-bottom: 5px;
+    }
+    
+    .user-role {
+        font-size: 0.9rem;
+        opacity: 0.9;
+        margin-bottom: 15px;
+        background: rgba(255,255,255,0.15);
+        padding: 4px 12px;
+        border-radius: 15px;
+        display: inline-block;
+    }
+    
+    .user-email {
+        font-size: 0.8rem;
+        opacity: 0.8;
+        margin-top: 5px;
+    }
+    
+    .logout-btn {
+        background: rgba(255,255,255,0.2) !important;
+        border: 1px solid rgba(255,255,255,0.3) !important;
+        color: white !important;
+        margin-top: 10px !important;
+    }
+    
+    .logout-btn:hover {
+        background: rgba(255,255,255,0.3) !important;
+        transform: translateY(-2px) !important;
+    }
+    
+    /* Resto de estilos... (mantener todos los estilos existentes) */
     
     .section-title-blue {
         color: #1e3a8a;
@@ -212,6 +533,118 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==================================================
+# OBTENER INFORMACIÓN DEL USUARIO LOGUEADO
+# ==================================================
+
+user_info = st.session_state.user_info
+current_user = st.session_state.current_username
+
+# ==================================================
+# SIDEBAR CON INFORMACIÓN DEL USUARIO
+# ==================================================
+
+with st.sidebar:
+    # Información del usuario
+    st.markdown(f"""
+    <div class="user-sidebar-info">
+        <div class="user-name">👤 {user_info['nombre']}</div>
+        <div class="user-role">{user_info['rol']}</div>
+        <div class="user-email">
+            {user_info['email']}<br>
+            <small>Especialidad: {user_info['especialidad']}</small>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Botón de logout
+    if st.button("🚪 Cerrar Sesión", use_container_width=True, key="logout_btn", 
+                type="secondary", help="Cierra la sesión actual"):
+        logout()
+    
+    st.markdown("---")
+    
+    # Resto del sidebar original
+    st.markdown('<div class="section-title-blue" style="font-size: 1.4rem;">📋 Sistema de Referencia</div>', unsafe_allow_html=True)
+    
+    tab_sidebar1, tab_sidebar2, tab_sidebar3 = st.tabs(["🎯 Ajustes Altitud", "📊 Crecimiento", "🔬 Hematología"])
+    
+    with tab_sidebar1:
+        st.markdown('<div style="color: #1e40af; font-weight: 600; margin-bottom: 10px;">Tabla de Ajustes por Altitud</div>', unsafe_allow_html=True)
+        
+        # Tabla de ajustes por altitud
+        AJUSTE_HEMOGLOBINA = [
+            {"altitud_min": 0, "altitud_max": 999, "ajuste": 0.0},
+            {"altitud_min": 1000, "altitud_max": 1499, "ajuste": -0.2},
+            {"altitud_min": 1500, "altitud_max": 1999, "ajuste": -0.5},
+            {"altitud_min": 2000, "altitud_max": 2499, "ajuste": -0.8},
+            {"altitud_min": 2500, "altitud_max": 2999, "ajuste": -1.3},
+            {"altitud_min": 3000, "altitud_max": 3499, "ajuste": -1.9},
+            {"altitud_min": 3500, "altitud_max": 3999, "ajuste": -2.7},
+            {"altitud_min": 4000, "altitud_max": 4499, "ajuste": -3.5},
+            {"altitud_min": 4500, "altitud_max": 10000, "ajuste": -4.5}
+        ]
+        
+        ajustes_df = pd.DataFrame(AJUSTE_HEMOGLOBINA)
+        st.dataframe(
+            ajustes_df.style.format({
+                'altitud_min': '{:.0f}',
+                'altitud_max': '{:.0f}', 
+                'ajuste': '{:+.1f}'
+            }),
+            use_container_width=True,
+            height=300
+        )
+    
+    with tab_sidebar2:
+        st.markdown('<div style="color: #1e40af; font-weight: 600; margin-bottom: 10px;">Tablas de Crecimiento OMS</div>', unsafe_allow_html=True)
+        
+        # Función para obtener referencia de crecimiento
+        def obtener_referencia_crecimiento():
+            return pd.DataFrame([
+                {'edad_meses': 0, 'peso_min_ninas': 2.8, 'peso_promedio_ninas': 3.4, 'peso_max_ninas': 4.2, 'peso_min_ninos': 2.9, 'peso_promedio_ninos': 3.4, 'peso_max_ninos': 4.4, 'talla_min_ninas': 47.0, 'talla_promedio_ninas': 50.3, 'talla_max_ninas': 53.6, 'talla_min_ninos': 47.5, 'talla_promedio_ninos': 50.3, 'talla_max_ninos': 53.8},
+                {'edad_meses': 3, 'peso_min_ninas': 4.5, 'peso_promedio_ninas': 5.6, 'peso_max_ninas': 7.0, 'peso_min_ninos': 5.0, 'peso_promedio_ninos': 6.2, 'peso_max_ninos': 7.8, 'talla_min_ninas': 55.0, 'talla_promedio_ninas': 59.0, 'talla_max_ninas': 63.5, 'talla_min_ninos': 57.0, 'talla_promedio_ninos': 60.0, 'talla_max_ninos': 64.5},
+                {'edad_meses': 6, 'peso_min_ninas': 6.0, 'peso_promedio_ninas': 7.3, 'peso_max_ninas': 9.0, 'peso_min_ninos': 6.5, 'peso_promedio_ninos': 8.0, 'peso_max_ninos': 9.8, 'talla_min_ninas': 61.0, 'talla_promedio_ninas': 65.0, 'talla_max_ninas': 69.5, 'talla_min_ninos': 63.0, 'talla_promedio_ninos': 67.0, 'talla_max_ninos': 71.5},
+                {'edad_meses': 24, 'peso_min_ninas': 10.5, 'peso_promedio_ninas': 12.4, 'peso_max_ninas': 15.0, 'peso_min_ninos': 11.0, 'peso_promedio_ninos': 12.9, 'peso_max_ninos': 16.0, 'talla_min_ninas': 81.0, 'talla_promedio_ninas': 86.0, 'talla_max_ninas': 92.5, 'talla_min_ninos': 83.0, 'talla_promedio_ninos': 88.0, 'talla_max_ninos': 94.5}
+            ])
+        
+        referencia_df = obtener_referencia_crecimiento()
+        st.dataframe(referencia_df, use_container_width=True, height=300)
+    
+    with tab_sidebar3:
+        st.markdown('<div style="color: #1e40af; font-weight: 600; margin-bottom: 10px;">Criterios de Interpretación</div>', unsafe_allow_html=True)
+        
+        st.markdown("""
+        ### 🩺 FERRITINA (Reservas)
+        - **< 15 ng/mL**: 🚨 Deficit severo
+        - **15-30 ng/mL**: ⚠️ Deficit moderado  
+        - **30-100 ng/mL**: 🔄 Reservas límite
+        - **> 100 ng/mL**: ✅ Adecuado
+        
+        ### 🔬 CHCM (Concentración)
+        - **< 32 g/dL**: 🚨 Hipocromía
+        - **32-36 g/dL**: ✅ Normocromía
+        - **> 36 g/dL**: 🔄 Hipercromía
+        
+        ### 📈 RETICULOCITOS (Producción)
+        - **< 0.5%**: ⚠️ Hipoproliferación
+        - **0.5-1.5%**: ✅ Normal
+        - **> 1.5%**: 🔄 Hiperproducción
+        """)
+
+# ==================================================
+# TÍTULO PRINCIPAL CON INFORMACIÓN DEL USUARIO
+# ==================================================
+
+st.markdown(f"""
+<div class="main-title" style="padding: 2rem;">
+    <h1 style="margin: 0; font-size: 2.5rem;">🏥 SISTEMA NIXON - Control de Anemia</h1>
+    <p style="margin: 10px 0 0 0; font-size: 1.1rem; opacity: 0.9;">
+    Usuario: <strong>{user_info['nombre']}</strong> | Rol: <strong>{user_info['rol']}</strong> | Especialidad: <strong>{user_info['especialidad']}</strong>
+    </p>
+</div>
+""", unsafe_allow_html=True)
+
+# ==================================================
 # CONFIGURACIÓN SUPABASE
 # ==================================================
 
@@ -234,11 +667,11 @@ def init_supabase():
 supabase = init_supabase()
 
 # ==================================================
-# FUNCIONES PARA TABLA CITAS - VERSIÓN SIMPLIFICADA Y CORREGIDA
+# FUNCIONES PARA TABLA CITAS
 # ==================================================
 
 def crear_tabla_citas_simple():
-    """Crea la tabla citas de forma simple - VERSIÓN CORREGIDA"""
+    """Crea la tabla citas de forma simple"""
     try:
         st.sidebar.info("🛠️ Configurando tabla 'citas'...")
         
@@ -288,7 +721,7 @@ def crear_tabla_citas_simple():
         return False
 
 def probar_guardado_directo():
-    """Prueba directa de guardado - VERSIÓN SIMPLIFICADA"""
+    """Prueba directa de guardado"""
     with st.sidebar:
         st.markdown("### 🧪 Prueba Directa")
         
@@ -779,7 +1212,7 @@ def calcular_riesgo_anemia(hb_ajustada, edad_meses, factores_clinicos, factores_
     elif puntaje >= 25:
         return "ALTO RIESGO", puntaje, "PRIORITARIO"
     elif puntaje >= 15:
-        return "RIESGO MODERADO", puntaje, "EN SEGUIMENTO"
+        return "RIESGO MODERADO", puntaje, "EN SEGUIMIENTO"
     else:
         return "BAJO RIESGO", puntaje, "VIGILANCIA"
 
@@ -796,15 +1229,15 @@ def generar_sugerencias(riesgo, hemoglobina_ajustada, edad_meses):
         return "✅ PREVENCIÓN: Mantener alimentación balanceada, control preventivo cada 6 meses."
 
 # ==================================================
-# INTERFAZ PRINCIPAL CON TÍTULOS MEJORADOS
+# INTERFAZ PRINCIPAL CON INFORMACIÓN DEL USUARIO
 # ==================================================
 
-# TÍTULO PRINCIPAL CON ESTILO MEJORADO
-st.markdown("""
+# TÍTULO PRINCIPAL CON INFORMACIÓN DEL USUARIO
+st.markdown(f"""
 <div class="main-title">
     <h1 style="margin: 0; font-size: 2.8rem;">🏥 SISTEMA NIXON - Control de Anemia y Nutrición</h1>
     <p style="margin: 10px 0 0 0; font-size: 1.2rem; opacity: 0.9;">
-    Sistema integrado con ajuste por altitud y evaluación nutricional
+    Usuario: <strong>{user_info['nombre']}</strong> | Rol: <strong>{user_info['rol']}</strong> | Especialidad: <strong>{user_info['especialidad']}</strong>
     </p>
 </div>
 """, unsafe_allow_html=True)
@@ -889,7 +1322,7 @@ with tab1:
             
             clasificacion, recomendacion, tipo_alerta = clasificar_anemia(hemoglobina_ajustada, edad_meses)
             
-            # Mostrar clasificación con estilo y COLORES CORRECTOS
+            # Mostrar clasificación con estilo
             if tipo_alerta == "error" or "SEVERA" in clasificacion.upper():
                 st.markdown(f"""
                 <div class="severity-critical">
@@ -919,7 +1352,7 @@ with tab1:
                 </div>
                 """, unsafe_allow_html=True)
             
-            # Métrica con estilo AZUL
+            # Métrica con estilo
             st.markdown(f"""
             <div class="metric-card-blue">
                 <div class="metric-label" style="color: #1e40af;">HEMOGLOBINA AJUSTADA</div>
@@ -983,7 +1416,7 @@ with tab1:
                 edad_meses
             )
             
-            # Mostrar resultados con COLORES CORRECTOS
+            # Mostrar resultados
             st.markdown("---")
             st.markdown('<div class="section-title-green" style="color: #059669; font-size: 1.5rem;">📊 EVALUACIÓN INTEGRAL DEL PACIENTE</div>', unsafe_allow_html=True)
 
@@ -993,7 +1426,7 @@ with tab1:
             with col1:
                 st.markdown('<div class="section-title-blue" style="font-size: 1.2rem; color: #1e40af;">🩺 ESTADO DE ANEMIA</div>', unsafe_allow_html=True)
 
-                # Clasificación OMS con COLORES DIFERENTES
+                # Clasificación OMS
                 if clasificacion == "ANEMIA SEVERA":
                     st.markdown(f"""
                     <div style="background-color: #fee2e2; border-left: 5px solid #dc2626; padding: 15px; border-radius: 8px; margin: 10px 0;">
@@ -1031,7 +1464,7 @@ with tab1:
                     </div>
                     """, unsafe_allow_html=True)
 
-                # NIVEL DE RIESGO con COLORES DIFERENTES
+                # NIVEL DE RIESGO
                 st.markdown("---")
                 st.markdown('<div class="section-title-blue" style="font-size: 1.2rem; color: #1e40af;">📈 NIVEL DE RIESGO</div>', unsafe_allow_html=True)
 
@@ -1115,7 +1548,7 @@ with tab1:
                         </div>
                         """, unsafe_allow_html=True)
                     
-                    # Mostrar evaluación nutricional con COLORES según severidad
+                    # Mostrar evaluación nutricional
                     if "DESNUTRICIÓN" in estado_nutricional.upper() or "SEVER" in estado_nutricional.upper():
                         color_fondo = "#fee2e2"
                         color_borde = "#dc2626"
@@ -1169,7 +1602,7 @@ with tab1:
             # SUGERENCIAS - ANCHO COMPLETO
             st.markdown('<div class="section-title-green" style="color: #059669; font-size: 1.3rem; margin-top: 20px;">💡 PLAN DE ACCIÓN Y RECOMENDACIONES</div>', unsafe_allow_html=True)
             
-            # Contenedor para sugerencias con color AMARILLO suave
+            # Contenedor para sugerencias
             st.markdown(f"""
             <div style="background-color: #fef3c7; border: 2px solid #d97706; padding: 20px; border-radius: 10px; margin: 10px 0;">
                 <div style="font-size: 1.2rem; color: #92400e; font-weight: bold; margin-bottom: 15px;">
@@ -1230,6 +1663,8 @@ with tab1:
                         st.error("❌ Error al guardar en Supabase")
             else:
                 st.error("🔴 No hay conexión a Supabase")
+
+# ... (el resto de tu código original continúa igual)
 # ==================================================
 # PESTAÑA 2: SEGUIMIENTO CLÍNICO COMPLETO
 # ==================================================
