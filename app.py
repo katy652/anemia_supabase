@@ -2111,7 +2111,10 @@ with tab2:
         col_cargar1, col_cargar2 = st.columns([2, 1])
         
         with col_cargar1:
-            if st.button("🔄 Cargar Todos los Pacientes", type="primary", use_container_width=True):
+            if st.button("🔄 Cargar Todos los Pacientes", 
+                        type="primary", 
+                        use_container_width=True,
+                        key="btn_cargar_pacientes_tab1"):
                 with st.spinner("Conectando con Supabase..."):
                     pacientes_df = cargar_pacientes_desde_supabase()
                     
@@ -2122,7 +2125,10 @@ with tab2:
                         st.warning("⚠️ No se encontraron pacientes en la base de datos")
         
         with col_cargar2:
-            if st.button("🛠️ Configurar Tabla Seguimiento", type="secondary", use_container_width=True):
+            if st.button("🛠️ Configurar Tabla Seguimiento", 
+                        type="secondary", 
+                        use_container_width=True,
+                        key="btn_config_tabla_seg_tab1"):
                 crear_tabla_seguimiento()
         
         # Si hay pacientes cargados, mostrar búsqueda
@@ -2136,12 +2142,12 @@ with tab2:
             with col_bus1:
                 dni_busqueda = st.text_input("🔍 Buscar por DNI:", 
                                            placeholder="Ingrese DNI del paciente",
-                                           key="busqueda_dni_seg")
+                                           key="busqueda_dni_seg_tab1")
             
             with col_bus2:
                 nombre_busqueda = st.text_input("🔍 Buscar por nombre:", 
                                               placeholder="Nombre o apellido",
-                                              key="busqueda_nombre_seg")
+                                              key="busqueda_nombre_seg_tab1")
             
             # Aplicar filtros
             pacientes_filtrados = pacientes_df.copy()
@@ -2199,7 +2205,7 @@ with tab2:
                     "Seleccione un paciente para ver detalles:",
                     pacientes_lista,
                     index=0 if len(pacientes_lista) > 0 else None,
-                    key="selector_paciente_seg"
+                    key="selector_paciente_seg_tab1"
                 )
                 
                 if paciente_seleccionado_str:
@@ -2272,20 +2278,26 @@ with tab2:
                         col_btn1, col_btn2, col_btn3 = st.columns(3)
                         
                         with col_btn1:
-                            if st.button("📋 Ver Historial Completo", use_container_width=True):
+                            if st.button("📋 Ver Historial Completo", 
+                                        use_container_width=True,
+                                        key="btn_ver_historial_tab1"):
                                 # Cambiar a la pestaña de historial
                                 st.session_state.tab_historial = True
                                 st.rerun()
                         
                         with col_btn2:
-                            if st.button("➕ Registrar Nuevo Control", use_container_width=True):
+                            if st.button("➕ Registrar Nuevo Control", 
+                                        use_container_width=True,
+                                        key="btn_nuevo_control_tab1"):
                                 # Cambiar a la pestaña de nuevo seguimiento
                                 st.session_state.tab_nuevo_seguimiento = True
                                 st.rerun()
                         
                         with col_btn3:
                             # Generar informe PDF
-                            if st.button("📄 Generar Informe", use_container_width=True):
+                            if st.button("📄 Generar Informe", 
+                                        use_container_width=True,
+                                        key="btn_generar_informe_tab1"):
                                 with st.spinner("Generando informe..."):
                                     # Función para generar PDF
                                     def generar_informe_pdf_simple(paciente_data, hb_ajustada):
@@ -2355,13 +2367,14 @@ with tab2:
                                             data=pdf_bytes,
                                             file_name=f"Informe_{paciente_completo['dni']}_{datetime.now().strftime('%Y%m%d')}.pdf",
                                             mime="application/pdf",
-                                            use_container_width=True
+                                            use_container_width=True,
+                                            key=f"btn_descarga_pdf_{paciente_completo['dni']}"
                                         )
             else:
                 st.warning("🔍 No se encontraron pacientes con los criterios de búsqueda")
     
     # ============================================
-    # TAB 2: HISTORIAL CLÍNICO
+    # TAB 2: HISTORIAL CLÍNICO - VERSIÓN CORREGIDA (CON CLAVES ÚNICAS)
     # ============================================
     with tab_seg2:
         st.markdown('<div class="section-title-green">📋 HISTORIAL CLÍNICO DEL PACIENTE</div>', unsafe_allow_html=True)
@@ -2457,12 +2470,15 @@ with tab2:
         else:
             st.warning("👆 Primero debe seleccionar un paciente en la pestaña '🔍 Buscar Paciente'")
             
-            if st.button("🔍 Ir a Buscar Paciente", use_container_width=True):
+            # CORRECCIÓN CRÍTICA: Agregar clave única a este botón
+            if st.button("🔍 Ir a Buscar Paciente", 
+                        use_container_width=True,
+                        key="btn_ir_buscar_desde_historial"):  # ¡CLAVE ÚNICA AQUÍ!
                 st.session_state.tab_buscar_paciente = True
                 st.rerun()
     
     # ============================================
-    # TAB 3: NUEVO SEGUIMIENTO
+    # TAB 3: NUEVO SEGUIMIENTO - VERSIÓN CORREGIDA (CON CLAVES ÚNICAS)
     # ============================================
     with tab_seg3:
         st.markdown('<div class="section-title-green">➕ REGISTRAR NUEVO SEGUIMIENTO</div>', unsafe_allow_html=True)
@@ -2483,14 +2499,17 @@ with tab2:
             """, unsafe_allow_html=True)
             
             # Formulario para nuevo seguimiento
-            with st.form("form_nuevo_seguimiento"):
+            with st.form("form_nuevo_seguimiento_tab3"):
                 col_form1, col_form2 = st.columns(2)
                 
                 with col_form1:
-                    fecha_seguimiento = st.date_input("Fecha del control*", value=datetime.now().date())
+                    fecha_seguimiento = st.date_input("Fecha del control*", 
+                                                     value=datetime.now().date(),
+                                                     key="fecha_seg_tab3")
                     tipo_seguimiento = st.selectbox(
                         "Tipo de seguimiento*",
-                        ["Control rutinario", "Control por anemia", "Reevaluación", "Urgencia", "Otro"]
+                        ["Control rutinario", "Control por anemia", "Reevaluación", "Urgencia", "Otro"],
+                        key="tipo_seg_tab3"
                     )
                     
                     hemoglobina_control = st.number_input(
@@ -2498,7 +2517,8 @@ with tab2:
                         min_value=0.0,
                         max_value=20.0,
                         value=float(paciente.get('hemoglobina_dl1', 11.0)),
-                        step=0.1
+                        step=0.1,
+                        key="hb_seg_tab3"
                     )
                 
                 with col_form2:
@@ -2507,7 +2527,8 @@ with tab2:
                         min_value=0.0,
                         max_value=50.0,
                         value=float(paciente.get('peso_kg', 12.0)),
-                        step=0.1
+                        step=0.1,
+                        key="peso_seg_tab3"
                     )
                     
                     talla_control = st.number_input(
@@ -2515,13 +2536,15 @@ with tab2:
                         min_value=0.0,
                         max_value=150.0,
                         value=float(paciente.get('talla_cm', 85.0)),
-                        step=0.1
+                        step=0.1,
+                        key="talla_seg_tab3"
                     )
                 
                 observaciones = st.text_area(
                     "Observaciones y recomendaciones*",
                     placeholder="Describa los hallazgos, tratamiento prescrito, recomendaciones...",
-                    height=150
+                    height=150,
+                    key="obs_seg_tab3"
                 )
                 
                 # Mostrar clasificación automática
@@ -2545,7 +2568,8 @@ with tab2:
                     submit_seguimiento = st.form_submit_button(
                         "💾 GUARDAR SEGUIMIENTO",
                         type="primary",
-                        use_container_width=True
+                        use_container_width=True,
+                        key="btn_guardar_seguimiento_tab3"
                     )
                 
                 if submit_seguimiento:
@@ -2591,19 +2615,26 @@ with tab2:
                                 col_op1, col_op2 = st.columns(2)
                                 
                                 with col_op1:
-                                    if st.button("📋 Ver Historial Actualizado", use_container_width=True):
+                                    if st.button("📋 Ver Historial Actualizado", 
+                                                use_container_width=True,
+                                                key="btn_ver_hist_actualizado_tab3"):
                                         st.session_state.tab_historial = True
                                         st.rerun()
                                 
                                 with col_op2:
-                                    if st.button("➕ Otro Seguimiento", use_container_width=True):
+                                    if st.button("➕ Otro Seguimiento", 
+                                                use_container_width=True,
+                                                key="btn_otro_seguimiento_tab3"):
                                         st.rerun()
                             else:
                                 st.error("❌ Error al guardar el seguimiento")
         else:
             st.warning("👆 Primero debe seleccionar un paciente en la pestaña '🔍 Buscar Paciente'")
             
-            if st.button("🔍 Ir a Buscar Paciente", use_container_width=True):
+            # CORRECCIÓN: Agregar clave única a este botón también
+            if st.button("🔍 Ir a Buscar Paciente", 
+                        use_container_width=True,
+                        key="btn_ir_buscar_desde_nuevo_seg"):
                 st.session_state.tab_buscar_paciente = True
                 st.rerun()
 
