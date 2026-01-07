@@ -2434,20 +2434,97 @@ with tab2:
                     st.rerun()
     
     # ============================================
-    # PESTAÑA 3: HISTORIAL COMPLETO - VERSIÓN CORREGIDA
-    # ============================================
+# PESTAÑA 3: HISTORIAL COMPLETO - VERSIÓN CORREGIDA
+# ============================================
+
+with tab_seg3:
+    st.header("📋 HISTORIAL CLÍNICO COMPLETO")
     
-    with tab_seg3:
-        st.header("📋 HISTORIAL CLÍNICO COMPLETO")
+    # Verificar si hay paciente seleccionado
+    if not st.session_state.seguimiento_paciente:
+        st.warning("⚠️ Seleccione un paciente primero en la pestaña 'Buscar Paciente'")
         
-        # Verificar si hay paciente seleccionado
-        if not st.session_state.seguimiento_paciente:
-            st.warning("⚠️ Seleccione un paciente primero en la pestaña 'Buscar Paciente'")
-            
-            # Botón para ir a buscar - KEY ÚNICO
-            if st.button("🔍 Ir a Buscar Paciente", 
-                        use_container_width=True,
-                        key="btn_ir_buscar_desde_historial"):
+        # Botón para ir a buscar - KEY ÚNICO
+        if st.button("🔍 Ir a Buscar Paciente", 
+                    use_container_width=True,
+                    key="btn_ir_buscar_desde_historial"):
+            st.markdown("""
+            <script>
+            const tabs = document.querySelectorAll('button[role="tab"]');
+            if (tabs.length >= 2) {
+                tabs[1].click(); // Índice 1 = segunda pestaña (Buscar Paciente)
+            }
+            </script>
+            """, unsafe_allow_html=True)
+            st.rerun()
+    else:
+        paciente = st.session_state.seguimiento_paciente
+        
+        # Mostrar información del paciente
+        st.markdown(f"""
+        <div style="background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%); 
+                    padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem;">
+            <h3 style="margin: 0 0 10px 0; color: #5b21b6;">📊 HISTORIAL DE: {paciente.get('nombre_apellido', 'N/A')}</h3>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+                <div><strong>DNI:</strong> {paciente.get('dni', 'N/A')}</div>
+                <div><strong>Edad:</strong> {paciente.get('edad_meses', 'N/A')} meses</div>
+                <div><strong>Región:</strong> {paciente.get('region', 'N/A')}</div>
+                <div><strong>Hb actual:</strong> {paciente.get('hemoglobina_dl1', 'N/A')} g/dL</div>
+                <div><strong>Estado:</strong> {paciente.get('estado_paciente', 'N/A')}</div>
+                <div><strong>Riesgo:</strong> {paciente.get('riesgo', 'N/A')}</div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Botones de acción - KEYS ÚNICOS
+        col_act1, col_act2, col_act3 = st.columns(3)
+        
+        with col_act1:
+            if st.button("🔄 Actualizar Historial", 
+                       type="primary", 
+                       use_container_width=True,
+                       key="btn_actualizar_historial_unico"):
+                dni_paciente = str(paciente.get('dni', ''))
+                if dni_paciente:
+                    try:
+                        response = supabase.table("seguimiento_clinico")\
+                            .select("*")\
+                            .eq("dni_paciente", dni_paciente)\
+                            .order("fecha_seguimiento", desc=True)\
+                            .execute()
+                        
+                        if response.data:
+                            st.session_state.seguimiento_historial = response.data
+                            st.success(f"✅ Historial actualizado: {len(response.data)} controles")
+                        else:
+                            st.session_state.seguimiento_historial = []
+                            st.info("📭 No hay controles registrados")
+                            
+                    except Exception as e:
+                        st.error(f"❌ Error al cargar historial: {str(e)[:100]}")
+                    time.sleep(1)
+                    st.rerun()
+        
+        with col_act2:
+            if st.button("📝 Nuevo Seguimiento", 
+                       type="secondary", 
+                       use_container_width=True,
+                       key="btn_nuevo_seguimiento_desde_historial_unico"):
+                st.markdown("""
+                <script>
+                const tabs = document.querySelectorAll('button[role="tab"]');
+                if (tabs.length >= 3) {
+                    tabs[2].click(); // Índice 2 = tercera pestaña (Nuevo Seguimiento)
+                }
+                </script>
+                """, unsafe_allow_html=True)
+                st.rerun()
+        
+        with col_act3:
+            if st.button("🔍 Cambiar Paciente", 
+                       type="secondary", 
+                       use_container_width=True,
+                       key="btn_cambiar_paciente_unico"):
                 st.markdown("""
                 <script>
                 const tabs = document.querySelectorAll('button[role="tab"]');
@@ -2457,167 +2534,94 @@ with tab2:
                 </script>
                 """, unsafe_allow_html=True)
                 st.rerun()
-        else:
-            paciente = st.session_state.seguimiento_paciente
+        
+        # Mostrar historial
+        historial = st.session_state.get('seguimiento_historial', [])
+        
+        if historial:
+            # Crear DataFrame del historial
+            df_historial = pd.DataFrame(historial)
             
-            # Mostrar información del paciente
-            st.markdown(f"""
-            <div style="background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%); 
-                        padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem;">
-                <h3 style="margin: 0 0 10px 0; color: #5b21b6;">📊 HISTORIAL DE: {paciente.get('nombre_apellido', 'N/A')}</h3>
-                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
-                    <div><strong>DNI:</strong> {paciente.get('dni', 'N/A')}</div>
-                    <div><strong>Edad:</strong> {paciente.get('edad_meses', 'N/A')} meses</div>
-                    <div><strong>Región:</strong> {paciente.get('region', 'N/A')}</div>
-                    <div><strong>Hb actual:</strong> {paciente.get('hemoglobina_dl1', 'N/A')} g/dL</div>
-                    <div><strong>Estado:</strong> {paciente.get('estado_paciente', 'N/A')}</div>
-                    <div><strong>Riesgo:</strong> {paciente.get('riesgo', 'N/A')}</div>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+            # Ordenar por fecha
+            if 'fecha_seguimiento' in df_historial.columns:
+                df_historial['fecha_seguimiento'] = pd.to_datetime(df_historial['fecha_seguimiento'])
+                df_historial = df_historial.sort_values('fecha_seguimiento', ascending=False)
             
-            # Botones de acción - KEYS ÚNICOS
-            col_act1, col_act2, col_act3 = st.columns(3)
+            # CORRECCIÓN: Métricas con keys únicas y simplificadas
+            col_met1, col_met2, col_met3, col_met4 = st.columns(4)
             
-            with col_act1:
-                if st.button("🔄 Actualizar Historial", 
-                           type="primary", 
-                           use_container_width=True,
-                           key="btn_actualizar_historial"):
-                    dni_paciente = str(paciente.get('dni', ''))
-                    if dni_paciente:
-                        try:
-                            response = supabase.table("seguimiento_clinico")\
-                                .select("*")\
-                                .eq("dni_paciente", dni_paciente)\
-                                .order("fecha_seguimiento", desc=True)\
-                                .execute()
-                            
-                            if response.data:
-                                st.session_state.seguimiento_historial = response.data
-                                st.success(f"✅ Historial actualizado: {len(response.data)} controles")
-                            else:
-                                st.session_state.seguimiento_historial = []
-                                st.info("📭 No hay controles registrados")
-                                
-                        except Exception as e:
-                            st.error(f"❌ Error al cargar historial: {str(e)[:100]}")
-                        time.sleep(1)
-                        st.rerun()
+            with col_met1:
+                # CORREGIDO: Sin key o con key simple
+                st.metric("Total controles", len(df_historial))
             
-            with col_act2:
-                if st.button("📝 Nuevo Seguimiento", 
-                           type="secondary", 
-                           use_container_width=True,
-                           key="btn_nuevo_seguimiento_desde_historial"):
-                    st.markdown("""
-                    <script>
-                    const tabs = document.querySelectorAll('button[role="tab"]');
-                    if (tabs.length >= 3) {
-                        tabs[2].click(); // Índice 2 = tercera pestaña (Nuevo Seguimiento)
-                    }
-                    </script>
-                    """, unsafe_allow_html=True)
-                    st.rerun()
+            with col_met2:
+                if 'hemoglobina_control' in df_historial.columns:
+                    hb_prom = df_historial['hemoglobina_control'].mean()
+                    st.metric("Hb promedio", f"{hb_prom:.1f} g/dL")
             
-            with col_act3:
-                if st.button("🔍 Cambiar Paciente", 
-                           type="secondary", 
-                           use_container_width=True,
-                           key="btn_cambiar_paciente"):
-                    st.markdown("""
-                    <script>
-                    const tabs = document.querySelectorAll('button[role="tab"]');
-                    if (tabs.length >= 2) {
-                        tabs[1].click(); // Índice 1 = segunda pestaña (Buscar Paciente)
-                    }
-                    </script>
-                    """, unsafe_allow_html=True)
-                    st.rerun()
+            with col_met3:
+                if 'peso_control' in df_historial.columns:
+                    peso_prom = df_historial['peso_control'].mean()
+                    st.metric("Peso promedio", f"{peso_prom:.1f} kg")
             
-            # Mostrar historial
-            historial = st.session_state.get('seguimiento_historial', [])
-            
-            if historial:
-                # Crear DataFrame del historial
-                df_historial = pd.DataFrame(historial)
-                
-                # Ordenar por fecha
+            with col_met4:
                 if 'fecha_seguimiento' in df_historial.columns:
-                    df_historial['fecha_seguimiento'] = pd.to_datetime(df_historial['fecha_seguimiento'])
-                    df_historial = df_historial.sort_values('fecha_seguimiento', ascending=False)
-                
-                # CORRECCIÓN: Cambiar str.metric() por st.metric()
-                # Métricas
-                col_met1, col_met2, col_met3, col_met4 = st.columns(4)
-                with col_met1:
-                    st.metric("Total controles", len(df_historial), key="metric_total_controles")
-                with col_met2:
-                    if 'hemoglobina_control' in df_historial.columns:
-                        hb_prom = df_historial['hemoglobina_control'].mean()
-                        st.metric("Hb promedio", f"{hb_prom:.1f} g/dL", key="metric_hb_promedio")
-                with col_met3:
-                    if 'peso_control' in df_historial.columns:
-                        peso_prom = df_historial['peso_control'].mean()
-                        st.metric("Peso promedio", f"{peso_prom:.1f} kg", key="metric_peso_promedio")
-                with col_met4:
-                    if 'fecha_seguimiento' in df_historial.columns:
-                        ultima = df_historial['fecha_seguimiento'].max().strftime('%d/%m/%Y')
-                        st.metric("Último control", ultima, key="metric_ultimo_control")
-                
-                # Tabla de controles
-                st.markdown("#### 📋 Controles Registrados")
-                
-                columnas_mostrar = ['fecha_seguimiento', 'tipo_seguimiento', 
-                                  'hemoglobina_control', 'peso_control', 'talla_control', 
-                                  'estado_nutricional', 'observaciones']
-                
-                columnas_disponibles = [c for c in columnas_mostrar if c in df_historial.columns]
-                
-                if columnas_disponibles:
-                    st.dataframe(
-                        df_historial[columnas_disponibles],
-                        use_container_width=True,
-                        height=400
-                    )
-                else:
-                    st.info("No hay datos suficientes para mostrar en la tabla")
-                
-                # Botón para exportar - KEY ÚNICO
-                if st.button("📥 Exportar Historial (CSV)", 
-                           use_container_width=True,
-                           key="btn_exportar_historial"):
-                    csv = df_historial.to_csv(index=False)
-                    st.download_button(
-                        label="📤 Descargar CSV",
-                        data=csv,
-                        file_name=f"historial_{paciente.get('dni', 'paciente')}.csv",
-                        mime="text/csv",
-                        use_container_width=True,
-                        key="btn_descargar_csv"
-                    )
+                    ultima = df_historial['fecha_seguimiento'].max().strftime('%d/%m/%Y')
+                    st.metric("Último control", ultima)
             
+            # Tabla de controles
+            st.markdown("#### 📋 Controles Registrados")
+            
+            columnas_mostrar = ['fecha_seguimiento', 'tipo_seguimiento', 
+                              'hemoglobina_control', 'peso_control', 'talla_control', 
+                              'estado_nutricional', 'observaciones']
+            
+            columnas_disponibles = [c for c in columnas_mostrar if c in df_historial.columns]
+            
+            if columnas_disponibles:
+                st.dataframe(
+                    df_historial[columnas_disponibles],
+                    use_container_width=True,
+                    height=400
+                )
             else:
-                st.info("""
-                📭 **No hay controles registrados para este paciente**
-                
-                Para agregar el primer control:
-                👉 Vaya a la pestaña **📝 Nuevo Seguimiento**
-                """)
-                
-                # Botón para crear primer seguimiento - KEY ÚNICO
-                if st.button("📝 Crear primer seguimiento", 
-                           use_container_width=True,
-                           key="btn_primer_seguimiento"):
-                    st.markdown("""
-                    <script>
-                    const tabs = document.querySelectorAll('button[role="tab"]');
-                    if (tabs.length >= 3) {
-                        tabs[2].click(); // Índice 2 = tercera pestaña (Nuevo Seguimiento)
-                    }
-                    </script>
-                    """, unsafe_allow_html=True)
-                    st.rerun()
+                st.info("No hay datos suficientes para mostrar en la tabla")
+            
+            # Botón para exportar - KEY ÚNICO
+            if st.button("📥 Exportar Historial (CSV)", 
+                       use_container_width=True,
+                       key="btn_exportar_historial_unico"):
+                csv = df_historial.to_csv(index=False)
+                st.download_button(
+                    label="📤 Descargar CSV",
+                    data=csv,
+                    file_name=f"historial_{paciente.get('dni', 'paciente')}.csv",
+                    mime="text/csv",
+                    use_container_width=True,
+                    key="btn_descargar_csv_unico"
+                )
+        
+        else:
+            st.info("""
+            📭 **No hay controles registrados para este paciente**
+            
+            Para agregar el primer control:
+            👉 Vaya a la pestaña **📝 Nuevo Seguimiento**
+            """)
+            
+            # Botón para crear primer seguimiento - KEY ÚNICO
+            if st.button("📝 Crear primer seguimiento", 
+                       use_container_width=True,
+                       key="btn_primer_seguimiento_unico"):
+                st.markdown("""
+                <script>
+                const tabs = document.querySelectorAll('button[role="tab"]');
+                if (tabs.length >= 3) {
+                    tabs[2].click(); // Índice 2 = tercera pestaña (Nuevo Seguimiento)
+                }
+                </script>
+                """, unsafe_allow_html=True)
+                st.rerun()
 # ==================================================
 # PESTAÑA 3: DASHBOARD NACIONAL
 # ==================================================
