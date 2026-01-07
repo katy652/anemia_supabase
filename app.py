@@ -2017,78 +2017,121 @@ with tab2:
         "📋 Historial Completo"
     ])
     
-    # ============================================
-    # PESTAÑA 1: BUSCAR PACIENTE - VERSIÓN CORREGIDA
-    # ============================================
+   # ============================================
+# PESTAÑA 1: BUSCAR PACIENTE - VERSIÓN CORREGIDA
+# ============================================
+
+with tab_seg1:
+    st.header("🔍 BUSCAR PACIENTE PARA SEGUIMIENTO")
     
-    with tab_seg1:
-        st.header("🔍 BUSCAR PACIENTE PARA SEGUIMIENTO")
+    # Botón para cargar pacientes
+    if st.button("🔄 Cargar Todos los Pacientes", type="primary", use_container_width=True, key="btn_cargar_pacientes_seg1"):
+        cargar_todos_pacientes()
+    
+    # Verificar si hay datos cargados
+    if not st.session_state.seguimiento_datos_pacientes.empty:
+        df = st.session_state.seguimiento_datos_pacientes
         
-        # Botón para cargar pacientes
-        if st.button("🔄 Cargar Todos los Pacientes", type="primary", use_container_width=True, key="btn_cargar_pacientes_seg1"):
-            cargar_todos_pacientes()
+        # Búsqueda por DNI, nombre o región - CORREGIDO
+        buscar = st.text_input("🔎 Buscar por nombre, DNI o región:", 
+                             placeholder="Ej: 'Mia' o '10096525' o 'LIMA'",
+                             key="buscar_paciente_input")
         
-        # Verificar si hay datos cargados
-        if not st.session_state.seguimiento_datos_pacientes.empty:
-            df = st.session_state.seguimiento_datos_pacientes
+        if buscar:
+            # Convertir a string para búsqueda
+            # BÚSQUEDA CORREGIDA: Incluyendo DNI explícitamente
+            mask = (
+                df['nombre_apellido'].astype(str).str.contains(buscar, case=False, na=False) |
+                df['dni'].astype(str).str.contains(buscar, na=False) |
+                df['region'].astype(str).str.contains(buscar, case=False, na=False)
+            )
+            df_filtrado = df[mask]
             
-            # Búsqueda
-            buscar = st.text_input("🔎 Buscar por nombre, DNI o región:", 
-                                 placeholder="Ej: 'Mia' o '10096525' o 'LIMA'",
-                                 key="buscar_paciente_input")
+            # Si no hay resultados con búsqueda normal, intentar búsqueda exacta por DNI
+            if df_filtrado.empty and buscar.isdigit():
+                # Búsqueda exacta por DNI
+                mask_exact = df['dni'].astype(str) == buscar
+                df_filtrado = df[mask_exact]
+        else:
+            df_filtrado = df
+        
+        # Mostrar resultados
+        if not df_filtrado.empty:
+            st.write(f"📊 **{len(df_filtrado)} pacientes encontrados**")
             
-            if buscar:
-                # Convertir a string para búsqueda
-                mask = (df['nombre_apellido'].astype(str).str.contains(buscar, case=False, na=False) |
-                       df['dni'].astype(str).str.contains(buscar, na=False) |
-                       df['region'].astype(str).str.contains(buscar, case=False, na=False))
-                df_filtrado = df[mask]
-            else:
-                df_filtrado = df
-            
-            # Mostrar resultados
-            if not df_filtrado.empty:
-                st.write(f"📊 **{len(df_filtrado)} pacientes encontrados**")
+            # Crear lista de selección MEJORADA
+            opciones = []
+            for _, row in df_filtrado.iterrows():
+                # Crear una descripción más completa
+                nombre = row.get('nombre_apellido', 'N/A')
+                dni = row.get('dni', 'N/A')
+                edad = row.get('edad_meses', 'N/A')
+                hb = row.get('hemoglobina_dl1', 'N/A')
+                riesgo = row.get('riesgo', 'N/A')
                 
-                # Crear lista de selección
-                opciones = []
-                for _, row in df_filtrado.iterrows():
-                    opcion_text = f"{row.get('nombre_apellido', 'N/A')} - DNI: {row.get('dni', 'N/A')} - Edad: {row.get('edad_meses', 'N/A')} meses - Hb: {row.get('hemoglobina_dl1', 'N/A')} g/dL"
-                    opciones.append((opcion_text, row.get('dni')))
+                # Diferentes formatos según lo que se buscó
+                if buscar and buscar.isdigit() and dni == buscar:
+                    # Si se buscó por DNI, resaltar
+                    opcion_text = f"🔍 DNI: {dni} - {nombre} - {edad} meses - Hb: {hb} g/dL - {riesgo}"
+                else:
+                    opcion_text = f"{nombre} - DNI: {dni} - Edad: {edad} meses - Hb: {hb} g/dL"
                 
-                # Selector
-                if opciones:
-                    opcion_seleccionada = st.selectbox(
-                        "Seleccione un paciente:",
-                        options=[op[0] for op in opciones],
-                        placeholder="Elija un paciente de la lista...",
-                        key="select_paciente_seguimiento"
-                    )
+                opciones.append((opcion_text, dni))
+            
+            # Selector
+            if opciones:
+                # Ordenar opciones: primero las que coincidan exactamente con la búsqueda
+                if buscar and buscar.isdigit():
+                    # Si se busca por DNI, poner primero las coincidencias exactas
+                    opciones.sort(key=lambda x: 0 if buscar in x[0] else 1)
+                
+                opcion_seleccionada = st.selectbox(
+                    "Seleccione un paciente:",
+                    options=[op[0] for op in opciones],
+                    placeholder="Elija un paciente de la lista...",
+                    key="select_paciente_seguimiento"
+                )
+                
+                # Encontrar DNI seleccionado
+                dni_seleccionado = None
+                for opcion_text, dni in opciones:
+                    if opcion_text == opcion_seleccionada:
+                        dni_seleccionado = dni
+                        break
+                
+                if dni_seleccionado:
+                    paciente_info = df_filtrado[df_filtrado['dni'] == dni_seleccionado].iloc[0]
                     
-                    # Encontrar DNI seleccionado
-                    dni_seleccionado = None
-                    for opcion_text, dni in opciones:
-                        if opcion_text == opcion_seleccionada:
-                            dni_seleccionado = dni
-                            break
+                    # Mostrar información del paciente seleccionado con mejor formato
+                    st.markdown("---")
+                    col_show1, col_show2 = st.columns(2)
                     
-                    if dni_seleccionado:
-                        paciente_info = df_filtrado[df_filtrado['dni'] == dni_seleccionado].iloc[0]
-                        
-                        # Mostrar información del paciente seleccionado
-                        col_show1, col_show2 = st.columns(2)
-                        
-                        with col_show1:
-                            st.info(f"**Paciente:** {paciente_info['nombre_apellido']}")
-                            st.info(f"**DNI:** {paciente_info['dni']}")
-                            st.info(f"**Edad:** {paciente_info['edad_meses']} meses")
-                        
-                        with col_show2:
-                            st.info(f"**Hemoglobina:** {paciente_info['hemoglobina_dl1']} g/dL")
-                            st.info(f"**Región:** {paciente_info['region']}")
-                            st.info(f"**Estado:** {paciente_info.get('estado_paciente', 'N/A')}")
-                        
-                        # Botón para seleccionar
+                    with col_show1:
+                        st.markdown(f"""
+                        <div style="background: #dbeafe; padding: 1rem; border-radius: 10px; margin-bottom: 1rem;">
+                            <h4 style="margin: 0 0 10px 0; color: #1e40af;">👤 DATOS PERSONALES</h4>
+                            <p><strong>Paciente:</strong> {paciente_info['nombre_apellido']}</p>
+                            <p><strong>DNI:</strong> {paciente_info['dni']}</p>
+                            <p><strong>Edad:</strong> {paciente_info['edad_meses']} meses</p>
+                            <p><strong>Género:</strong> {paciente_info.get('genero', 'N/A')}</p>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    
+                    with col_show2:
+                        st.markdown(f"""
+                        <div style="background: #d1fae5; padding: 1rem; border-radius: 10px; margin-bottom: 1rem;">
+                            <h4 style="margin: 0 0 10px 0; color: #059669;">🩺 DATOS CLÍNICOS</h4>
+                            <p><strong>Hemoglobina:</strong> {paciente_info['hemoglobina_dl1']} g/dL</p>
+                            <p><strong>Región:</strong> {paciente_info['region']}</p>
+                            <p><strong>Estado:</strong> {paciente_info.get('estado_paciente', 'N/A')}</p>
+                            <p><strong>Riesgo:</strong> {paciente_info.get('riesgo', 'N/A')}</p>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    
+                    # Botón para seleccionar
+                    col_btn_sel1, col_btn_sel2 = st.columns(2)
+                    
+                    with col_btn_sel1:
                         if st.button("✅ Seleccionar este paciente", 
                                    use_container_width=True, 
                                    type="primary",
@@ -2112,72 +2155,99 @@ with tab2:
                                     st.session_state.seguimiento_historial = []
                                     cantidad = 0
                                     
-                            except Exception:
+                            except Exception as e:
                                 st.session_state.seguimiento_historial = []
                                 cantidad = 0
+                                st.warning(f"⚠️ No se pudo cargar historial: {str(e)[:100]}")
                             
                             st.success(f"✅ Paciente seleccionado: {paciente_info['nombre_apellido']}")
                             st.info(f"📋 Se cargaron {cantidad} controles previos")
                             
                             # Redirección a Nuevo Seguimiento
-                            st.markdown("""
-                            <script>
-                            setTimeout(() => {
-                                const tabs = document.querySelectorAll('button[role="tab"]');
-                                if (tabs.length >= 3) {
-                                    tabs[2].click();
-                                }
-                            }, 1000);
-                            </script>
-                            """, unsafe_allow_html=True)
-                            
                             time.sleep(1)
                             st.rerun()
-                
-                # Mostrar tabla de pacientes
-                st.markdown("### 📋 Lista de Pacientes")
-                
-                # Definir columnas a mostrar
-                columnas_mostrar = ['nombre_apellido', 'dni', 'edad_meses', 'hemoglobina_dl1', 'region', 'riesgo']
-                
-                # Filtrar solo columnas existentes
-                columnas_disponibles = [c for c in columnas_mostrar if c in df_filtrado.columns]
-                
-                if columnas_disponibles:
-                    # Crear copia del dataframe para limpiar datos
-                    df_mostrar = df_filtrado[columnas_disponibles].copy()
                     
-                    # Limpiar datos
-                    for col in df_mostrar.columns:
-                        df_mostrar[col] = df_mostrar[col].fillna('N/A')
-                        df_mostrar[col] = df_mostrar[col].astype(str)
-                    
-                    # Renombrar columnas
-                    nombres_columnas = {
-                        'nombre_apellido': 'Nombre',
-                        'dni': 'DNI',
-                        'edad_meses': 'Edad (meses)',
-                        'hemoglobina_dl1': 'Hb (g/dL)',
-                        'region': 'Región',
-                        'riesgo': 'Riesgo'
-                    }
-                    
-                    nombres_columnas_filtrados = {k: v for k, v in nombres_columnas.items() if k in df_mostrar.columns}
-                    df_mostrar = df_mostrar.rename(columns=nombres_columnas_filtrados)
-                    
-                    # Mostrar tabla
-                    st.dataframe(
-                        df_mostrar,
-                        use_container_width=True,
-                        height=300,
-                        hide_index=True
-                    )
-                else:
-                    st.info("No hay datos suficientes para mostrar en la tabla")
+                    with col_btn_sel2:
+                        if st.button("📋 Ver detalles completos", 
+                                   use_container_width=True, 
+                                   type="secondary",
+                                   key=f"btn_detalles_{dni_seleccionado}"):
+                            # Mostrar todos los datos del paciente
+                            with st.expander("📄 Detalles completos del paciente", expanded=True):
+                                st.json(paciente_info.to_dict())
+            
+            # Mostrar tabla de pacientes MEJORADA
+            st.markdown("### 📋 Lista de Pacientes (Resumen)")
+            
+            # Definir columnas a mostrar con formato mejorado
+            columnas_mostrar = ['nombre_apellido', 'dni', 'edad_meses', 'hemoglobina_dl1', 'region', 'riesgo', 'estado_paciente']
+            
+            # Filtrar solo columnas existentes
+            columnas_disponibles = [c for c in columnas_mostrar if c in df_filtrado.columns]
+            
+            if columnas_disponibles:
+                # Crear copia del dataframe para limpiar datos
+                df_mostrar = df_filtrado[columnas_disponibles].copy()
+                
+                # Limpiar datos
+                for col in df_mostrar.columns:
+                    df_mostrar[col] = df_mostrar[col].fillna('N/A')
+                
+                # Renombrar columnas
+                nombres_columnas = {
+                    'nombre_apellido': 'Nombre',
+                    'dni': 'DNI',
+                    'edad_meses': 'Edad (meses)',
+                    'hemoglobina_dl1': 'Hb (g/dL)',
+                    'region': 'Región',
+                    'riesgo': 'Riesgo',
+                    'estado_paciente': 'Estado'
+                }
+                
+                nombres_columnas_filtrados = {k: v for k, v in nombres_columnas.items() if k in df_mostrar.columns}
+                df_mostrar = df_mostrar.rename(columns=nombres_columnas_filtrados)
+                
+                # Aplicar formato condicional
+                def colorize_hb(val):
+                    try:
+                        hb = float(val)
+                        if hb < 9.0:
+                            return 'background-color: #fee2e2; color: #dc2626; font-weight: bold;'
+                        elif hb < 11.0:
+                            return 'background-color: #fef3c7; color: #d97706; font-weight: bold;'
+                        else:
+                            return 'background-color: #d1fae5; color: #059669;'
+                    except:
+                        return ''
+                
+                # Mostrar tabla con estilo
+                st.dataframe(
+                    df_mostrar.style.applymap(colorize_hb, subset=['Hb (g/dL)']),
+                    use_container_width=True,
+                    height=min(300, len(df_mostrar) * 35 + 38),
+                    hide_index=True
+                )
             else:
-                st.info("🔍 No se encontraron pacientes con los criterios de búsqueda")
+                st.info("No hay datos suficientes para mostrar en la tabla")
         else:
-            st.info("👆 Presiona 'Cargar Todos los Pacientes' para buscar pacientes")
+            st.info("🔍 No se encontraron pacientes con los criterios de búsqueda")
+            
+            # Sugerencia si se buscó por DNI
+            if buscar and buscar.isdigit():
+                st.markdown("""
+                <div style="background: #fef3c7; padding: 1rem; border-radius: 10px; border-left: 5px solid #d97706;">
+                    <p><strong>💡 Sugerencia:</strong></p>
+                    <p>No se encontró paciente con DNI: <strong>{}</strong></p>
+                    <p>Verifique que:</p>
+                    <ul>
+                    <li>El DNI tenga 8 dígitos</li>
+                    <li>El paciente esté registrado en el sistema</li>
+                    <li>Intente buscar por nombre o región</li>
+                    </ul>
+                </div>
+                """.format(buscar), unsafe_allow_html=True)
+    else:
+        st.info("👆 Presiona 'Cargar Todos los Pacientes' para buscar pacientes")
     
     # ============================================
     # PESTAÑA 2: NUEVO SEGUIMIENTO - VERSIÓN CORREGIDA (SIN HORA)
