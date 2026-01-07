@@ -2477,9 +2477,9 @@ DATOS ADICIONALES:
                         time.sleep(1)
                         st.rerun()
 
-   # ============================================
-# PESTAÑA 3: HISTORIAL COMPLETO - VERSIÓN CON PDF
-# ============================================
+   # ==================================================
+# PESTAÑA 3: HISTORIAL COMPLETO - VERSIÓN CON PDF CORREGIDA
+# ==================================================
 
 with tab_seg3:
     st.header("📋 HISTORIAL CLÍNICO COMPLETO")
@@ -2698,62 +2698,41 @@ with tab_seg3:
                 )
                 
                 # ============================================
-                # SECCIÓN DE EXPORTACIÓN CON PDF
+                # SECCIÓN DE EXPORTACIÓN CON PDF - VERSIÓN CORREGIDA
                 # ============================================
                 
                 st.markdown("#### 📤 Exportar Historial")
                 
-                # Botón para exportar - AHORA CON PDF (3 columnas)
+                # Botones de exportación (3 columnas)
                 col_exp1, col_exp2, col_exp3 = st.columns(3)
                 
                 with col_exp1:
-                    if st.button("📥 Exportar Historial (CSV)", 
+                    if st.button("📊 Exportar a CSV", 
                                use_container_width=True,
-                               key="btn_exportar_historial_csv"):
+                               type="secondary",
+                               key="btn_exportar_csv_historial"):
                         csv = df_historial.to_csv(index=False, encoding='utf-8')
+                        
                         st.download_button(
-                            label="📤 Descargar CSV",
+                            label="📥 Descargar CSV",
                             data=csv,
                             file_name=f"historial_{paciente.get('dni', 'paciente')}_{datetime.now().strftime('%Y%m%d')}.csv",
                             mime="text/csv",
                             use_container_width=True,
-                            key="btn_descargar_csv"
+                            key="btn_descargar_csv_historial"
                         )
                 
                 with col_exp2:
-                    if st.button("📄 Generar Informe PDF", 
-                               use_container_width=True,
-                               type="primary",
-                               key="btn_generar_pdf_historial"):
-                        with st.spinner("🔄 Generando PDF profesional..."):
-                            try:
-                                # Verificar si está disponible la librería PDF
-                                if 'generar_pdf_historial' in globals():
-                                    # Generar PDF
-                                    pdf_bytes = generar_pdf_historial(paciente, historial)
-                                    
-                                    # Botón de descarga
-                                    st.download_button(
-                                        label="📥 Descargar PDF",
-                                        data=pdf_bytes,
-                                        file_name=f"Historial_{paciente.get('nombre_apellido', 'paciente').replace(' ', '_')}_{datetime.now().strftime('%Y%m%d')}.pdf",
-                                        mime="application/pdf",
-                                        use_container_width=True,
-                                        key="btn_descargar_pdf"
-                                    )
-                                    
-                                    st.success("✅ PDF generado exitosamente")
-                                else:
-                                    st.error("⚠️ Función PDF no disponible")
-                                    st.info("Para usar PDF, agrega la función 'generar_pdf_historial' al inicio del archivo")
-                                    
-                            except Exception as e:
-                                st.error(f"❌ Error al generar PDF: {str(e)[:100]}")
-                                st.info("⚠️ Para usar PDF, instala: pip install reportlab")
+                    # Botón para generar PDF
+                    generar_pdf = st.button("📄 Generar Informe PDF", 
+                                          use_container_width=True,
+                                          type="primary",
+                                          key="btn_generar_pdf_historial")
                 
                 with col_exp3:
                     if st.button("🖨️ Vista de Impresión", 
                                use_container_width=True,
+                               type="secondary",
                                key="btn_vista_impresion_historial"):
                         with st.expander("📄 Vista para Impresión", expanded=True):
                             st.markdown(f"""
@@ -2789,6 +2768,56 @@ with tab_seg3:
             
             else:
                 st.info("No hay datos suficientes para mostrar en la tabla")
+            
+            # ============================================
+            # GENERACIÓN DE PDF (FUERA DE LOS BOTONES)
+            # ============================================
+            
+            if generar_pdf:
+                with st.spinner("🔄 Generando PDF profesional..."):
+                    try:
+                        # Importar FPDF si no está disponible
+                        try:
+                            from fpdf import FPDF
+                        except ImportError:
+                            st.error("⚠️ FPDF no está instalado")
+                            st.info("Instala con: pip install fpdf")
+                            # Usar alternativa simple
+                            pdf_content = generar_pdf_simple(paciente, historial)
+                        else:
+                            # Usar FPDF para PDF profesional
+                            pdf_content = generar_pdf_historial(paciente, historial)
+                        
+                        # Botón de descarga
+                        st.download_button(
+                            label="📥 Descargar PDF Completo",
+                            data=pdf_content,
+                            file_name=f"Historial_{paciente.get('nombre_apellido', 'paciente').replace(' ', '_')}_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf",
+                            mime="application/pdf",
+                            use_container_width=True,
+                            key="btn_descargar_pdf_completo"
+                        )
+                        
+                        st.success("✅ PDF generado exitosamente")
+                        
+                    except Exception as e:
+                        st.error(f"❌ Error al generar PDF: {str(e)[:100]}")
+                        st.info("⚠️ Para usar PDF completo, instala: pip install fpdf")
+                        
+                        # Generar PDF simple como alternativa
+                        try:
+                            pdf_simple = generar_pdf_simple(paciente, historial)
+                            st.download_button(
+                                label="📥 Descargar PDF Básico",
+                                data=pdf_simple,
+                                file_name=f"Historial_Basico_{paciente.get('nombre_apellido', 'paciente').replace(' ', '_')}.pdf",
+                                mime="application/pdf",
+                                use_container_width=True,
+                                key="btn_descargar_pdf_basico"
+                            )
+                            st.success("✅ PDF básico generado como alternativa")
+                        except Exception as e2:
+                            st.error(f"❌ Error al generar PDF básico: {str(e2)[:100]}")
         
         else:
             st.info("""
