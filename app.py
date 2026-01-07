@@ -1964,125 +1964,7 @@ with tab1:
 # ==================================================
 
 with tab2:
-    # ============================================
-    # VERIFICACIÓN CRÍTICA DE CONEXIÓN A SUPABASE
-    # ============================================
-    
-    # Primero verificar que la conexión a Supabase existe
-    if supabase is None:
-        st.error("""
-        🔴 **ERROR CRÍTICO: NO HAY CONEXIÓN A SUPABASE**
-        
-        **Solución inmediata:**
-        1. Verifica que el archivo `.streamlit/secrets.toml` exista
-        2. Asegúrate de tener estas credenciales:
-        
-        ```toml
-        SUPABASE_URL = "https://tu-proyecto.supabase.co"
-        SUPABASE_KEY = "tu_clave_anon_public"
-        ```
-        
-        3. Reinicia la aplicación
-        """)
-        st.stop()  # Detener ejecución si no hay conexión
-    
-    # Probar conexión con un timeout corto
-    try:
-        with st.spinner("🔄 Verificando conexión a Supabase..."):
-            test = supabase.table("alertas_hemoglobina").select("dni").limit(1).execute(timeout=5)
-        st.success("✅ Conexión a Supabase activa")
-        modo_demo = False
-    except Exception as e:
-        st.error(f"❌ Error de conexión: {str(e)[:100]}")
-        st.warning("⚠️ Continuando en MODO DEMOSTRACIÓN con datos locales")
-        modo_demo = True
-    
-    # ============================================
-    # FUNCIONES CORREGIDAS PARA EL SEGUIMIENTO
-    # ============================================
-    
-    def cargar_todos_pacientes():
-        """Carga todos los pacientes desde Supabase o usa datos demo"""
-        with st.spinner("🔄 Cargando pacientes..."):
-            if not modo_demo:
-                try:
-                    response = supabase.table("alertas_hemoglobina").select("*").execute(timeout=10)
-                    if response.data:
-                        df = pd.DataFrame(response.data)
-                        st.session_state.seguimiento_datos_pacientes = df
-                        st.success(f"✅ {len(df)} pacientes cargados desde Supabase")
-                        return True
-                except Exception as e:
-                    st.error(f"❌ Error al cargar pacientes: {str(e)[:80]}")
-            
-            # Si estamos en modo demo o hay error, usar datos demo
-            datos_demo = {
-                'dni': ['10096525', '19895625', '12345678', '87654321'],
-                'nombre_apellido': ['MIA GARCÍA', 'INSTELLA ORIGINAL', 'MARÍA LÓPEZ', 'CARLOS GÓMEZ'],
-                'edad_meses': [30, 24, 36, 18],
-                'hemoglobina_dl1': [8.7, 9.5, 11.2, 10.8],
-                'region': ['LIMA', 'LIMA', 'AREQUIPA', 'CUSCO'],
-                'genero': ['F', 'F', 'F', 'M'],
-                'riesgo': ['ALTO', 'ALTO', 'MEDIO', 'ALTO'],
-                'peso_kg': [12.5, 11.8, 14.2, 13.5],
-                'talla_cm': [85.0, 82.0, 92.0, 88.0]
-            }
-            
-            st.session_state.seguimiento_datos_pacientes = pd.DataFrame(datos_demo)
-            st.info("📋 Usando datos de demostración")
-            return True
-    
-    def cargar_historial_paciente(dni):
-        """Carga el historial clínico de un paciente"""
-        try:
-            if not modo_demo:
-                response = supabase.table("seguimiento_clinico")\
-                    .select("*")\
-                    .eq("dni_paciente", str(dni))\
-                    .order("fecha_seguimiento", desc=True)\
-                    .execute(timeout=10)
-                
-                if response.data:
-                    st.session_state.seguimiento_historial = response.data
-                    return len(response.data)
-            
-            # Si no hay datos o estamos en modo demo
-            st.session_state.seguimiento_historial = []
-            return 0
-            
-        except Exception as e:
-            st.warning(f"ℹ️ No se pudo cargar historial: {str(e)[:80]}")
-            st.session_state.seguimiento_historial = []
-            return 0
-    
-    def guardar_seguimiento(datos_seguimiento):
-        """Guarda un seguimiento clínico"""
-        try:
-            if not modo_demo:
-                response = supabase.table("seguimiento_clinico").insert(datos_seguimiento).execute(timeout=10)
-                if response.data:
-                    # Actualizar hemoglobina en la tabla principal
-                    try:
-                        supabase.table("alertas_hemoglobina")\
-                            .update({"hemoglobina_dl1": datos_seguimiento['hemoglobina_control']})\
-                            .eq("dni", datos_seguimiento['dni_paciente'])\
-                            .execute()
-                    except:
-                        pass  # Ignorar si falla la actualización
-                    
-                    return True, "✅ Guardado en Supabase"
-                else:
-                    return False, "❌ Error al guardar"
-            else:
-                # Modo demo: guardar localmente
-                if 'seguimiento_historial_local' not in st.session_state:
-                    st.session_state.seguimiento_historial_local = []
-                
-                st.session_state.seguimiento_historial_local.append(datos_seguimiento)
-                return True, "✅ Guardado localmente (modo demo)"
-                
-        except Exception as e:
-            return False, f"❌ Error: {str(e)[:80]}"
+    st.markdown('<div class="section-title-green">🔬 SISTEMA DE SEGUIMIENTO CLÍNICO COMPLETO</div>', unsafe_allow_html=True)
     
     # ============================================
     # INICIALIZACIÓN DE ESTADOS
@@ -2097,24 +1979,77 @@ with tab2:
     if 'seguimiento_historial' not in st.session_state:
         st.session_state.seguimiento_historial = []
     
-    if 'seguimiento_historial_local' not in st.session_state:
-        st.session_state.seguimiento_historial_local = []
-    
     # ============================================
-    # INTERFAZ DE LA PESTAÑA 2
+    # FUNCIONES CORREGIDAS
     # ============================================
     
-    st.markdown('<div class="section-title-green">🔬 SISTEMA DE SEGUIMIENTO CLÍNICO COMPLETO</div>', unsafe_allow_html=True)
+    def cargar_todos_pacientes():
+        """Carga todos los pacientes desde Supabase"""
+        try:
+            with st.spinner("🔄 Cargando pacientes..."):
+                response = supabase.table("alertas_hemoglobina").select("*").execute()
+                
+                if response.data:
+                    df = pd.DataFrame(response.data)
+                    
+                    # Asegurar que las columnas necesarias existan
+                    columnas_necesarias = ['dni', 'nombre_apellido', 'edad_meses', 'hemoglobina_dl1', 'region']
+                    for col in columnas_necesarias:
+                        if col not in df.columns:
+                            df[col] = None
+                    
+                    st.session_state.seguimiento_datos_pacientes = df
+                    return True
+                else:
+                    st.error("❌ No se encontraron pacientes en la base de datos")
+                    return False
+                    
+        except Exception as e:
+            st.error(f"❌ Error al cargar pacientes: {str(e)[:100]}")
+            return False
     
-    if modo_demo:
-        st.warning("""
-        ⚠️ **MODO DEMOSTRACIÓN ACTIVADO**
-        
-        Estás trabajando con datos de ejemplo. Para usar datos reales:
-        1. Configura tus credenciales de Supabase
-        2. Asegúrate de tener conexión a internet
-        3. Reinicia la aplicación
-        """)
+    def cargar_historial_paciente(dni):
+        """Carga el historial clínico de un paciente"""
+        try:
+            response = supabase.table("seguimiento_clinico")\
+                .select("*")\
+                .eq("dni_paciente", str(dni))\
+                .order("fecha_seguimiento", desc=True)\
+                .execute()
+            
+            if response.data:
+                st.session_state.seguimiento_historial = response.data
+                return len(response.data)
+            else:
+                st.session_state.seguimiento_historial = []
+                return 0
+                
+        except Exception as e:
+            # Si la tabla no existe, usar datos vacíos
+            st.session_state.seguimiento_historial = []
+            return 0
+    
+    def guardar_seguimiento(datos_seguimiento):
+        """Guarda un seguimiento clínico"""
+        try:
+            response = supabase.table("seguimiento_clinico").insert(datos_seguimiento).execute()
+            
+            if response.data:
+                # Actualizar hemoglobina en la tabla principal si existe
+                try:
+                    supabase.table("alertas_hemoglobina")\
+                        .update({"hemoglobina_dl1": datos_seguimiento['hemoglobina_control']})\
+                        .eq("dni", datos_seguimiento['dni_paciente'])\
+                        .execute()
+                except:
+                    pass  # Ignorar si falla la actualización
+                
+                return True, "✅ Seguimiento guardado correctamente"
+            else:
+                return False, "❌ Error al guardar el seguimiento"
+                
+        except Exception as e:
+            return False, f"❌ Error: {str(e)[:100]}"
     
     # ============================================
     # CREAR 3 PESTAÑAS INTERNAS
@@ -2127,7 +2062,7 @@ with tab2:
     ])
     
     # ============================================
-    # PESTAÑA 1: BUSCAR PACIENTE
+    # PESTAÑA 1: BUSCAR PACIENTE - CORREGIDA
     # ============================================
     
     with tab_seg1:
@@ -2137,7 +2072,7 @@ with tab2:
         if st.button("🔄 Cargar Todos los Pacientes", type="primary", use_container_width=True):
             cargar_todos_pacientes()
         
-        # Mostrar pacientes si existen
+        # Verificar si hay datos cargados
         if not st.session_state.seguimiento_datos_pacientes.empty:
             df = st.session_state.seguimiento_datos_pacientes
             
@@ -2154,58 +2089,73 @@ with tab2:
             else:
                 df_filtrado = df
             
-            # Mostrar opciones de pacientes
+            # Mostrar resultados
             if not df_filtrado.empty:
-                # Crear opciones para selectbox
+                st.write(f"📊 **{len(df_filtrado)} pacientes encontrados**")
+                
+                # Crear lista de selección
                 opciones = []
                 for _, row in df_filtrado.iterrows():
-                    opcion_text = f"{row['nombre_apellido']} - DNI: {row['dni']} - Edad: {row['edad_meses']} meses - Hb: {row['hemoglobina_dl1']} g/dL"
-                    opciones.append((opcion_text, row['dni']))
+                    opcion_text = f"{row.get('nombre_apellido', 'N/A')} - DNI: {row.get('dni', 'N/A')} - Edad: {row.get('edad_meses', 'N/A')} meses - Hb: {row.get('hemoglobina_dl1', 'N/A')} g/dL"
+                    opciones.append((opcion_text, row.get('dni')))
                 
                 # Selector
-                opcion_seleccionada = st.selectbox(
-                    "Seleccione un paciente:",
-                    options=[op[0] for op in opciones],
-                    placeholder="Elija un paciente de la lista..."
-                )
-                
-                # Procesar selección
-                if opcion_seleccionada:
-                    for opcion_text, dni in opciones:
-                        if opcion_text == opcion_seleccionada:
-                            paciente_info = df_filtrado[df_filtrado['dni'] == dni].iloc[0]
+                if opciones:
+                    opcion_seleccionada = st.selectbox(
+                        "Seleccione un paciente:",
+                        options=[op[0] for op in opciones],
+                        placeholder="Elija un paciente de la lista...",
+                        key="select_paciente"
+                    )
+                    
+                    # Botón para seleccionar
+                    if opcion_seleccionada:
+                        dni_seleccionado = None
+                        for opcion_text, dni in opciones:
+                            if opcion_text == opcion_seleccionada:
+                                dni_seleccionado = dni
+                                break
+                        
+                        if dni_seleccionado:
+                            paciente_info = df_filtrado[df_filtrado['dni'] == dni_seleccionado].iloc[0]
                             
-                            # GUARDAR PACIENTE EN SESSION STATE
-                            st.session_state.seguimiento_paciente = paciente_info.to_dict()
-                            
-                            # ✅ CORRECCIÓN CRÍTICA: CARGAR HISTORIAL AUTOMÁTICAMENTE
-                            cantidad = cargar_historial_paciente(str(dni))
-                            
-                            # Mostrar información
-                            col_info1, col_info2 = st.columns(2)
-                            
-                            with col_info1:
+                            if st.button("✅ Seleccionar este paciente", use_container_width=True):
+                                # GUARDAR PACIENTE EN SESSION STATE
+                                st.session_state.seguimiento_paciente = paciente_info.to_dict()
+                                
+                                # Cargar historial
+                                cantidad = cargar_historial_paciente(str(dni_seleccionado))
+                                
                                 st.success(f"✅ Paciente seleccionado: {paciente_info['nombre_apellido']}")
-                                st.info(f"📋 DNI: {paciente_info['dni']}")
-                                st.info(f"🎂 Edad: {paciente_info['edad_meses']} meses")
-                            
-                            with col_info2:
-                                st.info(f"🩺 Hb: {paciente_info['hemoglobina_dl1']} g/dL")
-                                st.info(f"📍 Región: {paciente_info['region']}")
-                                if cantidad > 0:
-                                    st.success(f"📊 {cantidad} controles cargados")
-                                else:
-                                    st.info("📭 Sin controles registrados")
-                            
-                            # Botón para ir a seguimiento
-                            if st.button("📝 Ir a Nuevo Seguimiento", type="secondary", use_container_width=True):
-                                st.success("✅ Listo para crear seguimiento")
-                                st.info("👆 Ve a la pestaña '📝 Nuevo Seguimiento'")
-                            
-                            break
+                                st.info(f"📋 Se cargaron {cantidad} controles previos")
+                                
+                                # Auto-redirección a pestaña de seguimiento
+                                st.markdown("""
+                                <script>
+                                document.querySelector('button[data-baseweb="tab"][aria-selected="false"]:nth-child(3)').click();
+                                </script>
+                                """, unsafe_allow_html=True)
+                                
+                                time.sleep(1)
+                                st.rerun()
+                
+                # Mostrar tabla de pacientes
+                st.markdown("### 📋 Lista de Pacientes")
+                columnas_mostrar = ['nombre_apellido', 'dni', 'edad_meses', 'hemoglobina_dl1', 'region', 'riesgo']
+                columnas_disponibles = [c for c in columnas_mostrar if c in df_filtrado.columns]
+                
+                st.dataframe(
+                    df_filtrado[columnas_disponibles],
+                    use_container_width=True,
+                    height=300
+                )
+            else:
+                st.info("🔍 No se encontraron pacientes con los criterios de búsqueda")
+        else:
+            st.info("👆 Presiona 'Cargar Todos los Pacientes' para buscar pacientes")
     
     # ============================================
-    # PESTAÑA 2: NUEVO SEGUIMIENTO
+    # PESTAÑA 2: NUEVO SEGUIMIENTO - CORREGIDA
     # ============================================
     
     with tab_seg2:
@@ -2222,24 +2172,41 @@ with tab2:
             3. Seleccione un paciente de la lista
             4. Regrese aquí para crear el seguimiento
             """)
+            
+            # Botón para ir a buscar
+            if st.button("🔍 Ir a Buscar Paciente", use_container_width=True):
+                st.markdown("""
+                <script>
+                document.querySelector('button[data-baseweb="tab"][aria-selected="false"]:nth-child(2)').click();
+                </script>
+                """, unsafe_allow_html=True)
+                time.sleep(1)
+                st.rerun()
         else:
             paciente = st.session_state.seguimiento_paciente
             
             # Mostrar información del paciente
-            st.markdown(f"""
-            <div style="background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); 
-                        padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem;">
-                <h3 style="margin: 0 0 10px 0; color: #1e40af;">📋 PACIENTE SELECCIONADO</h3>
-                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;">
-                    <div><strong>Nombre:</strong> {paciente['nombre_apellido']}</div>
-                    <div><strong>DNI:</strong> {paciente['dni']}</div>
-                    <div><strong>Edad:</strong> {paciente['edad_meses']} meses</div>
-                    <div><strong>Hb actual:</strong> {paciente['hemoglobina_dl1']} g/dL</div>
-                    <div><strong>Región:</strong> {paciente['region']}</div>
-                    <div><strong>Riesgo:</strong> {paciente.get('riesgo', 'N/A')}</div>
+            col_info1, col_info2 = st.columns(2)
+            
+            with col_info1:
+                st.markdown(f"""
+                <div style="background: #dbeafe; padding: 1rem; border-radius: 10px; margin-bottom: 1rem;">
+                    <h4 style="margin: 0 0 10px 0; color: #1e40af;">📋 PACIENTE SELECCIONADO</h4>
+                    <p><strong>Nombre:</strong> {paciente.get('nombre_apellido', 'N/A')}</p>
+                    <p><strong>DNI:</strong> {paciente.get('dni', 'N/A')}</p>
+                    <p><strong>Edad:</strong> {paciente.get('edad_meses', 'N/A')} meses</p>
                 </div>
-            </div>
-            """, unsafe_allow_html=True)
+                """, unsafe_allow_html=True)
+            
+            with col_info2:
+                st.markdown(f"""
+                <div style="background: #d1fae5; padding: 1rem; border-radius: 10px; margin-bottom: 1rem;">
+                    <h4 style="margin: 0 0 10px 0; color: #059669;">📊 DATOS CLÍNICOS</h4>
+                    <p><strong>Hb actual:</strong> {paciente.get('hemoglobina_dl1', 'N/A')} g/dL</p>
+                    <p><strong>Región:</strong> {paciente.get('region', 'N/A')}</p>
+                    <p><strong>Estado:</strong> {paciente.get('estado_paciente', 'N/A')}</p>
+                </div>
+                """, unsafe_allow_html=True)
             
             # Formulario de seguimiento
             with st.form("form_seguimiento", clear_on_submit=True):
@@ -2253,47 +2220,83 @@ with tab2:
                 
                 col_hb, col_peso, col_talla = st.columns(3)
                 with col_hb:
-                    hemoglobina = st.number_input("Hemoglobina (g/dL)*", 
-                                                value=float(paciente.get('hemoglobina_dl1', 11.0)),
-                                                min_value=0.0, max_value=20.0, step=0.1)
+                    hemoglobina = st.number_input(
+                        "Hemoglobina (g/dL)*", 
+                        value=float(paciente.get('hemoglobina_dl1', 11.0)),
+                        min_value=0.0, 
+                        max_value=20.0, 
+                        step=0.1
+                    )
                 with col_peso:
-                    peso = st.number_input("Peso (kg)*", 
-                                         value=float(paciente.get('peso_kg', 12.0)),
-                                         min_value=0.0, max_value=50.0, step=0.1)
+                    peso = st.number_input(
+                        "Peso (kg)*", 
+                        value=float(paciente.get('peso_kg', 12.0)),
+                        min_value=0.0, 
+                        max_value=50.0, 
+                        step=0.1
+                    )
                 with col_talla:
-                    talla = st.number_input("Talla (cm)*", 
-                                          value=float(paciente.get('talla_cm', 85.0)),
-                                          min_value=0.0, max_value=150.0, step=0.1)
+                    talla = st.number_input(
+                        "Talla (cm)*", 
+                        value=float(paciente.get('talla_cm', 85.0)),
+                        min_value=0.0, 
+                        max_value=150.0, 
+                        step=0.1
+                    )
                 
                 # Evaluar estado nutricional
+                edad_paciente = paciente.get('edad_meses', 24)
+                genero_paciente = paciente.get('genero', 'F')
+                
                 estado_peso, estado_talla, estado_nutricional = evaluar_estado_nutricional(
-                    paciente.get('edad_meses', 24), peso, talla, paciente.get('genero', 'F')
+                    edad_paciente, peso, talla, genero_paciente
                 )
                 
-                st.info(f"**Estado nutricional:** {estado_nutricional} ({estado_peso} / {estado_talla})")
+                st.info(f"**Estado nutricional:** {estado_nutricional}")
+                st.caption(f"Peso: {estado_peso} | Talla: {estado_talla}")
                 
                 tipo_seguimiento = st.selectbox(
                     "Tipo de seguimiento*",
                     ["Control rutinario", "Seguimiento por anemia", "Control nutricional", 
-                     "Evaluación de tratamiento", "Otro"]
+                     "Evaluación de tratamiento", "Consulta de urgencia", "Control de crecimiento"]
                 )
                 
-                observaciones = st.text_area("Observaciones clínicas*", 
-                                           placeholder="Describa el estado del paciente, síntomas, evolución...",
-                                           height=100)
+                observaciones = st.text_area(
+                    "Observaciones clínicas*", 
+                    placeholder="Describa el estado del paciente, síntomas, evolución, respuesta al tratamiento...",
+                    height=100
+                )
                 
-                tratamiento = st.text_input("Tratamiento actual", 
-                                          placeholder="Describa el tratamiento en curso...")
+                tratamiento = st.text_input(
+                    "Tratamiento actual o prescrito", 
+                    placeholder="Ej: Sulfato ferroso 15 mg/día, suplemento vitamínico..."
+                )
                 
-                proximo_control = st.date_input("Próximo control sugerido",
-                                              value=datetime.now().date() + timedelta(days=30))
+                proximo_control = st.date_input(
+                    "Próximo control sugerido",
+                    value=datetime.now().date() + timedelta(days=30)
+                )
                 
                 # Botones
-                col_btn1, col_btn2 = st.columns(2)
+                col_btn1, col_btn2, col_btn3 = st.columns(3)
                 with col_btn1:
-                    submit = st.form_submit_button("💾 GUARDAR SEGUIMIENTO", type="primary", use_container_width=True)
+                    submit = st.form_submit_button(
+                        "💾 GUARDAR SEGUIMIENTO", 
+                        type="primary", 
+                        use_container_width=True
+                    )
                 with col_btn2:
-                    cancel = st.form_submit_button("❌ CANCELAR", type="secondary", use_container_width=True)
+                    limpiar = st.form_submit_button(
+                        "🧹 LIMPIAR FORMULARIO", 
+                        type="secondary", 
+                        use_container_width=True
+                    )
+                with col_btn3:
+                    cancelar = st.form_submit_button(
+                        "❌ CANCELAR", 
+                        type="secondary", 
+                        use_container_width=True
+                    )
                 
                 # Procesar guardado
                 if submit:
@@ -2302,7 +2305,7 @@ with tab2:
                     else:
                         # Preparar datos
                         datos = {
-                            "dni_paciente": str(paciente['dni']),
+                            "dni_paciente": str(paciente.get('dni', '')),
                             "fecha_seguimiento": fecha.strftime('%Y-%m-%d'),
                             "hora_seguimiento": hora.strftime('%H:%M:%S'),
                             "tipo_seguimiento": tipo_seguimiento,
@@ -2327,24 +2330,45 @@ with tab2:
                                 st.success(message)
                                 
                                 # Actualizar historial en session state
-                                st.session_state.seguimiento_historial.append(datos)
+                                if 'seguimiento_historial' not in st.session_state:
+                                    st.session_state.seguimiento_historial = []
+                                st.session_state.seguimiento_historial.insert(0, datos)
                                 
                                 # Mostrar resumen
+                                st.balloons()
+                                
                                 col_res1, col_res2, col_res3 = st.columns(3)
                                 with col_res1:
-                                    st.metric("📅 Fecha", fecha.strftime('%d/%m'))
+                                    st.metric("📅 Fecha", fecha.strftime('%d/%m/%Y'))
                                 with col_res2:
                                     st.metric("🩺 Hb", f"{hemoglobina} g/dL")
                                 with col_res3:
                                     st.metric("⚖️ Peso", f"{peso} kg")
+                                
+                                # Auto-redirección a historial
+                                st.info("📋 Redirigiendo al historial...")
+                                time.sleep(2)
+                                st.markdown("""
+                                <script>
+                                document.querySelector('button[data-baseweb="tab"][aria-selected="false"]:nth-child(4)').click();
+                                </script>
+                                """, unsafe_allow_html=True)
+                                st.rerun()
                             else:
                                 st.error(message)
                 
-                if cancel:
-                    st.info("⚠️ Seguimiento cancelado")
+                if limpiar:
+                    st.info("🧹 Formulario limpiado. Puede ingresar nuevos datos.")
+                    time.sleep(1)
+                    st.rerun()
+                
+                if cancelar:
+                    st.info("❌ Seguimiento cancelado")
+                    time.sleep(1)
+                    st.rerun()
     
     # ============================================
-    # PESTAÑA 3: HISTORIAL COMPLETO
+    # PESTAÑA 3: HISTORIAL COMPLETO - CORREGIDA
     # ============================================
     
     with tab_seg3:
@@ -2353,6 +2377,15 @@ with tab2:
         # Verificar si hay paciente seleccionado
         if not st.session_state.seguimiento_paciente:
             st.warning("⚠️ Seleccione un paciente primero en la pestaña 'Buscar Paciente'")
+            
+            if st.button("🔍 Ir a Buscar Paciente", use_container_width=True):
+                st.markdown("""
+                <script>
+                document.querySelector('button[data-baseweb="tab"][aria-selected="false"]:nth-child(2)').click();
+                </script>
+                """, unsafe_allow_html=True)
+                time.sleep(1)
+                st.rerun()
         else:
             paciente = st.session_state.seguimiento_paciente
             
@@ -2360,86 +2393,100 @@ with tab2:
             st.markdown(f"""
             <div style="background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%); 
                         padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem;">
-                <h3 style="margin: 0 0 10px 0; color: #5b21b6;">📊 HISTORIAL DE: {paciente['nombre_apellido']}</h3>
+                <h3 style="margin: 0 0 10px 0; color: #5b21b6;">📊 HISTORIAL DE: {paciente.get('nombre_apellido', 'N/A')}</h3>
                 <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
-                    <div><strong>DNI:</strong> {paciente['dni']}</div>
-                    <div><strong>Edad:</strong> {paciente['edad_meses']} meses</div>
-                    <div><strong>Región:</strong> {paciente['region']}</div>
+                    <div><strong>DNI:</strong> {paciente.get('dni', 'N/A')}</div>
+                    <div><strong>Edad:</strong> {paciente.get('edad_meses', 'N/A')} meses</div>
+                    <div><strong>Región:</strong> {paciente.get('region', 'N/A')}</div>
+                    <div><strong>Hb actual:</strong> {paciente.get('hemoglobina_dl1', 'N/A')} g/dL</div>
+                    <div><strong>Estado:</strong> {paciente.get('estado_paciente', 'N/A')}</div>
+                    <div><strong>Riesgo:</strong> {paciente.get('riesgo', 'N/A')}</div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
             
-            # Botón para actualizar
-            if st.button("🔄 Actualizar Historial", type="secondary"):
-                cargar_historial_paciente(str(paciente['dni']))
+            # Botón para actualizar historial
+            col_act1, col_act2 = st.columns(2)
+            with col_act1:
+                if st.button("🔄 Actualizar Historial", type="primary", use_container_width=True):
+                    dni_paciente = str(paciente.get('dni', ''))
+                    if dni_paciente:
+                        cantidad = cargar_historial_paciente(dni_paciente)
+                        st.success(f"✅ Historial actualizado: {cantidad} controles encontrados")
+                        time.sleep(1)
+                        st.rerun()
             
-            # Combinar historial de Supabase y local
-            historial_completo = []
-            
-            # Historial de Supabase
-            if st.session_state.seguimiento_historial:
-                historial_completo.extend(st.session_state.seguimiento_historial)
-            
-            # Historial local (modo demo)
-            if st.session_state.seguimiento_historial_local:
-                historial_local = [
-                    h for h in st.session_state.seguimiento_historial_local 
-                    if h.get('dni_paciente') == str(paciente['dni'])
-                ]
-                historial_completo.extend(historial_local)
+            with col_act2:
+                if st.button("📝 Nuevo Seguimiento", type="secondary", use_container_width=True):
+                    st.markdown("""
+                    <script>
+                    document.querySelector('button[data-baseweb="tab"][aria-selected="false"]:nth-child(3)').click();
+                    </script>
+                    """, unsafe_allow_html=True)
+                    time.sleep(1)
+                    st.rerun()
             
             # Mostrar historial
-            if historial_completo:
-                df = pd.DataFrame(historial_completo)
+            historial = st.session_state.get('seguimiento_historial', [])
+            
+            if historial:
+                # Crear DataFrame del historial
+                df_historial = pd.DataFrame(historial)
                 
                 # Ordenar por fecha
-                if 'fecha_seguimiento' in df.columns:
-                    df['fecha_seguimiento'] = pd.to_datetime(df['fecha_seguimiento'])
-                    df = df.sort_values('fecha_seguimiento', ascending=False)
+                if 'fecha_seguimiento' in df_historial.columns:
+                    df_historial['fecha_seguimiento'] = pd.to_datetime(df_historial['fecha_seguimiento'])
+                    df_historial = df_historial.sort_values('fecha_seguimiento', ascending=False)
                 
                 # Métricas
-                col_met1, col_met2, col_met3 = st.columns(3)
+                col_met1, col_met2, col_met3, col_met4 = st.columns(4)
                 with col_met1:
-                    st.metric("Total controles", len(df))
+                    st.metric("Total controles", len(df_historial))
                 with col_met2:
-                    if 'hemoglobina_control' in df.columns:
-                        hb_prom = df['hemoglobina_control'].mean()
+                    if 'hemoglobina_control' in df_historial.columns:
+                        hb_prom = df_historial['hemoglobina_control'].mean()
                         st.metric("Hb promedio", f"{hb_prom:.1f} g/dL")
                 with col_met3:
-                    if 'fecha_seguimiento' in df.columns:
-                        ultima = df['fecha_seguimiento'].max().strftime('%d/%m/%Y')
+                    if 'peso_control' in df_historial.columns:
+                        peso_prom = df_historial['peso_control'].mean()
+                        st.metric("Peso promedio", f"{peso_prom:.1f} kg")
+                with col_met4:
+                    if 'fecha_seguimiento' in df_historial.columns:
+                        ultima = df_historial['fecha_seguimiento'].max().strftime('%d/%m/%Y')
                         st.metric("Último control", ultima)
                 
                 # Tabla de controles
                 st.markdown("#### 📋 Controles Registrados")
                 
-                columnas = ['fecha_seguimiento', 'tipo_seguimiento', 'hemoglobina_control', 
-                          'peso_control', 'talla_control', 'observaciones']
+                columnas_mostrar = ['fecha_seguimiento', 'tipo_seguimiento', 
+                                  'hemoglobina_control', 'peso_control', 'talla_control', 
+                                  'estado_nutricional', 'observaciones']
                 
-                columnas_disponibles = [c for c in columnas if c in df.columns]
+                columnas_disponibles = [c for c in columnas_mostrar if c in df_historial.columns]
                 
                 if columnas_disponibles:
                     st.dataframe(
-                        df[columnas_disponibles],
+                        df_historial[columnas_disponibles],
                         use_container_width=True,
-                        height=300,
+                        height=400,
                         column_config={
                             "fecha_seguimiento": st.column_config.DateColumn("Fecha", format="DD/MM/YYYY"),
                             "tipo_seguimiento": "Tipo",
-                            "hemoglobina_control": st.column_config.NumberColumn("Hb", format="%.1f"),
-                            "peso_control": st.column_config.NumberColumn("Peso", format="%.1f"),
-                            "talla_control": st.column_config.NumberColumn("Talla", format="%.1f"),
+                            "hemoglobina_control": st.column_config.NumberColumn("Hb (g/dL)", format="%.1f"),
+                            "peso_control": st.column_config.NumberColumn("Peso (kg)", format="%.1f"),
+                            "talla_control": st.column_config.NumberColumn("Talla (cm)", format="%.1f"),
+                            "estado_nutricional": "Estado Nutricional",
                             "observaciones": st.column_config.TextColumn("Observaciones", width="large")
                         }
                     )
                 else:
-                    st.info("No hay datos suficientes para mostrar")
+                    st.info("No hay datos suficientes para mostrar en la tabla")
                 
-                # Gráfico de evolución
-                if 'hemoglobina_control' in df.columns and len(df) >= 2:
+                # Gráfico de evolución de hemoglobina
+                if 'hemoglobina_control' in df_historial.columns and len(df_historial) >= 2:
                     st.markdown("#### 📈 Evolución de Hemoglobina")
                     
-                    df_graf = df.sort_values('fecha_seguimiento').copy()
+                    df_graf = df_historial.sort_values('fecha_seguimiento').copy()
                     
                     fig = px.line(
                         df_graf,
@@ -2447,29 +2494,45 @@ with tab2:
                         y='hemoglobina_control',
                         markers=True,
                         title='Evolución de Hemoglobina',
-                        labels={'fecha_seguimiento': 'Fecha', 'hemoglobina_control': 'Hb (g/dL)'}
+                        labels={'fecha_seguimiento': 'Fecha', 'hemoglobina_control': 'Hb (g/dL)'},
+                        line_shape='spline'
                     )
                     
-                    # Línea de referencia
-                    if paciente.get('edad_meses', 24) < 60:
+                    # Línea de referencia según edad
+                    edad_paciente = paciente.get('edad_meses', 24)
+                    if edad_paciente < 60:
                         fig.add_hline(y=11.0, line_dash="dash", line_color="red",
                                     annotation_text="Límite anemia (<11 g/dL)")
                     else:
                         fig.add_hline(y=12.0, line_dash="dash", line_color="red",
                                     annotation_text="Límite anemia (<12 g/dL)")
                     
+                    fig.update_layout(
+                        xaxis_title="Fecha de Control",
+                        yaxis_title="Hemoglobina (g/dL)",
+                        height=400
+                    )
+                    
                     st.plotly_chart(fig, use_container_width=True)
                 
-                # Exportar
-                if st.button("📥 Descargar Historial (CSV)", use_container_width=True):
-                    csv = df.to_csv(index=False)
-                    st.download_button(
-                        label="📤 Descargar",
-                        data=csv,
-                        file_name=f"historial_{paciente['dni']}.csv",
-                        mime="text/csv",
-                        use_container_width=True
-                    )
+                # Exportar historial
+                st.markdown("---")
+                col_exp1, col_exp2 = st.columns(2)
+                
+                with col_exp1:
+                    if st.button("📥 Descargar Historial (CSV)", use_container_width=True):
+                        csv = df_historial.to_csv(index=False)
+                        st.download_button(
+                            label="📤 Descargar CSV",
+                            data=csv,
+                            file_name=f"historial_{paciente.get('dni', 'paciente')}_{datetime.now().strftime('%Y%m%d')}.csv",
+                            mime="text/csv",
+                            use_container_width=True
+                        )
+                
+                with col_exp2:
+                    if st.button("📊 Ver Reporte Completo", use_container_width=True):
+                        st.info("🔧 Función de reporte en desarrollo...")
             
             else:
                 st.info("""
@@ -2478,6 +2541,15 @@ with tab2:
                 Para agregar el primer control:
                 👉 Vaya a la pestaña **📝 Nuevo Seguimiento**
                 """)
+                
+                if st.button("📝 Crear primer seguimiento", use_container_width=True):
+                    st.markdown("""
+                    <script>
+                    document.querySelector('button[data-baseweb="tab"][aria-selected="false"]:nth-child(3)').click();
+                    </script>
+                    """, unsafe_allow_html=True)
+                    time.sleep(1)
+                    st.rerun()
 # ==================================================
 # PESTAÑA 3: DASHBOARD NACIONAL
 # ==================================================
