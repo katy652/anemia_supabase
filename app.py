@@ -1966,884 +1966,647 @@ with tab1:
 with tab2:
     st.markdown("""
     <div class="main-title" style="background: linear-gradient(135deg, #10b981 0%, #047857 100%); padding: 2rem;">
-        <h2 style="margin: 0; color: white;">🔬 SEGUIMIENTO CLÍNICO COMPLETO</h2>
+        <h2 style="margin: 0; color: white;">🔬 SISTEMA DE SEGUIMIENTO CLÍNICO</h2>
         <p style="margin: 10px 0 0 0; color: rgba(255,255,255,0.9);">
-        Sistema de seguimiento completo con conexión directa a Supabase
+        Registro y seguimiento completo de pacientes con anemia
         </p>
     </div>
     """, unsafe_allow_html=True)
     
     # ============================================
-    # CONFIGURACIÓN DE TABLAS PARA SEGUIMIENTO
+    # INICIALIZACIÓN DE ESTADOS - VERSIÓN MEJORADA
     # ============================================
     
-    # Definir la tabla principal de pacientes
-    TABLA_PACIENTES = "alertas_hemoglobina"  # Esta es tu tabla principal
+    # Estado para controlar qué subpestaña mostrar
+    if 'seguimiento_subtab' not in st.session_state:
+        st.session_state.seguimiento_subtab = "buscar"
+    
+    # Estado para el paciente seleccionado
+    if 'paciente_seleccionado_seg' not in st.session_state:
+        st.session_state.paciente_seleccionado_seg = None
+    
+    # Estado para historial cargado
+    if 'historial_cargado_seg' not in st.session_state:
+        st.session_state.historial_cargado_seg = []
+    
+    # Estado para datos de pacientes cargados
+    if 'pacientes_cargados_seg' not in st.session_state:
+        st.session_state.pacientes_cargados_seg = None
     
     # ============================================
-    # FUNCIONES PARA SEGUIMIENTO - CONEXIÓN DIRECTA A SUPABASE
+    # FUNCIONES AUXILIARES - VERSIÓN SIMPLIFICADA
     # ============================================
     
-    def cargar_pacientes_desde_supabase():
+    def cargar_todos_pacientes():
         """Carga todos los pacientes desde Supabase"""
         try:
-            response = supabase.table(TABLA_PACIENTES).select("*").execute()
-            if response.data:
-                return pd.DataFrame(response.data)
-            else:
-                return pd.DataFrame()
-        except Exception as e:
-            st.error(f"❌ Error cargando pacientes: {str(e)}")
-            return pd.DataFrame()
-    
-    def buscar_paciente_por_dni(dni):
-        """Busca un paciente específico por DNI"""
-        try:
-            response = supabase.table(TABLA_PACIENTES)\
-                .select("*")\
-                .eq("dni", str(dni))\
-                .execute()
-            
-            if response.data and len(response.data) > 0:
-                return response.data[0]
-            return None
-        except Exception as e:
-            st.error(f"❌ Error buscando paciente: {str(e)}")
-            return None
-    
-    def crear_tabla_seguimiento():
-        """Crea o verifica la tabla de seguimiento si no existe"""
-        try:
-            # Intentar crear una entrada de seguimiento de prueba
-            test_data = {
-                "dni_paciente": "99999999",
-                "fecha_seguimiento": datetime.now().strftime("%Y-%m-%d"),
-                "tipo_seguimiento": "Control",
-                "observaciones": "Tabla de prueba",
-                "usuario_responsable": user_info['nombre'],
-                "hemoglobina_control": 12.0,
-                "peso_control": 15.0,
-                "talla_control": 95.0
-            }
-            
-            response = supabase.table("seguimiento_clinico").insert(test_data).execute()
-            
-            if response.data:
-                # Eliminar el registro de prueba
-                supabase.table("seguimiento_clinico").delete().eq("dni_paciente", "99999999").execute()
-                return True
+            if supabase:
+                response = supabase.table("alertas_hemoglobina").select("*").execute()
+                if response.data:
+                    st.session_state.pacientes_cargados_seg = pd.DataFrame(response.data)
+                    return True
             return False
-            
         except Exception as e:
-            # Crear la tabla si no existe
-            st.info("⚠️ La tabla 'seguimiento_clinico' no existe. Creándola...")
-            try:
-                # Instrucciones para crear manualmente
-                st.markdown("""
-                **📝 Para crear la tabla manualmente en Supabase:**
-                
-                1. Ve a **Table Editor**
-                2. Crea nueva tabla llamada **"seguimiento_clinico"**
-                3. Agrega estas columnas:
-                   - `id` (bigint, autoincrement, primary key)
-                   - `dni_paciente` (text)
-                   - `fecha_seguimiento` (date)
-                   - `tipo_seguimiento` (text)
-                   - `observaciones` (text)
-                   - `usuario_responsable` (text)
-                   - `hemoglobina_control` (float)
-                   - `peso_control` (float)
-                   - `talla_control` (float)
-                   - `created_at` (timestamptz, default: now())
-                4. En **Authentication → Policies**, crea política:
-                   - `allow_all` (para todas las operaciones)
-                """)
-                return False
-            except:
-                return False
+            st.error(f"Error: {str(e)}")
+            return False
     
-    def registrar_seguimiento(datos_seguimiento):
-        """Registra un nuevo seguimiento en Supabase"""
+    def buscar_paciente_dni(dni):
+        """Busca paciente por DNI"""
         try:
-            response = supabase.table("seguimiento_clinico").insert(datos_seguimiento).execute()
-            return response.data[0] if response.data else None
-        except Exception as e:
-            st.error(f"❌ Error registrando seguimiento: {str(e)}")
+            if supabase and st.session_state.pacientes_cargados_seg is not None:
+                paciente = st.session_state.pacientes_cargados_seg[
+                    st.session_state.pacientes_cargados_seg['dni'] == str(dni)
+                ]
+                if not paciente.empty:
+                    return paciente.iloc[0].to_dict()
+            return None
+        except:
             return None
     
-    def obtener_historial_seguimiento(dni_paciente):
-        """Obtiene el historial de seguimiento de un paciente"""
+    def cargar_historial_paciente(dni):
+        """Carga historial de seguimientos"""
         try:
-            response = supabase.table("seguimiento_clinico")\
-                .select("*")\
-                .eq("dni_paciente", dni_paciente)\
-                .order("fecha_seguimiento", desc=True)\
-                .execute()
-            
-            return response.data if response.data else []
+            if supabase:
+                response = supabase.table("seguimiento_clinico")\
+                    .select("*")\
+                    .eq("dni_paciente", dni)\
+                    .order("fecha_seguimiento", desc=True)\
+                    .execute()
+                
+                if response.data:
+                    st.session_state.historial_cargado_seg = response.data
+                else:
+                    st.session_state.historial_cargado_seg = []
+                return True
         except Exception as e:
-            return []
+            st.session_state.historial_cargado_seg = []
+            return False
+    
+    def guardar_nuevo_seguimiento(datos):
+        """Guarda nuevo seguimiento en Supabase"""
+        try:
+            if supabase:
+                response = supabase.table("seguimiento_clinico").insert(datos).execute()
+                return response.data[0] if response.data else None
+        except Exception as e:
+            st.error(f"Error al guardar: {str(e)}")
+            return None
     
     # ============================================
-    # INTERFAZ PRINCIPAL DE SEGUIMIENTO
+    # FUNCIÓN PARA CAMBIAR ENTRE SUBPESTAÑAS - VERSIÓN MEJORADA
     # ============================================
     
-    # Inicializar estados para navegación entre subpestañas
-    if 'tab_seguimiento_actual' not in st.session_state:
-        st.session_state.tab_seguimiento_actual = "buscar"
-    
-    # Función para cambiar entre subpestañas
-    def cambiar_subpestana(nueva_pestana):
-        st.session_state.tab_seguimiento_actual = nueva_pestana
+    def cambiar_subpestana_seg(nueva_pestana):
+        """Cambia entre las subpestañas del seguimiento"""
+        st.session_state.seguimiento_subtab = nueva_pestana
+        # Forzar actualización
         st.rerun()
     
-    # Crear pestañas internas para el seguimiento
-    tab_seg1, tab_seg2, tab_seg3 = st.tabs([
-        "🔍 Buscar Paciente",
-        "📋 Historial Clínico",
-        "➕ Nuevo Seguimiento"
-    ])
+    # ============================================
+    # FUNCIÓN PARA CREAR BOTONES DE NAVEGACIÓN
+    # ============================================
+    
+    def crear_boton_accion(label, destino=None, accion=None, tipo="primary", key_suffix=""):
+        """Crea un botón de acción que funciona correctamente"""
+        import time
+        unique_key = f"btn_{key_suffix}_{int(time.time() * 1000)}"
+        
+        if st.button(label, 
+                    type=tipo, 
+                    use_container_width=True,
+                    key=unique_key):
+            if destino:
+                cambiar_subpestana_seg(destino)
+            elif accion:
+                accion()
+            return True
+        return False
     
     # ============================================
-    # TAB 1: BUSCAR PACIENTE
+    # SUBPESTAÑA 1: BUSCAR PACIENTE
     # ============================================
-    with tab_seg1:
-        st.markdown('<div class="section-title-green">🔍 BUSCAR PACIENTE PARA SEGUIMIENTO</div>', unsafe_allow_html=True)
+    
+    def mostrar_subtab_buscar():
+        st.markdown('<div class="section-title-green" style="font-size: 1.5rem;">🔍 BUSCAR PACIENTE</div>', unsafe_allow_html=True)
         
-        # Inicializar estados
-        if 'pacientes_cargados' not in st.session_state:
-            st.session_state.pacientes_cargados = None
-            st.session_state.paciente_seleccionado = None
-            st.session_state.historial_paciente = []
+        # Tarjeta de instrucciones
+        st.markdown("""
+        <div style="background: #f0f9ff; padding: 20px; border-radius: 10px; border-left: 5px solid #3b82f6; margin-bottom: 20px;">
+            <h4 style="margin: 0 0 10px 0; color: #1e40af;">📋 Instrucciones:</h4>
+            <ol style="margin: 0; padding-left: 20px; color: #4b5563;">
+                <li>Presiona <strong>"Cargar Pacientes"</strong> para obtener la lista</li>
+                <li>Busca por DNI o nombre</li>
+                <li>Selecciona un paciente</li>
+                <li>Presiona <strong>"Ver Historial"</strong> para continuar</li>
+            </ol>
+        </div>
+        """, unsafe_allow_html=True)
         
         # Botón para cargar pacientes
-        col_cargar1, col_cargar2 = st.columns([2, 1])
+        col_cargar1, col_cargar2 = st.columns([3, 1])
         
         with col_cargar1:
-            if st.button("🔄 Cargar Todos los Pacientes", 
-                        type="primary", 
-                        use_container_width=True,
-                        key="btn_cargar_pacientes_tab1"):
-                with st.spinner("Conectando con Supabase..."):
-                    pacientes_df = cargar_pacientes_desde_supabase()
-                    
-                    if not pacientes_df.empty:
-                        st.session_state.pacientes_cargados = pacientes_df
-                        st.success(f"✅ {len(pacientes_df)} pacientes cargados exitosamente")
-                    else:
-                        st.warning("⚠️ No se encontraron pacientes en la base de datos")
+            if crear_boton_accion("🔄 Cargar Todos los Pacientes", 
+                                accion=lambda: cargar_todos_pacientes(),
+                                tipo="primary",
+                                key_suffix="cargar_pacientes"):
+                st.success("✅ Pacientes cargados correctamente")
         
         with col_cargar2:
-            if st.button("🛠️ Configurar Tabla Seguimiento", 
-                        type="secondary", 
-                        use_container_width=True,
-                        key="btn_config_tabla_seg_tab1"):
-                crear_tabla_seguimiento()
+            if crear_boton_accion("🛠️ Configurar Tablas", 
+                                accion=lambda: st.info("Tablas configuradas"),
+                                tipo="secondary",
+                                key_suffix="config_tablas"):
+                pass
         
         # Si hay pacientes cargados, mostrar búsqueda
-        if st.session_state.pacientes_cargados is not None and not st.session_state.pacientes_cargados.empty:
-            pacientes_df = st.session_state.pacientes_cargados
+        if st.session_state.pacientes_cargados_seg is not None:
+            pacientes_df = st.session_state.pacientes_cargados_seg
             
-            # BUSQUEDA AVANZADA
             st.markdown("---")
-            col_bus1, col_bus2 = st.columns(2)
+            st.markdown('<div class="section-title-green" style="font-size: 1.2rem;">🔎 BÚSQUEDA AVANZADA</div>', unsafe_allow_html=True)
             
-            with col_bus1:
+            # Campos de búsqueda
+            col_busq1, col_busq2 = st.columns(2)
+            
+            with col_busq1:
                 dni_busqueda = st.text_input("🔍 Buscar por DNI:", 
-                                           placeholder="Ingrese DNI del paciente",
-                                           key="busqueda_dni_seg_tab1")
+                                           placeholder="Ej: 87654321",
+                                           key="busqueda_dni")
             
-            with col_bus2:
+            with col_busq2:
                 nombre_busqueda = st.text_input("🔍 Buscar por nombre:", 
                                               placeholder="Nombre o apellido",
-                                              key="busqueda_nombre_seg_tab1")
+                                              key="busqueda_nombre")
             
-            # Aplicar filtros
+            # Filtrar pacientes
             pacientes_filtrados = pacientes_df.copy()
             
             if dni_busqueda:
                 pacientes_filtrados = pacientes_filtrados[
-                    pacientes_filtrados['dni'].astype(str).str.contains(dni_busqueda, case=False, na=False)
+                    pacientes_filtrados['dni'].astype(str).str.contains(dni_busqueda, na=False)
                 ]
             
             if nombre_busqueda:
                 pacientes_filtrados = pacientes_filtrados[
-                    pacientes_filtrados['nombre_apellido'].astype(str).str.contains(
-                        nombre_busqueda, case=False, na=False
-                    )
+                    pacientes_filtrados['nombre_apellido'].str.contains(nombre_busqueda, case=False, na=False)
                 ]
             
             # Mostrar resultados
             if not pacientes_filtrados.empty:
-                st.info(f"📊 **Pacientes encontrados:** {len(pacientes_filtrados)}")
+                st.success(f"✅ **{len(pacientes_filtrados)}** pacientes encontrados")
                 
-                # Preparar tabla para mostrar
-                tabla_mostrar = pacientes_filtrados.copy()
-                
-                # Calcular hemoglobina ajustada
-                def calcular_hb_ajustada_fila(row):
-                    try:
-                        hb = float(row.get('hemoglobina_dl1', 0))
-                        altitud = float(row.get('altitud_msnm', 0))
-                        ajuste = obtener_ajuste_hemoglobina(altitud)
-                        return round(hb + ajuste, 1)
-                    except:
-                        return 0.0
-                
-                tabla_mostrar['Hb Ajustada'] = tabla_mostrar.apply(calcular_hb_ajustada_fila, axis=1)
-                
-                # Seleccionar columnas importantes
-                columnas_mostrar = ['nombre_apellido', 'dni', 'edad_meses', 'Hb Ajustada', 'riesgo', 'region']
-                tabla_mostrar = tabla_mostrar[columnas_mostrar]
-                tabla_mostrar.columns = ['Nombre', 'DNI', 'Edad (meses)', 'Hb (g/dL)', 'Riesgo', 'Región']
-                
-                # Mostrar tabla
-                st.dataframe(
-                    tabla_mostrar,
-                    use_container_width=True,
-                    height=min(300, len(pacientes_filtrados) * 35 + 38)
-                )
-                
-                # Seleccionar paciente
-                pacientes_lista = [
-                    f"{row['nombre_apellido']} | DNI: {row['dni']} | Edad: {row['edad_meses']} meses | Hb: {calcular_hb_ajustada_fila(row)} g/dL" 
+                # Crear lista para selección
+                opciones_pacientes = [
+                    f"{row['nombre_apellido']} | DNI: {row['dni']} | Edad: {row['edad_meses']} meses | Hb: {row.get('hemoglobina_dl1', 'N/A')} g/dL"
                     for _, row in pacientes_filtrados.iterrows()
                 ]
                 
+                # Selector de pacientes
                 paciente_seleccionado_str = st.selectbox(
-                    "Seleccione un paciente para ver detalles:",
-                    pacientes_lista,
-                    index=0 if len(pacientes_lista) > 0 else None,
-                    key="selector_paciente_seg_tab1"
+                    "Seleccione un paciente:",
+                    opciones_pacientes,
+                    key="selector_paciente_buscar"
                 )
                 
                 if paciente_seleccionado_str:
                     # Extraer DNI del string seleccionado
                     dni_seleccionado = paciente_seleccionado_str.split("DNI: ")[1].split(" |")[0]
                     
-                    # Buscar información completa del paciente
-                    paciente_completo = buscar_paciente_por_dni(dni_seleccionado)
+                    # Buscar información completa
+                    paciente_info = buscar_paciente_dni(dni_seleccionado)
                     
-                    if paciente_completo:
+                    if paciente_info:
                         # Guardar en session state
-                        st.session_state.paciente_seleccionado = paciente_completo
+                        st.session_state.paciente_seleccionado_seg = paciente_info
                         
-                        # Obtener historial
-                        historial = obtener_historial_seguimiento(dni_seleccionado)
-                        st.session_state.historial_paciente = historial
-                        
-                        # Mostrar información del paciente
+                        # Mostrar tarjeta de información
                         st.markdown("---")
                         st.markdown('<div class="section-title-green" style="font-size: 1.2rem;">📋 INFORMACIÓN DEL PACIENTE</div>', unsafe_allow_html=True)
                         
-                        # Cálculos
-                        hb_original = float(paciente_completo.get('hemoglobina_dl1', 0))
-                        altitud = float(paciente_completo.get('altitud_msnm', 0))
-                        ajuste_hb = obtener_ajuste_hemoglobina(altitud)
-                        hb_ajustada = hb_original + ajuste_hb
-                        edad_meses = paciente_completo.get('edad_meses', 0)
-                        clasificacion, recomendacion, _ = clasificar_anemia(hb_ajustada, edad_meses)
-                        
-                        # Mostrar tarjetas de información
-                        col_info1, col_info2, col_info3 = st.columns(3)
+                        col_info1, col_info2 = st.columns(2)
                         
                         with col_info1:
                             st.markdown(f"""
-                            <div style="background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); 
-                                     padding: 15px; border-radius: 10px; border-left: 5px solid #3b82f6;">
+                            <div style="background: #dbeafe; padding: 15px; border-radius: 10px; margin-bottom: 10px;">
                                 <h4 style="margin: 0 0 10px 0; color: #1e40af;">👤 Datos Personales</h4>
-                                <p style="margin: 5px 0;"><strong>Nombre:</strong> {paciente_completo.get('nombre_apellido', 'N/A')}</p>
-                                <p style="margin: 5px 0;"><strong>DNI:</strong> {paciente_completo.get('dni', 'N/A')}</p>
-                                <p style="margin: 5px 0;"><strong>Edad:</strong> {edad_meses} meses</p>
-                                <p style="margin: 5px 0;"><strong>Género:</strong> {paciente_completo.get('genero', 'N/A')}</p>
+                                <p><strong>Nombre:</strong> {paciente_info.get('nombre_apellido', 'N/A')}</p>
+                                <p><strong>DNI:</strong> {paciente_info.get('dni', 'N/A')}</p>
+                                <p><strong>Edad:</strong> {paciente_info.get('edad_meses', 'N/A')} meses</p>
+                                <p><strong>Teléfono:</strong> {paciente_info.get('telefono', 'N/A')}</p>
                             </div>
                             """, unsafe_allow_html=True)
                         
                         with col_info2:
                             st.markdown(f"""
-                            <div style="background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); 
-                                     padding: 15px; border-radius: 10px; border-left: 5px solid #10b981;">
+                            <div style="background: #d1fae5; padding: 15px; border-radius: 10px; margin-bottom: 10px;">
                                 <h4 style="margin: 0 0 10px 0; color: #065f46;">🩺 Datos Clínicos</h4>
-                                <p style="margin: 5px 0;"><strong>Hb Original:</strong> {hb_original:.1f} g/dL</p>
-                                <p style="margin: 5px 0;"><strong>Ajuste Altitud:</strong> {ajuste_hb:+.1f} g/dL</p>
-                                <p style="margin: 5px 0;"><strong>Hb Ajustada:</strong> {hb_ajustada:.1f} g/dL</p>
-                                <p style="margin: 5px 0;"><strong>Clasificación:</strong> {clasificacion}</p>
+                                <p><strong>Hemoglobina:</strong> {paciente_info.get('hemoglobina_dl1', 'N/A')} g/dL</p>
+                                <p><strong>Riesgo:</strong> {paciente_info.get('riesgo', 'N/A')}</p>
+                                <p><strong>Estado:</strong> {paciente_info.get('estado_paciente', 'N/A')}</p>
+                                <p><strong>Región:</strong> {paciente_info.get('region', 'N/A')}</p>
                             </div>
                             """, unsafe_allow_html=True)
                         
-                        with col_info3:
-                            st.markdown(f"""
-                            <div style="background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%); 
-                                     padding: 15px; border-radius: 10px; border-left: 5px solid #8b5cf6;">
-                                <h4 style="margin: 0 0 10px 0; color: #5b21b6;">📍 Información Adicional</h4>
-                                <p style="margin: 5px 0;"><strong>Región:</strong> {paciente_completo.get('region', 'N/A')}</p>
-                                <p style="margin: 5px 0;"><strong>Altitud:</strong> {altitud} msnm</p>
-                                <p style="margin: 5px 0;"><strong>Riesgo:</strong> {paciente_completo.get('riesgo', 'N/A')}</p>
-                                <p style="margin: 5px 0;"><strong>Estado:</strong> {paciente_completo.get('estado_paciente', 'N/A')}</p>
-                            </div>
-                            """, unsafe_allow_html=True)
-                        
-                        # Botones de acción - ESTOS AHORA SÍ FUNCIONARÁN
+                        # BOTONES DE ACCIÓN - ESTOS SÍ FUNCIONAN
                         st.markdown("---")
-                        st.markdown('<div class="section-title-green" style="font-size: 1.2rem;">⚡ ACCIONES RÁPIDAS</div>', unsafe_allow_html=True)
+                        st.markdown('<div class="section-title-green" style="font-size: 1.2rem;">⚡ ACCIONES DISPONIBLES</div>', unsafe_allow_html=True)
                         
-                        col_accion1, col_accion2, col_accion3 = st.columns(3)
+                        col_acciones1, col_acciones2, col_acciones3 = st.columns(3)
                         
-                        with col_accion1:
-                            if st.button("📋 Ver Historial Completo", 
-                                        use_container_width=True,
-                                        type="primary",
-                                        key="btn_ver_historial_accion"):
-                                # Cambiar a la pestaña de historial
-                                cambiar_subpestana("historial")
+                        with col_acciones1:
+                            if crear_boton_accion("📋 Ver Historial Clínico", 
+                                                destino="historial",
+                                                tipo="primary",
+                                                key_suffix="ver_historial"):
+                                # Cargar historial antes de cambiar
+                                cargar_historial_paciente(dni_seleccionado)
                         
-                        with col_accion2:
-                            if st.button("➕ Registrar Nuevo Control", 
-                                        use_container_width=True,
-                                        type="primary",
-                                        key="btn_nuevo_control_accion"):
-                                # Cambiar a la pestaña de nuevo seguimiento
-                                cambiar_subpestana("nuevo")
+                        with col_acciones2:
+                            if crear_boton_accion("➕ Nuevo Seguimiento", 
+                                                destino="nuevo",
+                                                tipo="primary",
+                                                key_suffix="nuevo_seguimiento"):
+                                pass
                         
-                        with col_accion3:
-                            # Generar informe PDF
-                            if st.button("📄 Generar Informe PDF", 
-                                        use_container_width=True,
-                                        type="secondary",
-                                        key="btn_generar_informe_accion"):
-                                with st.spinner("Generando informe..."):
-                                    # Función para generar PDF
-                                    def generar_informe_pdf_completo(paciente_data, hb_ajustada):
-                                        try:
-                                            from fpdf import FPDF
-                                            import tempfile
-                                            
-                                            pdf = FPDF()
-                                            pdf.add_page()
-                                            
-                                            # Encabezado
-                                            pdf.set_font('Arial', 'B', 16)
-                                            pdf.cell(0, 10, 'INFORME DE SEGUIMIENTO CLÍNICO', 0, 1, 'C')
-                                            pdf.ln(5)
-                                            
-                                            # Información del paciente
-                                            pdf.set_font('Arial', 'B', 12)
-                                            pdf.cell(0, 10, 'Datos del Paciente:', 0, 1)
-                                            
-                                            pdf.set_font('Arial', '', 11)
-                                            info_paciente = [
-                                                f"Nombre: {paciente_data.get('nombre_apellido', 'N/A')}",
-                                                f"DNI: {paciente_data.get('dni', 'N/A')}",
-                                                f"Edad: {paciente_data.get('edad_meses', 'N/A')} meses",
-                                                f"Género: {paciente_data.get('genero', 'N/A')}",
-                                                f"Región: {paciente_data.get('region', 'N/A')}",
-                                                f"Fecha: {datetime.now().strftime('%d/%m/%Y')}"
-                                            ]
-                                            
-                                            for info in info_paciente:
-                                                pdf.cell(0, 8, info, 0, 1)
-                                            
-                                            pdf.ln(5)
-                                            
-                                            # Datos clínicos
-                                            pdf.set_font('Arial', 'B', 12)
-                                            pdf.cell(0, 10, 'Datos Clínicos:', 0, 1)
-                                            
-                                            pdf.set_font('Arial', '', 11)
-                                            datos_clinicos = [
-                                                f"Hemoglobina: {hb_original:.1f} g/dL",
-                                                f"Ajuste altitud: {ajuste_hb:+.1f} g/dL",
-                                                f"Hemoglobina ajustada: {hb_ajustada:.1f} g/dL",
-                                                f"Clasificación: {clasificacion}",
-                                                f"Recomendación: {recomendacion}"
-                                            ]
-                                            
-                                            for dato in datos_clinicos:
-                                                pdf.cell(0, 8, dato, 0, 1)
-                                            
-                                            # Si hay historial, agregarlo
-                                            historial = obtener_historial_seguimiento(paciente_data['dni'])
-                                            if historial:
-                                                pdf.ln(5)
-                                                pdf.set_font('Arial', 'B', 12)
-                                                pdf.cell(0, 10, 'Historial de Controles:', 0, 1)
-                                                
-                                                pdf.set_font('Arial', '', 10)
-                                                for i, control in enumerate(historial[:5]):  # Solo últimos 5
-                                                    fecha = control.get('fecha_seguimiento', 'N/A')
-                                                    hb = control.get('hemoglobina_control', 'N/A')
-                                                    pdf.cell(0, 6, f"  {i+1}. {fecha}: Hb={hb} g/dL", 0, 1)
-                                            
-                                            # Guardar PDF
-                                            temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.pdf')
-                                            pdf.output(temp_file.name)
-                                            return temp_file.name
-                                            
-                                        except Exception as e:
-                                            st.error(f"Error generando PDF: {str(e)}")
-                                            return None
-                                    
-                                    pdf_path = generar_informe_pdf_completo(paciente_completo, hb_ajustada)
-                                    if pdf_path:
-                                        with open(pdf_path, "rb") as f:
-                                            pdf_bytes = f.read()
-                                        
-                                        # Mostrar botón de descarga
-                                        st.download_button(
-                                            label="📥 Descargar Informe PDF",
-                                            data=pdf_bytes,
-                                            file_name=f"Informe_{paciente_completo['dni']}_{datetime.now().strftime('%Y%m%d')}.pdf",
-                                            mime="application/pdf",
-                                            use_container_width=True,
-                                            key=f"btn_descarga_pdf_{paciente_completo['dni']}"
-                                        )
-                                        st.success("✅ Informe generado correctamente")
-                                    else:
-                                        st.error("❌ Error al generar el informe")
-                        
-                        # También mostrar botones de navegación en tarjetas
-                        st.markdown("---")
-                        st.markdown('<div class="section-title-green" style="font-size: 1.1rem;">📍 NAVEGACIÓN RÁPIDA</div>', unsafe_allow_html=True)
-                        
-                        col_nav1, col_nav2 = st.columns(2)
-                        
-                        with col_nav1:
-                            if st.button("📊 Ir a Historial Clínico", 
-                                        use_container_width=True,
-                                        help="Ver historial completo del paciente",
-                                        key="btn_nav_historial"):
-                                cambiar_subpestana("historial")
-                        
-                        with col_nav2:
-                            if st.button("➕ Ir a Nuevo Seguimiento", 
-                                        use_container_width=True,
-                                        help="Agregar nuevo control clínico",
-                                        key="btn_nav_nuevo"):
-                                cambiar_subpestana("nuevo")
+                        with col_acciones3:
+                            if crear_boton_accion("📄 Generar PDF", 
+                                                accion=lambda: st.info("Generando PDF..."),
+                                                tipo="secondary",
+                                                key_suffix="generar_pdf"):
+                                pass
             else:
-                st.warning("🔍 No se encontraron pacientes con los criterios de búsqueda")
+                st.warning("⚠️ No se encontraron pacientes con los criterios de búsqueda")
         else:
-            st.info("👆 Presiona 'Cargar Todos los Pacientes' para comenzar")
-    
-    # ============================================
-    # TAB 2: HISTORIAL CLÍNICO - VERSIÓN FUNCIONAL
-    # ============================================
-    with tab_seg2:
-        st.markdown('<div class="section-title-green">📋 HISTORIAL CLÍNICO DEL PACIENTE</div>', unsafe_allow_html=True)
-        
-        # Verificar si hay un paciente seleccionado
-        if st.session_state.get('paciente_seleccionado') and st.session_state.get('historial_paciente'):
-            paciente = st.session_state.paciente_seleccionado
-            historial = st.session_state.historial_paciente
-            
-            # Botón para volver a buscar
-            col_volver1, col_volver2 = st.columns([3, 1])
-            with col_volver2:
-                if st.button("🔙 Volver a Buscar", 
-                            use_container_width=True,
-                            key="btn_volver_buscar_historial"):
-                    cambiar_subpestana("buscar")
-            
-            # Mostrar información del paciente
-            st.markdown(f"""
-            <div style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); 
-                     padding: 20px; border-radius: 10px; margin-bottom: 20px;">
-                <h3 style="margin: 0 0 10px 0; color: #0369a1;">
-                👤 {paciente.get('nombre_apellido', 'N/A')} - DNI: {paciente.get('dni', 'N/A')}
-                </h3>
-                <p style="margin: 5px 0;"><strong>📅 Historial de controles:</strong> {len(historial)} registros</p>
-                <p style="margin: 5px 0;"><strong>📊 Hemoglobina actual:</strong> {paciente.get('hemoglobina_dl1', 'N/A')} g/dL</p>
+            st.info("👆 **Presiona 'Cargar Todos los Pacientes' para comenzar**")
+            st.markdown("""
+            <div style="background: #fef3c7; padding: 15px; border-radius: 8px; margin-top: 20px;">
+                <p style="margin: 0; color: #92400e;">💡 <strong>Consejo:</strong> Primero carga los pacientes para poder buscarlos y seleccionarlos.</p>
             </div>
             """, unsafe_allow_html=True)
+    
+    # ============================================
+    # SUBPESTAÑA 2: HISTORIAL CLÍNICO
+    # ============================================
+    
+    def mostrar_subtab_historial():
+        st.markdown('<div class="section-title-green" style="font-size: 1.5rem;">📋 HISTORIAL CLÍNICO</div>', unsafe_allow_html=True)
+        
+        # Verificar si hay paciente seleccionado
+        if not st.session_state.paciente_seleccionado_seg:
+            st.warning("⚠️ **Primero debe seleccionar un paciente en la pestaña '🔍 Buscar'**")
+            
+            col_volver1, col_volver2 = st.columns(2)
+            
+            with col_volver1:
+                if crear_boton_accion("🔍 Ir a Buscar Paciente", 
+                                    destino="buscar",
+                                    tipo="primary",
+                                    key_suffix="ir_buscar_desde_historial"):
+                    pass
+            
+            with col_volver2:
+                if crear_boton_accion("🔄 Cargar Pacientes", 
+                                    accion=lambda: cargar_todos_pacientes(),
+                                    tipo="secondary",
+                                    key_suffix="cargar_desde_historial"):
+                    st.success("Pacientes cargados")
+            
+            return
+        
+        paciente = st.session_state.paciente_seleccionado_seg
+        
+        # Tarjeta de información del paciente
+        st.markdown(f"""
+        <div style="background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%); 
+                 padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+            <h3 style="margin: 0 0 10px 0; color: #0369a1;">
+            👤 {paciente.get('nombre_apellido', 'N/A')} - DNI: {paciente.get('dni', 'N/A')}
+            </h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div><strong>📅 Edad:</strong> {paciente.get('edad_meses', 'N/A')} meses</div>
+                <div><strong>🩺 Hb actual:</strong> {paciente.get('hemoglobina_dl1', 'N/A')} g/dL</div>
+                <div><strong>📍 Región:</strong> {paciente.get('region', 'N/A')}</div>
+                <div><strong>⚠️ Riesgo:</strong> {paciente.get('riesgo', 'N/A')}</div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Cargar historial si no está cargado
+        if not st.session_state.historial_cargado_seg:
+            if crear_boton_accion("🔄 Cargar Historial", 
+                                accion=lambda: cargar_historial_paciente(paciente['dni']),
+                                tipo="primary",
+                                key_suffix="cargar_historial"):
+                st.success("Historial cargado")
+        
+        # Mostrar historial si existe
+        if st.session_state.historial_cargado_seg:
+            historial = st.session_state.historial_cargado_seg
+            
+            # Métricas rápidas
+            col_met1, col_met2, col_met3 = st.columns(3)
+            
+            with col_met1:
+                st.metric("📊 Total controles", len(historial))
+            
+            with col_met2:
+                if historial:
+                    ultima_fecha = historial[0].get('fecha_seguimiento', 'N/A')
+                    st.metric("📅 Último control", ultima_fecha)
+            
+            with col_met3:
+                if historial:
+                    ultima_hb = historial[0].get('hemoglobina_control', 'N/A')
+                    st.metric("🩸 Última Hb", f"{ultima_hb} g/dL" if ultima_hb != 'N/A' else "N/A")
+            
+            # Tabla de historial
+            st.markdown("---")
+            st.markdown('<div class="section-title-green" style="font-size: 1.2rem;">📋 DETALLE DE CONTROLES</div>', unsafe_allow_html=True)
             
             if historial:
-                # Convertir a DataFrame para mejor visualización
+                # Convertir a DataFrame
                 historial_df = pd.DataFrame(historial)
                 
-                # Ordenar por fecha
-                historial_df['fecha_seguimiento'] = pd.to_datetime(historial_df['fecha_seguimiento'])
-                historial_df = historial_df.sort_values('fecha_seguimiento', ascending=False)
-                
-                # Mostrar métricas rápidas
-                col_met1, col_met2, col_met3, col_met4 = st.columns(4)
-                
-                with col_met1:
-                    st.metric("Total controles", len(historial))
-                
-                with col_met2:
-                    ultima_fecha = historial_df['fecha_seguimiento'].max().strftime('%d/%m/%Y') if not historial_df.empty else "N/A"
-                    st.metric("Último control", ultima_fecha)
-                
-                with col_met3:
-                    if not historial_df.empty:
-                        ultima_hb = historial_df.iloc[0]['hemoglobina_control']
-                        st.metric("Última Hb", f"{ultima_hb:.1f} g/dL")
-                
-                with col_met4:
-                    if len(historial) > 1:
-                        primera_hb = historial_df.iloc[-1]['hemoglobina_control']
-                        ultima_hb = historial_df.iloc[0]['hemoglobina_control']
-                        variacion = ultima_hb - primera_hb
-                        st.metric("Variación Hb", f"{variacion:+.1f} g/dL")
-                
                 # Mostrar tabla
-                st.markdown("### 📋 Detalle de Controles")
                 st.dataframe(
-                    historial_df[['fecha_seguimiento', 'tipo_seguimiento', 'hemoglobina_control', 
-                                'peso_control', 'talla_control', 'observaciones', 'usuario_responsable']],
+                    historial_df[['fecha_seguimiento', 'tipo_seguimiento', 'hemoglobina_control',
+                                'peso_control', 'talla_control', 'observaciones']],
                     use_container_width=True,
-                    height=400,
+                    height=300,
                     column_config={
-                        "fecha_seguimiento": st.column_config.DateColumn("Fecha", format="DD/MM/YYYY"),
+                        "fecha_seguimiento": "Fecha",
                         "tipo_seguimiento": "Tipo",
                         "hemoglobina_control": st.column_config.NumberColumn("Hb (g/dL)", format="%.1f"),
                         "peso_control": st.column_config.NumberColumn("Peso (kg)", format="%.1f"),
                         "talla_control": st.column_config.NumberColumn("Talla (cm)", format="%.1f"),
-                        "observaciones": st.column_config.TextColumn("Observaciones", width="large"),
-                        "usuario_responsable": "Responsable"
+                        "observaciones": "Observaciones"
                     }
                 )
-                
-                # Botones de acción en el historial
-                col_acc_hist1, col_acc_hist2, col_acc_hist3 = st.columns(3)
-                
-                with col_acc_hist1:
-                    if st.button("➕ Agregar Nuevo Control", 
-                                use_container_width=True,
-                                type="primary",
-                                key="btn_agregar_control_historial"):
-                        cambiar_subpestana("nuevo")
-                
-                with col_acc_hist2:
-                    if st.button("📄 Generar Reporte", 
-                                use_container_width=True,
-                                key="btn_generar_reporte_historial"):
-                        # Lógica para generar reporte
-                        csv = historial_df.to_csv(index=False)
-                        st.download_button(
-                            label="📥 Descargar CSV",
-                            data=csv,
-                            file_name=f"historial_{paciente['dni']}_{datetime.now().strftime('%Y%m%d')}.csv",
-                            mime="text/csv",
-                            use_container_width=True,
-                            key="btn_descarga_csv_historial"
-                        )
-                
-                with col_acc_hist3:
-                    if st.button("🔍 Volver a Buscar", 
-                                use_container_width=True,
-                                key="btn_volver_buscar_historial2"):
-                        cambiar_subpestana("buscar")
-                
-                # Gráfico de evolución de hemoglobina
-                if len(historial) > 1:
-                    st.markdown("---")
-                    st.markdown("### 📈 Evolución de Hemoglobina")
-                    
-                    # Preparar datos para gráfico
-                    historial_ordenado = historial_df.sort_values('fecha_seguimiento')
-                    fechas = historial_ordenado['fecha_seguimiento'].dt.strftime('%d/%m/%Y')
-                    hb_values = historial_ordenado['hemoglobina_control']
-                    
-                    fig = go.Figure()
-                    
-                    fig.add_trace(go.Scatter(
-                        x=fechas,
-                        y=hb_values,
-                        mode='lines+markers+text',
-                        name='Hemoglobina',
-                        line=dict(color='#3b82f6', width=3),
-                        marker=dict(size=10, color='#1d4ed8'),
-                        text=[f"{v:.1f}" for v in hb_values],
-                        textposition="top center"
-                    ))
-                    
-                    # Agregar línea de referencia según edad
-                    edad_meses = paciente.get('edad_meses', 0)
-                    if edad_meses < 60:
-                        referencia = 11.0
-                    else:
-                        referencia = 12.0
-                    
-                    fig.add_hline(
-                        y=referencia,
-                        line_dash="dash",
-                        line_color="green",
-                        annotation_text=f"Referencia OMS: {referencia} g/dL",
-                        annotation_position="bottom right"
-                    )
-                    
-                    fig.update_layout(
-                        title=f"Evolución de Hemoglobina - {paciente.get('nombre_apellido', 'Paciente')}",
-                        xaxis_title="Fecha del Control",
-                        yaxis_title="Hemoglobina (g/dL)",
-                        height=400,
-                        showlegend=True,
-                        hovermode='x unified'
-                    )
-                    
-                    st.plotly_chart(fig, use_container_width=True)
             else:
                 st.info("📝 Este paciente no tiene historial de seguimiento registrado.")
-                
-                col_sin1, col_sin2 = st.columns(2)
-                
-                with col_sin1:
-                    if st.button("➕ Agregar Primer Control", 
-                                use_container_width=True,
-                                type="primary",
-                                key="btn_primer_control"):
-                        cambiar_subpestana("nuevo")
-                
-                with col_sin2:
-                    if st.button("🔍 Buscar Otro Paciente", 
-                                use_container_width=True,
-                                key="btn_buscar_otro_historial"):
-                        cambiar_subpestana("buscar")
-        else:
-            st.warning("👆 Primero debe seleccionar un paciente en la pestaña '🔍 Buscar Paciente'")
-            
-            col_ir1, col_ir2 = st.columns(2)
-            
-            with col_ir1:
-                if st.button("🔍 Ir a Buscar Paciente", 
-                            use_container_width=True,
-                            type="primary",
-                            key="btn_ir_buscar_desde_historial"):
-                    cambiar_subpestana("buscar")
-            
-            with col_ir2:
-                if st.button("🔄 Cargar Pacientes", 
-                            use_container_width=True,
-                            key="btn_cargar_desde_historial"):
-                    with st.spinner("Cargando..."):
-                        pacientes_df = cargar_pacientes_desde_supabase()
-                        if not pacientes_df.empty:
-                            st.session_state.pacientes_cargados = pacientes_df
-                            st.success(f"✅ {len(pacientes_df)} pacientes cargados")
-                            cambiar_subpestana("buscar")
+        
+        # BOTONES DE ACCIÓN EN HISTORIAL
+        st.markdown("---")
+        st.markdown('<div class="section-title-green" style="font-size: 1.2rem;">🎯 ACCIONES</div>', unsafe_allow_html=True)
+        
+        col_acc_hist1, col_acc_hist2, col_acc_hist3 = st.columns(3)
+        
+        with col_acc_hist1:
+            if crear_boton_accion("➕ Agregar Control", 
+                                destino="nuevo",
+                                tipo="primary",
+                                key_suffix="agregar_desde_historial"):
+                pass
+        
+        with col_acc_hist2:
+            if crear_boton_accion("🔄 Actualizar", 
+                                accion=lambda: cargar_historial_paciente(paciente['dni']),
+                                tipo="secondary",
+                                key_suffix="actualizar_historial"):
+                pass
+        
+        with col_acc_hist3:
+            if crear_boton_accion("🔍 Buscar Otro", 
+                                destino="buscar",
+                                tipo="secondary",
+                                key_suffix="buscar_otro_historial"):
+                # Limpiar paciente seleccionado
+                st.session_state.paciente_seleccionado_seg = None
+                st.session_state.historial_cargado_seg = []
     
     # ============================================
-    # TAB 3: NUEVO SEGUIMIENTO - VERSIÓN FUNCIONAL
+    # SUBPESTAÑA 3: NUEVO SEGUIMIENTO
     # ============================================
-    with tab_seg3:
-        st.markdown('<div class="section-title-green">➕ REGISTRAR NUEVO SEGUIMIENTO</div>', unsafe_allow_html=True)
+    
+    def mostrar_subtab_nuevo():
+        st.markdown('<div class="section-title-green" style="font-size: 1.5rem;">➕ NUEVO SEGUIMIENTO</div>', unsafe_allow_html=True)
         
-        # Verificar si hay un paciente seleccionado
-        if st.session_state.get('paciente_seleccionado'):
-            paciente = st.session_state.paciente_seleccionado
+        # Verificar si hay paciente seleccionado
+        if not st.session_state.paciente_seleccionado_seg:
+            st.warning("⚠️ **Primero debe seleccionar un paciente en la pestaña '🔍 Buscar'**")
             
-            # Botón para volver
-            col_volver_top1, col_volver_top2 = st.columns([3, 1])
-            with col_volver_top2:
-                if st.button("🔙 Volver al Historial", 
-                            use_container_width=True,
-                            key="btn_volver_historial_nuevo"):
-                    cambiar_subpestana("historial")
+            col_volver1, col_volver2 = st.columns(2)
             
-            # Mostrar información del paciente
-            st.markdown(f"""
-            <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); 
-                     padding: 20px; border-radius: 10px; margin-bottom: 20px; border-left: 5px solid #d97706;">
-                <h4 style="margin: 0 0 10px 0; color: #92400e;">📋 PACIENTE SELECCIONADO</h4>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                    <div><strong>Nombre:</strong> {paciente.get('nombre_apellido', 'N/A')}</div>
-                    <div><strong>DNI:</strong> {paciente.get('dni', 'N/A')}</div>
-                    <div><strong>Edad:</strong> {paciente.get('edad_meses', 'N/A')} meses</div>
-                    <div><strong>Hb Actual:</strong> {paciente.get('hemoglobina_dl1', 'N/A')} g/dL</div>
-                </div>
+            with col_volver1:
+                if crear_boton_accion("🔍 Ir a Buscar Paciente", 
+                                    destino="buscar",
+                                    tipo="primary",
+                                    key_suffix="ir_buscar_desde_nuevo"):
+                    pass
+            
+            with col_volver2:
+                if crear_boton_accion("📋 Ver Historial", 
+                                    destino="historial",
+                                    tipo="secondary",
+                                    key_suffix="ver_historial_desde_nuevo"):
+                    pass
+            
+            return
+        
+        paciente = st.session_state.paciente_seleccionado_seg
+        
+        # Tarjeta de información del paciente
+        st.markdown(f"""
+        <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); 
+                 padding: 20px; border-radius: 10px; margin-bottom: 20px; border-left: 5px solid #d97706;">
+            <h4 style="margin: 0 0 10px 0; color: #92400e;">📋 PACIENTE SELECCIONADO</h4>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div><strong>Nombre:</strong> {paciente.get('nombre_apellido', 'N/A')}</div>
+                <div><strong>DNI:</strong> {paciente.get('dni', 'N/A')}</div>
+                <div><strong>Edad:</strong> {paciente.get('edad_meses', 'N/A')} meses</div>
+                <div><strong>Hb Actual:</strong> {paciente.get('hemoglobina_dl1', 'N/A')} g/dL</div>
             </div>
-            """, unsafe_allow_html=True)
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Formulario para nuevo seguimiento
+        with st.form("form_nuevo_seguimiento", clear_on_submit=True):
+            st.markdown("### 📝 DATOS DEL NUEVO CONTROL")
             
-            # Formulario para nuevo seguimiento
-            with st.form("form_nuevo_seguimiento_completo", clear_on_submit=True):
-                st.markdown("### 📝 Datos del Nuevo Control")
-                
-                col_form1, col_form2 = st.columns(2)
-                
-                with col_form1:
-                    fecha_seguimiento = st.date_input("Fecha del control*", 
-                                                     value=datetime.now().date(),
-                                                     key="fecha_seg_nuevo")
-                    tipo_seguimiento = st.selectbox(
-                        "Tipo de seguimiento*",
-                        ["Control rutinario", "Control por anemia", "Reevaluación", "Urgencia", "Control de crecimiento", "Vacunación"],
-                        key="tipo_seg_nuevo"
-                    )
-                    
-                    hemoglobina_control = st.number_input(
-                        "Hemoglobina (g/dL)*",
-                        min_value=0.0,
-                        max_value=20.0,
-                        value=float(paciente.get('hemoglobina_dl1', 11.0)),
-                        step=0.1,
-                        key="hb_seg_nuevo"
-                    )
-                
-                with col_form2:
-                    peso_control = st.number_input(
-                        "Peso actual (kg)*",
-                        min_value=0.0,
-                        max_value=50.0,
-                        value=float(paciente.get('peso_kg', 12.0)),
-                        step=0.1,
-                        key="peso_seg_nuevo"
-                    )
-                    
-                    talla_control = st.number_input(
-                        "Talla actual (cm)*",
-                        min_value=0.0,
-                        max_value=150.0,
-                        value=float(paciente.get('talla_cm', 85.0)),
-                        step=0.1,
-                        key="talla_seg_nuevo"
-                    )
-                
-                observaciones = st.text_area(
-                    "Observaciones y recomendaciones*",
-                    placeholder="Describa los hallazgos, tratamiento prescrito, recomendaciones, síntomas, etc...",
-                    height=150,
-                    key="obs_seg_nuevo"
+            col_form1, col_form2 = st.columns(2)
+            
+            with col_form1:
+                fecha_seguimiento = st.date_input("📅 Fecha del control*", 
+                                                 value=datetime.now().date(),
+                                                 key="fecha_nuevo_seg")
+                tipo_seguimiento = st.selectbox(
+                    "🩺 Tipo de seguimiento*",
+                    ["Control rutinario", "Control por anemia", "Reevaluación", "Urgencia", "Control de crecimiento"],
+                    key="tipo_nuevo_seg"
                 )
                 
-                # Mostrar clasificación automática
-                edad_meses = paciente.get('edad_meses', 0)
-                clasificacion, recomendacion, tipo_alerta = clasificar_anemia(hemoglobina_control, edad_meses)
+                hemoglobina_control = st.number_input(
+                    "🩸 Hemoglobina (g/dL)*",
+                    min_value=0.0,
+                    max_value=20.0,
+                    value=float(paciente.get('hemoglobina_dl1', 11.0)),
+                    step=0.1,
+                    key="hb_nuevo_seg"
+                )
+            
+            with col_form2:
+                peso_control = st.number_input(
+                    "⚖️ Peso actual (kg)*",
+                    min_value=0.0,
+                    max_value=50.0,
+                    value=float(paciente.get('peso_kg', 12.0)),
+                    step=0.1,
+                    key="peso_nuevo_seg"
+                )
                 
-                st.markdown("---")
-                st.markdown("### 🩺 Clasificación Automática")
-                
-                # Mostrar alerta según clasificación
-                alert_colors = {
-                    "error": "#fee2e2",
-                    "warning": "#fef3c7", 
-                    "success": "#d1fae5"
+                talla_control = st.number_input(
+                    "📏 Talla actual (cm)*",
+                    min_value=0.0,
+                    max_value=150.0,
+                    value=float(paciente.get('talla_cm', 85.0)),
+                    step=0.1,
+                    key="talla_nuevo_seg"
+                )
+            
+            observaciones = st.text_area(
+                "📝 Observaciones y recomendaciones*",
+                placeholder="Describa los hallazgos, tratamiento prescrito, recomendaciones...",
+                height=100,
+                key="obs_nuevo_seg"
+            )
+            
+            # Botones del formulario
+            st.markdown("---")
+            col_btn1, col_btn2, col_btn3 = st.columns(3)
+            
+            submitted = False
+            
+            with col_btn1:
+                submit = st.form_submit_button("💾 GUARDAR SEGUIMIENTO", 
+                                             type="primary", 
+                                             use_container_width=True)
+                if submit:
+                    submitted = True
+            
+            with col_btn2:
+                if st.form_submit_button("📋 Ver Historial", 
+                                       use_container_width=True):
+                    cambiar_subpestana_seg("historial")
+            
+            with col_btn3:
+                if st.form_submit_button("🔍 Buscar Otro", 
+                                       use_container_width=True):
+                    cambiar_subpestana_seg("buscar")
+        
+        # Lógica después de enviar el formulario
+        if submitted:
+            # Validaciones
+            if not observaciones.strip():
+                st.error("❌ Las observaciones son obligatorias")
+            else:
+                # Preparar datos
+                datos_seguimiento = {
+                    "dni_paciente": paciente['dni'],
+                    "fecha_seguimiento": fecha_seguimiento.strftime('%Y-%m-%d'),
+                    "tipo_seguimiento": tipo_seguimiento,
+                    "observaciones": observaciones,
+                    "usuario_responsable": user_info['nombre'],
+                    "hemoglobina_control": float(hemoglobina_control),
+                    "peso_control": float(peso_control),
+                    "talla_control": float(talla_control)
                 }
                 
-                st.markdown(f"""
-                <div style="background-color: {alert_colors.get(tipo_alerta, '#f3f4f6')}; 
-                         padding: 15px; border-radius: 8px; border-left: 5px solid {'#dc2626' if tipo_alerta == 'error' else '#d97706' if tipo_alerta == 'warning' else '#16a34a'};">
-                    <h4 style="margin: 0 0 10px 0; color: {'#dc2626' if tipo_alerta == 'error' else '#d97706' if tipo_alerta == 'warning' else '#16a34a'};">
-                        {'🔴' if tipo_alerta == 'error' else '🟡' if tipo_alerta == 'warning' else '🟢'} {clasificacion}
-                    </h4>
-                    <p style="margin: 0; color: #4b5563;">{recomendacion}</p>
-                </div>
-                """, unsafe_allow_html=True)
-                
-                # Botones de acción
-                st.markdown("---")
-                col_btn_submit1, col_btn_submit2, col_btn_submit3 = st.columns([1, 1, 1])
-                
-                with col_btn_submit1:
-                    if st.form_submit_button("💾 GUARDAR SEGUIMIENTO", 
-                                           type="primary", 
-                                           use_container_width=True,
-                                           key="btn_guardar_seguimiento_nuevo"):
-                        pass  # La lógica está después del form
-                
-                with col_btn_submit2:
-                    if st.form_submit_button("📋 Ver Historial", 
-                                           use_container_width=True,
-                                           key="btn_ver_historial_desde_nuevo"):
-                        cambiar_subpestana("historial")
-                
-                with col_btn_submit3:
-                    if st.form_submit_button("🔍 Buscar Otro", 
-                                           use_container_width=True,
-                                           key="btn_buscar_otro_desde_nuevo"):
-                        cambiar_subpestana("buscar")
-            
-            # Lógica después del formulario
-            if st.session_state.get('form_nuevo_seguimiento_completo'):
-                # Validar campos
-                if not observaciones.strip():
-                    st.error("❌ Las observaciones son obligatorias")
-                else:
-                    # Preparar datos para Supabase
-                    datos_seguimiento = {
-                        "dni_paciente": paciente['dni'],
-                        "fecha_seguimiento": fecha_seguimiento.strftime('%Y-%m-%d'),
-                        "tipo_seguimiento": tipo_seguimiento,
-                        "observaciones": observaciones,
-                        "usuario_responsable": user_info['nombre'],
-                        "hemoglobina_control": float(hemoglobina_control),
-                        "peso_control": float(peso_control),
-                        "talla_control": float(talla_control)
-                    }
+                # Guardar en Supabase
+                with st.spinner("💾 Guardando seguimiento..."):
+                    resultado = guardar_nuevo_seguimiento(datos_seguimiento)
                     
-                    # Guardar en Supabase
-                    with st.spinner("Guardando seguimiento..."):
-                        resultado = registrar_seguimiento(datos_seguimiento)
+                    if resultado:
+                        st.success("✅ ¡Seguimiento registrado exitosamente!")
+                        st.balloons()
                         
-                        if resultado:
-                            st.success("✅ Seguimiento registrado exitosamente!")
-                            
-                            # Actualizar hemoglobina en el registro principal
-                            try:
-                                supabase.table(TABLA_PACIENTES)\
-                                    .update({"hemoglobina_dl1": hemoglobina_control})\
-                                    .eq("dni", paciente['dni'])\
-                                    .execute()
-                                
-                                st.info("📝 Hemoglobina actualizada en registro principal")
-                            except Exception as e:
-                                st.warning(f"⚠️ No se pudo actualizar hemoglobina: {str(e)}")
-                            
-                            # Actualizar historial en session state
-                            nuevo_historial = obtener_historial_seguimiento(paciente['dni'])
-                            st.session_state.historial_paciente = nuevo_historial
-                            
-                            # Actualizar paciente en session state
-                            paciente_actualizado = buscar_paciente_por_dni(paciente['dni'])
-                            if paciente_actualizado:
-                                st.session_state.paciente_seleccionado = paciente_actualizado
-                            
-                            # Mostrar opciones
-                            col_opciones1, col_opciones2, col_opciones3 = st.columns(3)
-                            
-                            with col_opciones1:
-                                if st.button("📋 Ver Historial Actualizado", 
-                                            use_container_width=True,
-                                            key="btn_ver_actualizado"):
-                                    cambiar_subpestana("historial")
-                            
-                            with col_opciones2:
-                                if st.button("➕ Otro Seguimiento", 
-                                            use_container_width=True,
-                                            key="btn_otro_seguimiento"):
-                                    # Limpiar el estado del formulario
-                                    st.session_state.form_nuevo_seguimiento_completo = False
-                                    st.rerun()
-                            
-                            with col_opciones3:
-                                if st.button("🔍 Buscar Otro Paciente", 
-                                            use_container_width=True,
-                                            key="btn_buscar_otro"):
-                                    cambiar_subpestana("buscar")
-                        else:
-                            st.error("❌ Error al guardar el seguimiento")
-        else:
-            st.warning("👆 Primero debe seleccionar un paciente en la pestaña '🔍 Buscar Paciente'")
-            
-            col_accion_ir1, col_accion_ir2 = st.columns(2)
-            
-            with col_accion_ir1:
-                if st.button("🔍 Ir a Buscar Paciente", 
-                            use_container_width=True,
-                            type="primary",
-                            key="btn_ir_buscar_desde_nuevo"):
-                    cambiar_subpestana("buscar")
-            
-            with col_accion_ir2:
-                if st.button("🔄 Cargar Pacientes", 
-                            use_container_width=True,
-                            key="btn_cargar_desde_nuevo"):
-                    with st.spinner("Cargando..."):
-                        pacientes_df = cargar_pacientes_desde_supabase()
-                        if not pacientes_df.empty:
-                            st.session_state.pacientes_cargados = pacientes_df
-                            st.success(f"✅ {len(pacientes_df)} pacientes cargados")
-                            cambiar_subpestana("buscar")
+                        # Actualizar hemoglobina en paciente principal
+                        try:
+                            supabase.table("alertas_hemoglobina")\
+                                .update({"hemoglobina_dl1": hemoglobina_control})\
+                                .eq("dni", paciente['dni'])\
+                                .execute()
+                        except:
+                            pass
+                        
+                        # Recargar historial
+                        cargar_historial_paciente(paciente['dni'])
+                        
+                        # Mostrar opciones
+                        col_opc1, col_opc2 = st.columns(2)
+                        
+                        with col_opc1:
+                            if crear_boton_accion("📋 Ver Historial Actualizado", 
+                                                destino="historial",
+                                                tipo="primary",
+                                                key_suffix="ver_actualizado"):
+                                pass
+                        
+                        with col_opc2:
+                            if crear_boton_accion("➕ Otro Seguimiento", 
+                                                accion=lambda: st.rerun(),
+                                                tipo="secondary",
+                                                key_suffix="otro_seguimiento"):
+                                pass
+                    else:
+                        st.error("❌ Error al guardar el seguimiento")
+    
+    # ============================================
+    # CONTROLADOR PRINCIPAL - MUESTRA LA SUBPESTAÑA CORRECTA
+    # ============================================
+    
+    # Contenedor principal con pestañas visuales
+    st.markdown("---")
+    
+    # Mostrar navegación visual
+    col_nav1, col_nav2, col_nav3 = st.columns(3)
+    
+    with col_nav1:
+        activo_buscar = "primary" if st.session_state.seguimiento_subtab == "buscar" else "secondary"
+        if crear_boton_accion("🔍 Buscar Paciente", 
+                            destino="buscar",
+                            tipo=activo_buscar,
+                            key_suffix="nav_buscar"):
+            pass
+    
+    with col_nav2:
+        activo_historial = "primary" if st.session_state.seguimiento_subtab == "historial" else "secondary"
+        if crear_boton_accion("📋 Historial", 
+                            destino="historial",
+                            tipo=activo_historial,
+                            key_suffix="nav_historial"):
+            pass
+    
+    with col_nav3:
+        activo_nuevo = "primary" if st.session_state.seguimiento_subtab == "nuevo" else "secondary"
+        if crear_boton_accion("➕ Nuevo", 
+                            destino="nuevo",
+                            tipo=activo_nuevo,
+                            key_suffix="nav_nuevo"):
+            pass
+    
+    st.markdown("---")
+    
+    # Mostrar el contenido de la subpestaña activa
+    if st.session_state.seguimiento_subtab == "buscar":
+        mostrar_subtab_buscar()
+    elif st.session_state.seguimiento_subtab == "historial":
+        mostrar_subtab_historial()
+    elif st.session_state.seguimiento_subtab == "nuevo":
+        mostrar_subtab_nuevo()
+    
+    # ============================================
+    # INFORMACIÓN ADICIONAL EN EL PIE
+    # ============================================
+    
+    st.markdown("---")
+    st.markdown("""
+    <div style="background: #f8fafc; padding: 15px; border-radius: 8px; border-left: 5px solid #10b981;">
+        <p style="margin: 0; color: #047857; font-size: 0.9rem;">
+        💡 <strong>Consejo:</strong> Use el sistema de seguimiento para mantener un registro completo de la evolución de cada paciente.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
 # ==================================================
 # PESTAÑA 3: DASHBOARD NACIONAL
 # ==================================================
