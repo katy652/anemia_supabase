@@ -1960,307 +1960,303 @@ with tab1:
                     st.error("🔴 No hay conexión a Supabase")
 
 # ==================================================
-# PESTAÑA 2: SEGUIMIENTO CLÍNICO - VERSIÓN SUPER SIMPLE
+# PESTAÑA 2: SEGUIMIENTO CLÍNICO - SOLUCIÓN DEFINITIVA
 # ==================================================
 
 with tab2:
     st.markdown('<div class="section-title-green">🔬 SEGUIMIENTO CLÍNICO</div>', unsafe_allow_html=True)
     
     # ============================================
-    # VERSIÓN SIMPLE Y FUNCIONAL
+    # VERSIÓN CON JAVASCRIPT PARA NAVEGACIÓN
     # ============================================
     
-    # Usar tabs nativos de Streamlit (estos SIEMPRE funcionan)
-    tab_seg1, tab_seg2, tab_seg3 = st.tabs([
-        "🔍 Buscar Paciente",
-        "📋 Historial",
-        "➕ Nuevo"
-    ])
+    # Usamos un selectbox para navegar - ESTO SÍ FUNCIONA
+    opciones_navegacion = ["🔍 Buscar Paciente", "📋 Ver Historial", "➕ Nuevo Seguimiento"]
+    
+    # Inicializar en session state
+    if 'pagina_actual' not in st.session_state:
+        st.session_state.pagina_actual = "🔍 Buscar Paciente"
+    
+    # Selector de navegación
+    pagina_seleccionada = st.selectbox(
+        "Ir a:",
+        opciones_navegacion,
+        index=opciones_navegacion.index(st.session_state.pagina_actual),
+        key="selector_navegacion"
+    )
+    
+    # Actualizar session state si cambió
+    if pagina_seleccionada != st.session_state.pagina_actual:
+        st.session_state.pagina_actual = pagina_seleccionada
+    
+    st.markdown("---")
     
     # ============================================
-    # TAB 1: BUSCAR PACIENTE
+    # PÁGINA 1: BUSCAR PACIENTE
     # ============================================
-    with tab_seg1:
+    if st.session_state.pagina_actual == "🔍 Buscar Paciente":
         st.header("🔍 Buscar Paciente")
         
         # Cargar pacientes
-        if st.button("🔄 Cargar Pacientes", key="btn_cargar_seg1"):
-            try:
-                response = supabase.table("alertas_hemoglobina").select("*").execute()
-                if response.data:
-                    st.session_state.pacientes_cargados = pd.DataFrame(response.data)
-                    st.success(f"✅ {len(response.data)} pacientes cargados")
-                else:
-                    st.warning("No hay pacientes en la base de datos")
-            except Exception as e:
-                st.error(f"Error: {e}")
+        if st.button("🔄 Cargar Todos los Pacientes", key="btn_cargar_unico"):
+            with st.spinner("Cargando..."):
+                try:
+                    response = supabase.table("alertas_hemoglobina").select("*").execute()
+                    if response.data:
+                        st.session_state.datos_pacientes = pd.DataFrame(response.data)
+                        st.success(f"✅ {len(response.data)} pacientes cargados")
+                    else:
+                        st.warning("No hay pacientes registrados")
+                except Exception as e:
+                    st.error(f"Error: {e}")
         
-        # Mostrar pacientes si están cargados
-        if 'pacientes_cargados' in st.session_state and not st.session_state.pacientes_cargados.empty:
-            pacientes_df = st.session_state.pacientes_cargados
+        # Si hay datos cargados, mostrarlos
+        if 'datos_pacientes' in st.session_state and not st.session_state.datos_pacientes.empty:
+            df = st.session_state.datos_pacientes
             
-            # Búsqueda simple
-            buscar_texto = st.text_input("Buscar por nombre o DNI:", key="buscar_seg1")
+            # Búsqueda
+            buscar = st.text_input("🔎 Buscar por nombre o DNI:", key="buscar_input")
             
-            if buscar_texto:
-                mask = (pacientes_df['nombre_apellido'].str.contains(buscar_texto, case=False, na=False) |
-                       pacientes_df['dni'].astype(str).str.contains(buscar_texto, na=False))
-                pacientes_filtrados = pacientes_df[mask]
+            if buscar:
+                mask = (df['nombre_apellido'].str.contains(buscar, case=False, na=False) | 
+                       df['dni'].astype(str).str.contains(buscar, na=False))
+                df_filtrado = df[mask]
             else:
-                pacientes_filtrados = pacientes_df
+                df_filtrado = df
             
             # Mostrar tabla
-            if not pacientes_filtrados.empty:
-                # Seleccionar columnas importantes
-                mostrar_df = pacientes_filtrados[['nombre_apellido', 'dni', 'edad_meses', 'hemoglobina_dl1', 'riesgo']].copy()
-                mostrar_df.columns = ['Nombre', 'DNI', 'Edad (meses)', 'Hemoglobina', 'Riesgo']
-                
-                st.dataframe(mostrar_df, use_container_width=True)
+            if not df_filtrado.empty:
+                st.dataframe(
+                    df_filtrado[['nombre_apellido', 'dni', 'edad_meses', 'hemoglobina_dl1', 'riesgo']],
+                    use_container_width=True,
+                    height=300
+                )
                 
                 # Seleccionar paciente
-                opciones = [f"{row['nombre_apellido']} ({row['dni']})" for _, row in pacientes_filtrados.iterrows()]
-                paciente_seleccionado = st.selectbox("Seleccionar paciente:", opciones, key="select_paciente_seg1")
+                pacientes_lista = df_filtrado['nombre_apellido'].tolist()
+                paciente_seleccionado = st.selectbox("Seleccionar paciente:", pacientes_lista, key="select_paciente")
                 
                 if paciente_seleccionado:
-                    # Extraer DNI
-                    dni = paciente_seleccionado.split("(")[-1].replace(")", "").strip()
-                    st.session_state.paciente_actual_dni = dni
+                    # Obtener datos del paciente seleccionado
+                    paciente_data = df_filtrado[df_filtrado['nombre_apellido'] == paciente_seleccionado].iloc[0]
                     
-                    # Mostrar info básica
-                    paciente_info = pacientes_filtrados[pacientes_filtrados['dni'] == dni].iloc[0]
+                    # Guardar en session state
+                    st.session_state.paciente_seleccionado = paciente_data.to_dict()
                     
-                    col_info1, col_info2 = st.columns(2)
-                    with col_info1:
-                        st.metric("Nombre", paciente_info['nombre_apellido'])
-                        st.metric("Edad", f"{paciente_info['edad_meses']} meses")
+                    # Mostrar info
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.info(f"**DNI:** {paciente_data['dni']}")
+                        st.info(f"**Edad:** {paciente_data['edad_meses']} meses")
                     
-                    with col_info2:
-                        st.metric("Hemoglobina", f"{paciente_info['hemoglobina_dl1']} g/dL")
-                        st.metric("Riesgo", paciente_info['riesgo'])
+                    with col2:
+                        st.info(f"**Hemoglobina:** {paciente_data['hemoglobina_dl1']} g/dL")
+                        st.info(f"**Riesgo:** {paciente_data['riesgo']}")
                     
-                    # Botones de acción
-                    st.markdown("---")
-                    col_btn1, col_btn2 = st.columns(2)
-                    
-                    with col_btn1:
-                        if st.button("📋 Ver Historial", key="btn_ver_historial_seg1", use_container_width=True):
-                            # Cambiar a pestaña de historial
-                            st.session_state.ir_a_historial = True
-                    
-                    with col_btn2:
-                        if st.button("➕ Nuevo Seguimiento", key="btn_nuevo_seg_seg1", use_container_width=True):
-                            # Cambiar a pestaña nuevo
-                            st.session_state.ir_a_nuevo = True
+                    # BOTÓN QUE SÍ FUNCIONA - Usando un form
+                    with st.form("acciones_form"):
+                        col_btn1, col_btn2 = st.columns(2)
+                        
+                        with col_btn1:
+                            ver_historial = st.form_submit_button("📋 Ver Historial", use_container_width=True)
+                        
+                        with col_btn2:
+                            nuevo_seguimiento = st.form_submit_button("➕ Nuevo Seguimiento", use_container_width=True)
+                        
+                        if ver_historial:
+                            st.session_state.pagina_actual = "📋 Ver Historial"
+                            st.markdown('<script>window.location.reload()</script>', unsafe_allow_html=True)
+                        
+                        if nuevo_seguimiento:
+                            st.session_state.pagina_actual = "➕ Nuevo Seguimiento"
+                            st.markdown('<script>window.location.reload()</script>', unsafe_allow_html=True)
+        
+        else:
+            st.info("👆 Presiona 'Cargar Todos los Pacientes' para comenzar")
     
     # ============================================
-    # TAB 2: HISTORIAL
+    # PÁGINA 2: VER HISTORIAL
     # ============================================
-    with tab_seg2:
+    elif st.session_state.pagina_actual == "📋 Ver Historial":
         st.header("📋 Historial Clínico")
         
         # Verificar si hay paciente seleccionado
-        if 'paciente_actual_dni' in st.session_state:
-            dni = st.session_state.paciente_actual_dni
+        if 'paciente_seleccionado' not in st.session_state:
+            st.warning("⚠️ Primero seleccione un paciente en la página 'Buscar Paciente'")
             
-            # Obtener información del paciente
-            try:
-                response = supabase.table("alertas_hemoglobina")\
-                    .select("*")\
-                    .eq("dni", dni)\
-                    .execute()
-                
-                if response.data:
-                    paciente = response.data[0]
-                    
-                    # Mostrar información
-                    st.markdown(f"**Paciente:** {paciente['nombre_apellido']} | **DNI:** {dni}")
-                    st.markdown(f"**Edad:** {paciente['edad_meses']} meses | **Hb:** {paciente['hemoglobina_dl1']} g/dL")
-                    
-                    # Obtener historial
-                    try:
-                        hist_response = supabase.table("seguimiento_clinico")\
-                            .select("*")\
-                            .eq("dni_paciente", dni)\
-                            .order("fecha_seguimiento", desc=True)\
-                            .execute()
-                        
-                        if hist_response.data:
-                            historial_df = pd.DataFrame(hist_response.data)
-                            
-                            # Mostrar métricas
-                            col_met1, col_met2 = st.columns(2)
-                            with col_met1:
-                                st.metric("Total controles", len(historial_df))
-                            
-                            with col_met2:
-                                if not historial_df.empty:
-                                    ultima_fecha = historial_df.iloc[0]['fecha_seguimiento']
-                                    st.metric("Último control", ultima_fecha)
-                            
-                            # Mostrar tabla
-                            st.dataframe(
-                                historial_df[['fecha_seguimiento', 'hemoglobina_control', 'peso_control', 'talla_control', 'observaciones']],
-                                use_container_width=True
-                            )
-                        else:
-                            st.info("Este paciente no tiene historial de seguimiento.")
-                            
-                    except:
-                        st.info("No se pudo cargar el historial.")
-                
-                # Botones
-                col_hist1, col_hist2 = st.columns(2)
-                with col_hist1:
-                    if st.button("➕ Agregar Control", key="btn_add_hist", use_container_width=True):
-                        st.session_state.ir_a_nuevo = True
-                
-                with col_hist2:
-                    if st.button("🔍 Buscar Otro", key="btn_buscar_hist", use_container_width=True):
-                        st.session_state.ir_a_buscar = True
-                        
-            except:
-                st.error("Error al cargar información del paciente")
+            # Botón para volver
+            if st.button("🔙 Volver a Buscar", key="btn_volver_hist"):
+                st.session_state.pagina_actual = "🔍 Buscar Paciente"
+                st.markdown('<script>window.location.reload()</script>', unsafe_allow_html=True)
+        
         else:
-            st.warning("👈 Primero seleccione un paciente en la pestaña 'Buscar Paciente'")
-            if st.button("🔍 Ir a Buscar", key="btn_ir_buscar_hist", use_container_width=True):
-                st.session_state.ir_a_buscar = True
+            paciente = st.session_state.paciente_seleccionado
+            
+            # Mostrar info del paciente
+            st.markdown(f"**Paciente:** {paciente['nombre_apellido']} | **DNI:** {paciente['dni']}")
+            
+            # Cargar historial
+            if st.button("🔄 Cargar Historial", key="btn_cargar_historial"):
+                try:
+                    response = supabase.table("seguimiento_clinico")\
+                        .select("*")\
+                        .eq("dni_paciente", paciente['dni'])\
+                        .order("fecha_seguimiento", desc=True)\
+                        .execute()
+                    
+                    if response.data:
+                        st.session_state.historial_paciente = response.data
+                        st.success(f"✅ {len(response.data)} controles cargados")
+                    else:
+                        st.info("Este paciente no tiene historial de seguimiento")
+                        st.session_state.historial_paciente = []
+                        
+                except Exception as e:
+                    st.error(f"Error: {e}")
+            
+            # Mostrar historial si existe
+            if 'historial_paciente' in st.session_state and st.session_state.historial_paciente:
+                historial_df = pd.DataFrame(st.session_state.historial_paciente)
+                
+                # Métricas
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("Controles", len(historial_df))
+                
+                with col2:
+                    if not historial_df.empty:
+                        st.metric("Última Hb", f"{historial_df.iloc[0]['hemoglobina_control']} g/dL")
+                
+                with col3:
+                    if not historial_df.empty:
+                        st.metric("Último control", historial_df.iloc[0]['fecha_seguimiento'])
+                
+                # Tabla
+                st.dataframe(
+                    historial_df[['fecha_seguimiento', 'hemoglobina_control', 'peso_control', 'talla_control', 'observaciones']],
+                    use_container_width=True
+                )
+            
+            # Botones de acción
+            with st.form("acciones_historial"):
+                col_btn1, col_btn2 = st.columns(2)
+                
+                with col_btn1:
+                    agregar_control = st.form_submit_button("➕ Agregar Control", use_container_width=True)
+                
+                with col_btn2:
+                    buscar_otro = st.form_submit_button("🔍 Buscar Otro", use_container_width=True)
+                
+                if agregar_control:
+                    st.session_state.pagina_actual = "➕ Nuevo Seguimiento"
+                    st.markdown('<script>window.location.reload()</script>', unsafe_allow_html=True)
+                
+                if buscar_otro:
+                    st.session_state.pagina_actual = "🔍 Buscar Paciente"
+                    st.markdown('<script>window.location.reload()</script>', unsafe_allow_html=True)
     
     # ============================================
-    # TAB 3: NUEVO SEGUIMIENTO
+    # PÁGINA 3: NUEVO SEGUIMIENTO
     # ============================================
-    with tab_seg3:
+    elif st.session_state.pagina_actual == "➕ Nuevo Seguimiento":
         st.header("➕ Nuevo Seguimiento")
         
         # Verificar si hay paciente seleccionado
-        if 'paciente_actual_dni' in st.session_state:
-            dni = st.session_state.paciente_actual_dni
+        if 'paciente_seleccionado' not in st.session_state:
+            st.warning("⚠️ Primero seleccione un paciente en la página 'Buscar Paciente'")
             
-            # Obtener información del paciente
-            try:
-                response = supabase.table("alertas_hemoglobina")\
-                    .select("*")\
-                    .eq("dni", dni)\
-                    .execute()
-                
-                if response.data:
-                    paciente = response.data[0]
-                    
-                    # Mostrar info
-                    st.markdown(f"**Paciente:** {paciente['nombre_apellido']}")
-                    
-                    # Formulario simple
-                    with st.form("form_nuevo_seg_simple"):
-                        fecha = st.date_input("Fecha", value=datetime.now().date())
-                        hemoglobina = st.number_input("Hemoglobina (g/dL)", value=float(paciente.get('hemoglobina_dl1', 11.0)), min_value=0.0, max_value=20.0, step=0.1)
-                        peso = st.number_input("Peso (kg)", value=float(paciente.get('peso_kg', 12.0)), min_value=0.0, max_value=50.0, step=0.1)
-                        talla = st.number_input("Talla (cm)", value=float(paciente.get('talla_cm', 85.0)), min_value=0.0, max_value=150.0, step=0.1)
-                        observaciones = st.text_area("Observaciones")
-                        
-                        col_submit1, col_submit2 = st.columns(2)
-                        with col_submit1:
-                            submit = st.form_submit_button("💾 Guardar", use_container_width=True)
-                        
-                        with col_submit2:
-                            if st.form_submit_button("❌ Cancelar", use_container_width=True):
-                                st.session_state.ir_a_historial = True
-                        
-                        if submit:
-                            # Validar
-                            if not observaciones.strip():
-                                st.error("Ingrese observaciones")
-                            else:
-                                # Guardar en Supabase
-                                try:
-                                    datos = {
-                                        "dni_paciente": dni,
-                                        "fecha_seguimiento": fecha.strftime("%Y-%m-%d"),
-                                        "tipo_seguimiento": "Control",
-                                        "observaciones": observaciones,
-                                        "usuario_responsable": user_info['nombre'],
-                                        "hemoglobina_control": hemoglobina,
-                                        "peso_control": peso,
-                                        "talla_control": talla
-                                    }
-                                    
-                                    response = supabase.table("seguimiento_clinico").insert(datos).execute()
-                                    
-                                    if response.data:
-                                        st.success("✅ Seguimiento guardado exitosamente!")
-                                        
-                                        # Actualizar hemoglobina principal
-                                        try:
-                                            supabase.table("alertas_hemoglobina")\
-                                                .update({"hemoglobina_dl1": hemoglobina})\
-                                                .eq("dni", dni)\
-                                                .execute()
-                                        except:
-                                            pass
-                                        
-                                        # Mostrar opciones
-                                        col_opc1, col_opc2 = st.columns(2)
-                                        with col_opc1:
-                                            if st.button("📋 Ver Historial", key="btn_ver_despues", use_container_width=True):
-                                                st.session_state.ir_a_historial = True
-                                        
-                                        with col_opc2:
-                                            if st.button("➕ Otro Control", key="btn_otro_despues", use_container_width=True):
-                                                st.rerun()
-                                    else:
-                                        st.error("Error al guardar")
-                                        
-                                except Exception as e:
-                                    st.error(f"Error: {e}")
-            except:
-                st.error("Error al cargar paciente")
+            if st.button("🔙 Volver a Buscar", key="btn_volver_nuevo"):
+                st.session_state.pagina_actual = "🔍 Buscar Paciente"
+                st.markdown('<script>window.location.reload()</script>', unsafe_allow_html=True)
+        
         else:
-            st.warning("👈 Primero seleccione un paciente en la pestaña 'Buscar Paciente'")
-            if st.button("🔍 Ir a Buscar", key="btn_ir_buscar_nuevo", use_container_width=True):
-                st.session_state.ir_a_buscar = True
+            paciente = st.session_state.paciente_seleccionado
+            
+            # Mostrar info
+            st.info(f"**Paciente:** {paciente['nombre_apellido']} | **DNI:** {paciente['dni']}")
+            
+            # Formulario simple
+            with st.form("form_seguimiento", clear_on_submit=True):
+                fecha = st.date_input("Fecha del control", value=datetime.now().date())
+                hemoglobina = st.number_input("Hemoglobina (g/dL)", 
+                                             value=float(paciente.get('hemoglobina_dl1', 11.0)),
+                                             min_value=0.0, max_value=20.0, step=0.1)
+                peso = st.number_input("Peso (kg)", 
+                                      value=float(paciente.get('peso_kg', 12.0)),
+                                      min_value=0.0, max_value=50.0, step=0.1)
+                talla = st.number_input("Talla (cm)", 
+                                       value=float(paciente.get('talla_cm', 85.0)),
+                                       min_value=0.0, max_value=150.0, step=0.1)
+                observaciones = st.text_area("Observaciones", placeholder="Ingrese observaciones...")
+                
+                # Botones del formulario
+                col_submit1, col_submit2, col_submit3 = st.columns(3)
+                
+                with col_submit1:
+                    guardar = st.form_submit_button("💾 Guardar", use_container_width=True)
+                
+                with col_submit2:
+                    ver_hist = st.form_submit_button("📋 Ver Historial", use_container_width=True)
+                
+                with col_submit3:
+                    cancelar = st.form_submit_button("❌ Cancelar", use_container_width=True)
+                
+                # Acciones
+                if guardar:
+                    if not observaciones.strip():
+                        st.error("Ingrese observaciones")
+                    else:
+                        # Guardar en Supabase
+                        try:
+                            datos = {
+                                "dni_paciente": paciente['dni'],
+                                "fecha_seguimiento": fecha.strftime("%Y-%m-%d"),
+                                "tipo_seguimiento": "Control",
+                                "observaciones": observaciones,
+                                "usuario_responsable": user_info['nombre'],
+                                "hemoglobina_control": hemoglobina,
+                                "peso_control": peso,
+                                "talla_control": talla
+                            }
+                            
+                            response = supabase.table("seguimiento_clinico").insert(datos).execute()
+                            
+                            if response.data:
+                                st.success("✅ Seguimiento guardado exitosamente!")
+                                st.balloons()
+                                
+                                # Actualizar hemoglobina principal
+                                try:
+                                    supabase.table("alertas_hemoglobina")\
+                                        .update({"hemoglobina_dl1": hemoglobina})\
+                                        .eq("dni", paciente['dni'])\
+                                        .execute()
+                                except:
+                                    pass
+                                
+                                # Esperar y redirigir
+                                time.sleep(2)
+                                st.session_state.pagina_actual = "📋 Ver Historial"
+                                st.markdown('<script>window.location.reload()</script>', unsafe_allow_html=True)
+                            else:
+                                st.error("Error al guardar")
+                                
+                        except Exception as e:
+                            st.error(f"Error: {e}")
+                
+                if ver_hist:
+                    st.session_state.pagina_actual = "📋 Ver Historial"
+                    st.markdown('<script>window.location.reload()</script>', unsafe_allow_html=True)
+                
+                if cancelar:
+                    st.session_state.pagina_actual = "🔍 Buscar Paciente"
+                    st.markdown('<script>window.location.reload()</script>', unsafe_allow_html=True)
     
     # ============================================
-    # LÓGICA PARA CAMBIAR DE PESTAÑA
+    # PIE DE PÁGINA
     # ============================================
-    
-    # Esta función maneja los cambios de pestaña
-    def manejar_navegacion():
-        if st.session_state.get('ir_a_historial'):
-            # Cambiar a pestaña de historial
-            st.session_state.ir_a_historial = False
-            # No podemos cambiar tabs directamente, pero podemos usar JS
-            st.markdown("""
-            <script>
-            // Buscar el tab de historial y hacer click
-            const tabs = document.querySelectorAll('[data-testid="stTab"]');
-            if (tabs.length >= 2) {
-                tabs[1].click();  // El segundo tab es Historial
-            }
-            </script>
-            """, unsafe_allow_html=True)
-        
-        elif st.session_state.get('ir_a_nuevo'):
-            st.session_state.ir_a_nuevo = False
-            st.markdown("""
-            <script>
-            const tabs = document.querySelectorAll('[data-testid="stTab"]');
-            if (tabs.length >= 3) {
-                tabs[2].click();  // El tercer tab es Nuevo
-            }
-            </script>
-            """, unsafe_allow_html=True)
-        
-        elif st.session_state.get('ir_a_buscar'):
-            st.session_state.ir_a_buscar = False
-            st.markdown("""
-            <script>
-            const tabs = document.querySelectorAll('[data-testid="stTab"]');
-            if (tabs.length >= 1) {
-                tabs[0].click();  // El primer tab es Buscar
-            }
-            </script>
-            """, unsafe_allow_html=True)
-    
-    # Ejecutar la navegación
-    manejar_navegacion()
+    st.markdown("---")
+    st.caption(f"📌 Página actual: {st.session_state.pagina_actual}")
 # ==================================================
 # PESTAÑA 3: DASHBOARD NACIONAL
 # ==================================================
