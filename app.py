@@ -9,19 +9,15 @@ import time
 from datetime import datetime, timedelta
 from fpdf import FPDF
 
-# ==================================================
-# FUNCIÓN PDF CON FPDF - VERSIÓN CORREGIDA
-# ==================================================
-
 def generar_pdf_fpdf(paciente, historial):
     """
-    Genera PDF usando FPDF (sin reportlab, sin problemas de codificación)
+    Genera PDF usando FPDF (sin caracteres especiales problemáticos)
     """
     try:
         pdf = FPDF()
         pdf.add_page()
         
-        # Configurar fuentes estándar (no necesitamos add_font)
+        # Configurar fuentes estándar
         pdf.set_font("Arial", "B", 16)
         
         # Título
@@ -38,20 +34,44 @@ def generar_pdf_fpdf(paciente, historial):
         pdf.cell(0, 10, "INFORMACION DEL PACIENTE", 0, 1)
         pdf.set_font("Arial", "", 10)
         
+        # Limpiar caracteres especiales
+        def limpiar_texto(texto):
+            if not texto:
+                return "N/A"
+            # Reemplazar caracteres problemáticos
+            texto = str(texto)
+            reemplazos = {
+                '•': '-',
+                '–': '-',
+                '—': '-',
+                '‘': "'",
+                '’': "'",
+                '“': '"',
+                '”': '"',
+                '…': '...',
+                'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ú': 'u',
+                'Á': 'A', 'É': 'E', 'Í': 'I', 'Ó': 'O', 'Ú': 'U',
+                'ñ': 'n', 'Ñ': 'N',
+                'ü': 'u', 'Ü': 'U'
+            }
+            for char_orig, char_reemplazo in reemplazos.items():
+                texto = texto.replace(char_orig, char_reemplazo)
+            return texto
+        
         datos = [
-            f"Nombre: {paciente.get('nombre_apellido', 'N/A')}",
+            f"Nombre: {limpiar_texto(paciente.get('nombre_apellido', 'N/A'))}",
             f"DNI: {paciente.get('dni', 'N/A')}",
             f"Edad: {paciente.get('edad_meses', 'N/A')} meses",
-            f"Genero: {paciente.get('genero', 'N/A')}",
-            f"Region: {paciente.get('region', 'N/A')}",
+            f"Genero: {limpiar_texto(paciente.get('genero', 'N/A'))}",
+            f"Region: {limpiar_texto(paciente.get('region', 'N/A'))}",
             f"Telefono: {paciente.get('telefono', 'N/A')}",
             f"Hemoglobina actual: {paciente.get('hemoglobina_dl1', 'N/A')} g/dL",
-            f"Estado: {paciente.get('estado_paciente', 'N/A')}",
-            f"Riesgo: {paciente.get('riesgo', 'N/A')}"
+            f"Estado: {limpiar_texto(paciente.get('estado_paciente', 'N/A'))}",
+            f"Riesgo: {limpiar_texto(paciente.get('riesgo', 'N/A'))}"
         ]
         
         for dato in datos:
-            pdf.cell(0, 8, dato, 0, 1)
+            pdf.cell(0, 8, limpiar_texto(dato), 0, 1)
         
         pdf.ln(10)
         
@@ -80,20 +100,20 @@ def generar_pdf_fpdf(paciente, historial):
                 else:
                     pdf.set_fill_color(255, 255, 255)
                 
-                # Obtener datos
+                # Obtener y limpiar datos
                 fecha = control.get('fecha_seguimiento', 'N/A')[:10] if control.get('fecha_seguimiento') else 'N/A'
-                tipo = control.get('tipo_seguimiento', 'N/A')[:10]
+                tipo = limpiar_texto(control.get('tipo_seguimiento', 'N/A'))[:10]
                 hb = control.get('hemoglobina_actual', 'N/A')
                 if isinstance(hb, (int, float)):
                     hb = f"{hb:.1f}"
-                clasif = control.get('clasificacion_actual', 'N/A')[:10]
-                responsable = control.get('usuario_responsable', 'N/A')[:10]
+                clasif = limpiar_texto(control.get('clasificacion_actual', 'N/A'))[:10]
+                responsable = limpiar_texto(control.get('usuario_responsable', 'N/A'))[:10]
                 proximo = control.get('proximo_control', 'N/A')[:10] if control.get('proximo_control') else 'N/A'
                 
                 # Agregar fila
                 datos_fila = [fecha, tipo, hb, clasif, responsable, proximo]
                 for i, dato in enumerate(datos_fila):
-                    pdf.cell(col_widths[i], 8, dato, 1, 0, "C", 1)
+                    pdf.cell(col_widths[i], 8, limpiar_texto(dato), 1, 0, "C", 1)
                 pdf.ln()
             
             pdf.ln(10)
@@ -116,10 +136,11 @@ def generar_pdf_fpdf(paciente, historial):
                 minimo = min(valores_hb)
                 maximo = max(valores_hb)
                 
-                pdf.cell(0, 8, f"• Promedio de hemoglobina: {promedio:.1f} g/dL", 0, 1)
-                pdf.cell(0, 8, f"• Primera medicion: {primera:.1f} g/dL", 0, 1)
-                pdf.cell(0, 8, f"• Ultima medicion: {ultima:.1f} g/dL", 0, 1)
-                pdf.cell(0, 8, f"• Rango: {minimo:.1f} - {maximo:.1f} g/dL", 0, 1)
+                # Usar guión en lugar de bullet point
+                pdf.cell(0, 8, f"- Promedio de hemoglobina: {promedio:.1f} g/dL", 0, 1)
+                pdf.cell(0, 8, f"- Primera medicion: {primera:.1f} g/dL", 0, 1)
+                pdf.cell(0, 8, f"- Ultima medicion: {ultima:.1f} g/dL", 0, 1)
+                pdf.cell(0, 8, f"- Rango: {minimo:.1f} - {maximo:.1f} g/dL", 0, 1)
                 
                 if len(valores_hb) >= 2:
                     cambio = ultima - primera
@@ -134,7 +155,7 @@ def generar_pdf_fpdf(paciente, historial):
                     else:
                         tendencia = 'Estable'
                     
-                    pdf.cell(0, 8, f"• Tendencia: {tendencia}", 0, 1)
+                    pdf.cell(0, 8, f"- Tendencia: {tendencia}", 0, 1)
         
         else:
             pdf.set_font("Arial", "I", 10)
@@ -145,25 +166,32 @@ def generar_pdf_fpdf(paciente, historial):
         pdf.set_font("Arial", "I", 8)
         pdf.cell(0, 5, "Sistema Nixon v2.0 - Control de Anemia Infantil", 0, 1, "C")
         pdf.cell(0, 5, f"Generado el: {datetime.now().strftime('%d/%m/%Y %H:%M')}", 0, 1, "C")
-        pdf.cell(0, 5, "© 2024 - Uso medico profesional", 0, 1, "C")
+        pdf.cell(0, 5, "(c) 2024 - Uso medico profesional", 0, 1, "C")
         
-        # **CORRECCIÓN CRÍTICA: Usar output() sin encode()**
-        return pdf.output(dest='S').encode('latin-1')
+        # OPCIÓN 1: Usar latin-1 con texto limpio
+        return pdf.output(dest='S').encode('latin-1', errors='ignore')
         
     except Exception as e:
-        # Si falla, crear un PDF de error simple
+        # Si falla, crear un PDF de error simple SIN caracteres especiales
         try:
             pdf = FPDF()
             pdf.add_page()
             pdf.set_font("Arial", "B", 16)
             pdf.cell(0, 10, "ERROR AL GENERAR PDF", 0, 1, "C")
             pdf.set_font("Arial", "", 12)
-            pdf.multi_cell(0, 10, f"Error: {str(e)[:100]}")
-            return pdf.output(dest='S').encode('latin-1')
+            error_msg = str(e)[:100].replace('•', '-').replace('–', '-').replace('—', '-')
+            pdf.multi_cell(0, 10, f"Error: {error_msg}")
+            return pdf.output(dest='S').encode('latin-1', errors='ignore')
         except:
-            # Si todo falla, devolver bytes vacíos
-            return b""
-
+            # Si todo falla, devolver PDF mínimo
+            try:
+                pdf = FPDF()
+                pdf.add_page()
+                pdf.set_font("Arial", "B", 16)
+                pdf.cell(0, 10, "PDF GENERADO", 0, 1, "C")
+                return pdf.output(dest='S').encode('latin-1', errors='ignore')
+            except:
+                return b"PDF_ERROR"
 # ==================================================
 # SISTEMA DE LOGIN PARA 5 USUARIOS DE SALUD
 # ==================================================
