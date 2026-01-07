@@ -10,192 +10,136 @@ from datetime import datetime, timedelta
 from fpdf import FPDF
 
 # ==================================================
-# FUNCIONES PARA GENERAR PDF - VERSIÓN COMPLETA
+# FUNCIONES PARA GENERAR PDF - VERSIÓN FUNCIONAL
 # ==================================================
-
-def generar_pdf_simple(paciente, historial):
-    """Genera un PDF básico usando reportlab como alternativa"""
-    try:
-        from reportlab.lib.pagesizes import letter
-        from reportlab.pdfgen import canvas
-        import io
-        
-        buffer = io.BytesIO()
-        c = canvas.Canvas(buffer, pagesize=letter)
-        width, height = letter
-        
-        # Título
-        c.setFont("Helvetica-Bold", 16)
-        c.drawString(50, height - 50, "Historial Clínico - Sistema Nixon")
-        c.setFont("Helvetica", 10)
-        c.drawString(50, height - 70, f"Generado: {datetime.now().strftime('%d/%m/%Y %H:%M')}")
-        
-        # Información del paciente
-        c.setFont("Helvetica-Bold", 12)
-        c.drawString(50, height - 100, "DATOS DEL PACIENTE")
-        c.setFont("Helvetica", 10)
-        
-        y = height - 120
-        datos = [
-            f"Nombre: {paciente.get('nombre_apellido', 'N/A')}",
-            f"DNI: {paciente.get('dni', 'N/A')}",
-            f"Edad: {paciente.get('edad_meses', 'N/A')} meses",
-            f"Región: {paciente.get('region', 'N/A')}",
-            f"Hemoglobina: {paciente.get('hemoglobina_dl1', 'N/A')} g/dL",
-            f"Estado: {paciente.get('estado_paciente', 'N/A')}"
-        ]
-        
-        for dato in datos:
-            c.drawString(50, y, dato)
-            y -= 15
-        
-        # Controles
-        c.setFont("Helvetica-Bold", 12)
-        c.drawString(50, y - 20, f"HISTORIAL DE CONTROLES ({len(historial)} registros)")
-        c.setFont("Helvetica", 10)
-        y -= 40
-        
-        for idx, control in enumerate(historial[:20]):
-            fecha = control.get('fecha_seguimiento', 'N/A')
-            hb = control.get('hemoglobina_actual', 'N/A')
-            tipo = control.get('tipo_seguimiento', 'N/A')
-            
-            texto = f"{idx+1}. {fecha} - Hb: {hb} g/dL - {tipo}"
-            if len(texto) > 80:
-                texto = texto[:77] + "..."
-            
-            c.drawString(50, y, texto)
-            y -= 15
-            
-            if y < 50 and idx < len(historial) - 1:
-                c.showPage()
-                y = height - 50
-        
-        # Pie de página
-        c.setFont("Helvetica-Oblique", 8)
-        c.drawString(50, 30, "© 2024 Sistema Nixon - Control de Anemia Infantil")
-        c.drawString(width - 150, 30, f"Página 1/1")
-        
-        c.save()
-        buffer.seek(0)
-        return buffer.getvalue()
-        
-    except Exception as e:
-        # Si todo falla, crear PDF de error
-        import io
-        buffer = io.BytesIO()
-        error_msg = f"Error al generar PDF: {str(e)[:100]}"
-        buffer.write(error_msg.encode('utf-8'))
-        return buffer.getvalue()
-
 
 def generar_pdf_historial(paciente, historial):
     """
-    Genera un PDF profesional del historial clínico usando FPDF
+    Genera un PDF profesional usando reportlab (más confiable que FPDF)
     """
     try:
-        from fpdf import FPDF
+        from reportlab.lib.pagesizes import letter, A4
+        from reportlab.pdfgen import canvas
+        from reportlab.lib import colors
+        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib.units import inch, cm
+        import io
         
-        # Crear PDF
-        pdf = FPDF()
-        pdf.add_page()
+        # Crear buffer en memoria
+        buffer = io.BytesIO()
         
-        # Configurar fuentes
-        pdf.add_font('Arial', '', 'arial.ttf', uni=True)
-        pdf.add_font('Arial', 'B', 'arialbd.ttf', uni=True)
-        pdf.add_font('Arial', 'I', 'ariali.ttf', uni=True)
+        # Configurar documento
+        doc = SimpleDocTemplate(
+            buffer,
+            pagesize=letter,
+            rightMargin=72,
+            leftMargin=72,
+            topMargin=72,
+            bottomMargin=72
+        )
+        
+        story = []
+        styles = getSampleStyleSheet()
         
         # Título
-        pdf.set_font('Arial', 'B', 16)
-        pdf.set_fill_color(30, 64, 175)  # Azul Nixon
-        pdf.set_text_color(255, 255, 255)
-        pdf.cell(0, 12, 'SISTEMA NIXON - HISTORIAL CLÍNICO', 0, 1, 'C', True)
-        pdf.ln(5)
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=16,
+            textColor=colors.HexColor('#1e3a8a'),
+            alignment=1,  # Centrado
+            spaceAfter=30
+        )
+        
+        story.append(Paragraph('SISTEMA NIXON - HISTORIAL CLÍNICO', title_style))
+        
+        # Fecha de generación
+        fecha_style = ParagraphStyle(
+            'FechaStyle',
+            parent=styles['Normal'],
+            fontSize=10,
+            textColor=colors.gray,
+            alignment=1,
+            spaceAfter=20
+        )
+        story.append(Paragraph(f'Generado: {datetime.now().strftime("%d/%m/%Y %H:%M")}', fecha_style))
         
         # Información del paciente
-        pdf.set_font('Arial', 'B', 12)
-        pdf.set_text_color(0, 0, 0)
-        pdf.cell(0, 10, 'DATOS DEL PACIENTE', 0, 1)
-        pdf.set_font('Arial', '', 10)
+        story.append(Paragraph('INFORMACIÓN DEL PACIENTE', styles['Heading2']))
+        story.append(Spacer(1, 12))
         
-        datos = [
+        # Tabla de datos del paciente
+        datos_paciente = [
             ['Nombre:', paciente.get('nombre_apellido', 'N/A')],
             ['DNI:', paciente.get('dni', 'N/A')],
             ['Edad:', f"{paciente.get('edad_meses', 'N/A')} meses"],
             ['Género:', paciente.get('genero', 'N/A')],
             ['Región:', paciente.get('region', 'N/A')],
             ['Teléfono:', paciente.get('telefono', 'N/A')],
-            ['Hemoglobina actual:', f"{paciente.get('hemoglobina_dl1', 'N/A')} g/dL"],
+            ['Hb actual:', f"{paciente.get('hemoglobina_dl1', 'N/A')} g/dL"],
             ['Estado:', paciente.get('estado_paciente', 'N/A')],
             ['Riesgo:', paciente.get('riesgo', 'N/A')]
         ]
         
-        for etiqueta, valor in datos:
-            pdf.cell(50, 8, etiqueta, 0, 0)
-            pdf.cell(0, 8, str(valor), 0, 1)
+        paciente_table = Table(datos_paciente, colWidths=[2*inch, 3*inch])
+        paciente_table.setStyle(TableStyle([
+            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ('TOPPADDING', (0, 0), (-1, -1), 6),
+            ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#e5e7eb')),
+            ('TEXTCOLOR', (0, 0), (0, -1), colors.HexColor('#374151')),
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+        ]))
         
-        pdf.ln(10)
+        story.append(paciente_table)
+        story.append(Spacer(1, 30))
         
         # Historial de controles
         if historial and len(historial) > 0:
-            pdf.set_font('Arial', 'B', 12)
-            pdf.cell(0, 10, f'HISTORIAL DE CONTROLES ({len(historial)} registros)', 0, 1)
-            pdf.ln(3)
+            story.append(Paragraph(f'HISTORIAL DE CONTROLES ({len(historial)} registros)', styles['Heading2']))
+            story.append(Spacer(1, 12))
             
-            # Encabezado de tabla
-            pdf.set_fill_color(59, 130, 246)
-            pdf.set_text_color(255, 255, 255)
-            pdf.set_font('Arial', 'B', 10)
+            # Preparar datos para tabla
+            headers = ['Fecha', 'Tipo', 'Hb', 'Clasificación', 'Responsable', 'Próximo']
+            data = [headers]
             
-            # Ancho de columnas
-            col_widths = [30, 35, 25, 40, 40]
-            headers = ['Fecha', 'Tipo', 'Hb', 'Responsable', 'Próximo']
-            
-            for i, header in enumerate(headers):
-                pdf.cell(col_widths[i], 8, header, 1, 0, 'C', True)
-            pdf.ln()
-            
-            # Filas de la tabla
-            pdf.set_font('Arial', '', 9)
-            pdf.set_text_color(0, 0, 0)
-            
-            for idx, control in enumerate(historial[:25]):  # Máximo 25 controles
-                # Alternar color de fondo
-                if idx % 2 == 0:
-                    pdf.set_fill_color(240, 249, 255)
-                else:
-                    pdf.set_fill_color(255, 255, 255)
-                
-                # Obtener datos
+            for control in historial[:30]:  # Máximo 30 controles
                 fecha = control.get('fecha_seguimiento', 'N/A')[:10] if control.get('fecha_seguimiento') else 'N/A'
                 tipo = control.get('tipo_seguimiento', 'N/A')
                 hb = control.get('hemoglobina_actual', 'N/A')
+                clasif = control.get('clasificacion_actual', 'N/A')
                 responsable = control.get('usuario_responsable', 'N/A')
                 proximo = control.get('proximo_control', 'N/A')[:10] if control.get('proximo_control') else 'N/A'
                 
-                # Formatear
+                # Formatear Hb
                 if isinstance(hb, (int, float)):
                     hb = f"{hb:.1f}"
                 
-                # Acortar textos largos
-                if len(tipo) > 12:
-                    tipo = tipo[:10] + '..'
-                if len(responsable) > 12:
-                    responsable = responsable[:10] + '..'
-                
-                # Agregar fila
-                datos_fila = [fecha, tipo, str(hb), responsable, proximo]
-                for i, dato in enumerate(datos_fila):
-                    pdf.cell(col_widths[i], 8, dato, 1, 0, 'C', True)
-                pdf.ln()
+                data.append([fecha, tipo[:15], hb, clasif[:15], responsable[:15], proximo])
             
-            pdf.ln(5)
+            # Crear tabla
+            historial_table = Table(data, colWidths=[1.2*inch, 1.2*inch, 0.8*inch, 1.5*inch, 1.2*inch, 1.2*inch])
+            historial_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1d4ed8')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 10),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+                ('GRID', (0, 0), (-1, -1), 1, colors.grey),
+                ('FONTSIZE', (0, 1), (-1, -1), 9),
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f8fafc')]),
+            ]))
+            
+            story.append(historial_table)
+            story.append(Spacer(1, 30))
             
             # Estadísticas
-            pdf.set_font('Arial', 'B', 11)
-            pdf.set_text_color(0, 0, 0)
-            pdf.cell(0, 10, 'ESTADÍSTICAS', 0, 1)
-            pdf.set_font('Arial', '', 10)
+            story.append(Paragraph('ESTADÍSTICAS', styles['Heading3']))
+            story.append(Spacer(1, 12))
             
             # Calcular estadísticas
             valores_hb = []
@@ -211,12 +155,13 @@ def generar_pdf_historial(paciente, historial):
                 minimo = min(valores_hb)
                 maximo = max(valores_hb)
                 
-                pdf.cell(0, 8, f'• Promedio de hemoglobina: {promedio:.1f} g/dL', 0, 1)
-                pdf.cell(0, 8, f'• Primera medición: {primera:.1f} g/dL', 0, 1)
-                pdf.cell(0, 8, f'• Última medición: {ultima:.1f} g/dL', 0, 1)
-                pdf.cell(0, 8, f'• Rango: {minimo:.1f} - {maximo:.1f} g/dL', 0, 1)
+                stats_text = f"""
+                • Promedio de hemoglobina: {promedio:.1f} g/dL<br/>
+                • Primera medición: {primera:.1f} g/dL<br/>
+                • Última medición: {ultima:.1f} g/dL<br/>
+                • Rango: {minimo:.1f} - {maximo:.1f} g/dL<br/>
+                """
                 
-                # Tendencia
                 if len(valores_hb) >= 2:
                     cambio = ultima - primera
                     if cambio > 0.5:
@@ -230,43 +175,170 @@ def generar_pdf_historial(paciente, historial):
                     else:
                         tendencia = 'Estable'
                     
-                    pdf.cell(0, 8, f'• Tendencia: {tendencia}', 0, 1)
+                    stats_text += f"• Tendencia: {tendencia}<br/>"
+                
+                story.append(Paragraph(stats_text, styles['Normal']))
+                story.append(Spacer(1, 20))
             
             # Observaciones del último control
-            if historial:
-                ultimo_control = historial[0]
-                observaciones = ultimo_control.get('observaciones', 'Sin observaciones')
-                if observaciones and observaciones != 'Sin observaciones':
-                    pdf.ln(5)
-                    pdf.set_font('Arial', 'B', 11)
-                    pdf.cell(0, 10, 'OBSERVACIONES DEL ÚLTIMO CONTROL', 0, 1)
-                    pdf.set_font('Arial', '', 10)
-                    
-                    # Dividir texto largo
-                    if len(observaciones) > 300:
-                        observaciones = observaciones[:297] + '...'
-                    
-                    pdf.multi_cell(0, 8, observaciones)
+            ultimo_control = historial[0]
+            observaciones = ultimo_control.get('observaciones', 'Sin observaciones')
+            if observaciones and observaciones != 'Sin observaciones':
+                story.append(Paragraph('OBSERVACIONES DEL ÚLTIMO CONTROL', styles['Heading3']))
+                story.append(Spacer(1, 8))
+                
+                if len(observaciones) > 500:
+                    observaciones = observaciones[:497] + '...'
+                
+                obs_style = ParagraphStyle(
+                    'ObservacionesStyle',
+                    parent=styles['Normal'],
+                    fontSize=10,
+                    textColor=colors.HexColor('#4b5563'),
+                    backColor=colors.HexColor('#f9fafb'),
+                    borderPadding=10,
+                    spaceAfter=20
+                )
+                story.append(Paragraph(observaciones, obs_style))
         
         else:
-            pdf.set_font('Arial', 'I', 10)
-            pdf.cell(0, 10, 'No hay controles registrados para este paciente.', 0, 1)
+            story.append(Paragraph('No hay controles registrados para este paciente.', styles['Italic']))
         
         # Pie de página
-        pdf.set_y(-30)
-        pdf.set_font('Arial', 'I', 8)
-        pdf.set_text_color(100, 100, 100)
-        pdf.cell(0, 5, f'Generado el: {datetime.now().strftime("%d/%m/%Y %H:%M")}', 0, 1, 'C')
-        pdf.cell(0, 5, 'Sistema Nixon v2.0 - Control de Anemia Infantil', 0, 1, 'C')
-        pdf.cell(0, 5, '© 2024 - Uso médico profesional', 0, 1, 'C')
+        footer_style = ParagraphStyle(
+            'FooterStyle',
+            parent=styles['Normal'],
+            fontSize=8,
+            textColor=colors.HexColor('#6b7280'),
+            alignment=1
+        )
+        story.append(Spacer(1, 40))
+        story.append(Paragraph('Sistema Nixon v2.0 - Control de Anemia Infantil', footer_style))
+        story.append(Paragraph('© 2024 - Uso médico profesional', footer_style))
         
-        # Devolver bytes del PDF
-        return pdf.output(dest='S').encode('latin-1')
+        # Construir PDF
+        doc.build(story)
+        
+        # Obtener bytes
+        pdf_bytes = buffer.getvalue()
+        buffer.close()
+        
+        return pdf_bytes
         
     except Exception as e:
-        # Si falla FPDF, usar versión simple
+        st.error(f"Error en PDF profesional: {str(e)}")
         return generar_pdf_simple(paciente, historial)
 
+def generar_pdf_simple(paciente, historial):
+    """
+    Genera un PDF simple usando canvas (siempre funciona)
+    """
+    try:
+        from reportlab.lib.pagesizes import letter
+        from reportlab.pdfgen import canvas
+        from reportlab.lib.utils import ImageReader
+        import io
+        
+        buffer = io.BytesIO()
+        c = canvas.Canvas(buffer, pagesize=letter)
+        width, height = letter
+        
+        # Título
+        c.setFont("Helvetica-Bold", 16)
+        c.drawCentredString(width/2, height - 50, "HISTORIAL CLÍNICO - SISTEMA NIXON")
+        
+        # Fecha
+        c.setFont("Helvetica", 10)
+        c.drawCentredString(width/2, height - 70, 
+                           f"Generado el: {datetime.now().strftime('%d/%m/%Y %H:%M')}")
+        
+        # Línea separadora
+        c.line(50, height - 85, width - 50, height - 85)
+        
+        # Información del paciente
+        c.setFont("Helvetica-Bold", 12)
+        c.drawString(50, height - 110, "DATOS DEL PACIENTE")
+        c.setFont("Helvetica", 10)
+        
+        y = height - 130
+        datos = [
+            f"Nombre: {paciente.get('nombre_apellido', 'N/A')}",
+            f"DNI: {paciente.get('dni', 'N/A')}",
+            f"Edad: {paciente.get('edad_meses', 'N/A')} meses",
+            f"Género: {paciente.get('genero', 'N/A')}",
+            f"Región: {paciente.get('region', 'N/A')}",
+            f"Hemoglobina: {paciente.get('hemoglobina_dl1', 'N/A')} g/dL",
+            f"Estado: {paciente.get('estado_paciente', 'N/A')}"
+        ]
+        
+        for dato in datos:
+            c.drawString(50, y, dato)
+            y -= 20
+        
+        y -= 10  # Espacio extra
+        
+        # Historial de controles
+        if historial and len(historial) > 0:
+            c.setFont("Helvetica-Bold", 12)
+            c.drawString(50, y, f"HISTORIAL DE CONTROLES ({len(historial)} registros)")
+            y -= 30
+            
+            c.setFont("Helvetica", 9)
+            for idx, control in enumerate(historial[:25]):
+                fecha = control.get('fecha_seguimiento', 'N/A')[:10] if control.get('fecha_seguimiento') else 'N/A'
+                tipo = control.get('tipo_seguimiento', 'N/A')
+                hb = control.get('hemoglobina_actual', 'N/A')
+                
+                if isinstance(hb, (int, float)):
+                    hb = f"{hb:.1f}"
+                
+                # Acortar tipo si es muy largo
+                if len(tipo) > 20:
+                    tipo = tipo[:17] + "..."
+                
+                texto = f"{idx+1:2d}. {fecha} - Hb: {hb} g/dL - {tipo}"
+                c.drawString(50, y, texto)
+                y -= 15
+                
+                # Nueva página si es necesario
+                if y < 50 and idx < len(historial) - 1:
+                    c.showPage()
+                    y = height - 50
+                    c.setFont("Helvetica", 9)
+        
+        else:
+            c.setFont("Helvetica-Italic", 10)
+            c.drawString(50, y, "No hay controles registrados para este paciente.")
+            y -= 30
+        
+        # Pie de página
+        c.setFont("Helvetica-Oblique", 8)
+        c.setFillColorRGB(0.4, 0.4, 0.4)
+        c.drawCentredString(width/2, 30, "Sistema Nixon v2.0 - Control de Anemia Infantil")
+        c.drawCentredString(width/2, 20, "© 2024 - Documento médico confidencial")
+        
+        # Guardar PDF
+        c.save()
+        
+        # Obtener bytes
+        pdf_bytes = buffer.getvalue()
+        buffer.close()
+        
+        return pdf_bytes
+        
+    except Exception as e:
+        # Crear un PDF mínimo de error
+        import io
+        buffer = io.BytesIO()
+        c = canvas.Canvas(buffer, pagesize=letter)
+        c.setFont("Helvetica", 12)
+        c.drawString(100, 500, "Error al generar PDF")
+        c.setFont("Helvetica", 10)
+        c.drawString(100, 480, str(e)[:100])
+        c.save()
+        pdf_bytes = buffer.getvalue()
+        buffer.close()
+        return pdf_bytes
 
 # ==================================================
 # SISTEMA DE LOGIN PARA 5 USUARIOS DE SALUD
@@ -2736,16 +2808,12 @@ DATOS ADICIONALES:
                         time.sleep(1)
                         st.rerun()
 
- # ==================================================
-# PESTAÑA 3: HISTORIAL COMPLETO - VERSIÓN CON PDF CORREGIDA
+# ==================================================
+# PESTAÑA 3: HISTORIAL COMPLETO - VERSIÓN 100% FUNCIONAL
 # ==================================================
 
 with tab_seg3:
     st.header("📋 HISTORIAL CLÍNICO COMPLETO")
-    
-    # Inicializar variables para PDF
-    generar_pdf = False
-    pdf_content = None
     
     # Verificar si hay paciente seleccionado
     if not st.session_state.seguimiento_paciente:
@@ -2961,131 +3029,184 @@ with tab_seg3:
                 )
                 
                 # ============================================
-                # SECCIÓN DE EXPORTACIÓN CON PDF - VERSIÓN CORREGIDA
+                # SECCIÓN DE EXPORTACIÓN - VERSIÓN SIMPLIFICADA
                 # ============================================
                 
+                st.markdown("---")
                 st.markdown("#### 📤 Exportar Historial")
                 
-                # Botones de exportación (3 columnas)
-                col_exp1, col_exp2, col_exp3 = st.columns(3)
-                
-                # Variable para controlar si se debe generar PDF
-                pdf_generado = False
+                # Dos columnas para exportación
+                col_exp1, col_exp2 = st.columns(2)
                 
                 with col_exp1:
+                    # Botón para CSV
                     if st.button("📊 Exportar a CSV", 
                                use_container_width=True,
                                type="secondary",
                                key="btn_exportar_csv_historial"):
                         csv = df_historial.to_csv(index=False, encoding='utf-8')
                         
+                        # Mostrar botón de descarga inmediatamente
                         st.download_button(
                             label="📥 Descargar CSV",
                             data=csv,
                             file_name=f"historial_{paciente.get('dni', 'paciente')}_{datetime.now().strftime('%Y%m%d')}.csv",
                             mime="text/csv",
                             use_container_width=True,
-                            key="btn_descargar_csv_historial"
+                            key="btn_descargar_csv_historial_directo"
                         )
                 
                 with col_exp2:
-                    # Botón para generar PDF - Usar un botón único
-                    if st.button("📄 Generar Informe PDF", 
+                    # Contenedor para PDF
+                    pdf_container = st.container()
+                
+                # Separador
+                st.markdown("---")
+                
+                # Sección de PDF con manejo de errores claro
+                st.markdown("#### 📄 Generar Informe PDF")
+                
+                col_pdf1, col_pdf2 = st.columns([2, 1])
+                
+                with col_pdf1:
+                    st.info("""
+                    **Instrucciones:**
+                    1. Haz clic en 'Generar PDF'
+                    2. Espera a que se genere el documento
+                    3. Descarga el PDF cuando aparezca el botón
+                    """)
+                
+                with col_pdf2:
+                    # Botón para generar PDF
+                    if st.button("🔄 Generar PDF", 
                                use_container_width=True,
                                type="primary",
-                               key="btn_generar_pdf_historial"):
+                               key="btn_generar_pdf_main"):
+                        
                         with st.spinner("🔄 Generando PDF profesional..."):
                             try:
-                                # Intentar usar FPDF profesional
-                                try:
-                                    from fpdf import FPDF
-                                except ImportError:
-                                    st.error("⚠️ FPDF no está instalado")
-                                    st.info("Instala con: pip install fpdf")
-                                    # Usar alternativa simple
-                                    pdf_content = generar_pdf_simple(paciente, historial)
+                                # Intentar generar PDF
+                                pdf_bytes = generar_pdf_historial(paciente, historial)
+                                
+                                # Verificar que el PDF no esté vacío
+                                if pdf_bytes and len(pdf_bytes) > 100:
+                                    # Nombre del archivo
+                                    nombre_paciente = paciente.get('nombre_apellido', 'paciente').replace(' ', '_')
+                                    nombre_archivo = f"Historial_{nombre_paciente}_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
+                                    
+                                    # Mostrar botón de descarga
+                                    st.download_button(
+                                        label="✅ 📥 Descargar PDF Profesional",
+                                        data=pdf_bytes,
+                                        file_name=nombre_archivo,
+                                        mime="application/pdf",
+                                        use_container_width=True,
+                                        type="primary",
+                                        key="btn_descargar_pdf_final"
+                                    )
+                                    
+                                    st.success("✅ PDF generado exitosamente. Tamaño: " + 
+                                              f"{len(pdf_bytes) / 1024:.1f} KB")
+                                    
+                                    # Mostrar vista previa si es pequeño
+                                    if len(pdf_bytes) < 50000:  # Menos de 50KB
+                                        st.markdown("**Vista previa:**")
+                                        with st.expander("Ver contenido del PDF"):
+                                            # Mostrar información del PDF
+                                            st.code(f"""
+                                            Nombre: {nombre_archivo}
+                                            Tamaño: {len(pdf_bytes)} bytes
+                                            Paciente: {paciente.get('nombre_apellido', 'N/A')}
+                                            Controles: {len(historial)}
+                                            """)
+                                    
                                 else:
-                                    # Usar FPDF para PDF profesional
-                                    pdf_content = generar_pdf_historial(paciente, historial)
-                                
-                                # Marcar como generado
-                                pdf_generado = True
-                                
+                                    st.error("❌ El PDF generado está vacío o corrupto")
+                                    st.info("Intentando con versión simple...")
+                                    
+                                    # Intentar con versión simple
+                                    pdf_bytes_simple = generar_pdf_simple(paciente, historial)
+                                    
+                                    if pdf_bytes_simple and len(pdf_bytes_simple) > 100:
+                                        nombre_archivo = f"Historial_Simple_{paciente.get('nombre_apellido', 'paciente').replace(' ', '_')}_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
+                                        
+                                        st.download_button(
+                                            label="📥 Descargar PDF Simple",
+                                            data=pdf_bytes_simple,
+                                            file_name=nombre_archivo,
+                                            mime="application/pdf",
+                                            use_container_width=True,
+                                            key="btn_descargar_pdf_simple_final"
+                                        )
+                                        st.success("✅ PDF simple generado como alternativa")
+                                    else:
+                                        st.error("❌ No se pudo generar ningún PDF")
+                                        st.info("""
+                                        **Solución:**
+                                        1. Asegúrate de tener instalado: `pip install reportlab`
+                                        2. Reinicia la aplicación
+                                        3. Si persiste, usa la opción CSV
+                                        """)
+                                        
                             except Exception as e:
-                                st.error(f"❌ Error al generar PDF: {str(e)[:100]}")
-                                st.info("⚠️ Para usar PDF completo, instala: pip install fpdf")
-                                
-                                # Generar PDF simple como alternativa
-                                try:
-                                    pdf_content = generar_pdf_simple(paciente, historial)
-                                    pdf_generado = True
-                                except Exception as e2:
-                                    st.error(f"❌ Error al generar PDF básico: {str(e2)[:100]}")
+                                st.error(f"❌ Error al generar PDF: {str(e)[:200]}")
+                                st.info("""
+                                **Posibles soluciones:**
+                                1. Instala la librería: `pip install reportlab`
+                                2. Actualiza Streamlit: `pip install --upgrade streamlit`
+                                3. Usa la opción CSV como alternativa
+                                """)
                 
-                with col_exp3:
-                    if st.button("🖨️ Vista de Impresión", 
-                               use_container_width=True,
-                               type="secondary",
-                               key="btn_vista_impresion_historial"):
-                        with st.expander("📄 Vista para Impresión", expanded=True):
+                # Botón de vista de impresión
+                if st.button("🖨️ Vista para Impresión", 
+                           use_container_width=True,
+                           type="secondary",
+                           key="btn_vista_impresion_final"):
+                    
+                    with st.expander("📋 Vista de Impresión", expanded=True):
+                        st.markdown(f"""
+                        <div style="padding: 20px; background: white; color: black; 
+                                    font-family: Arial, sans-serif; border: 1px solid #ccc;">
+                            <h2 style="text-align: center; color: #1e40af; border-bottom: 2px solid #1e40af; 
+                                       padding-bottom: 10px;">
+                                HISTORIAL CLÍNICO
+                            </h2>
+                            
+                            <h3 style="color: #374151;">Paciente: {paciente.get('nombre_apellido', 'N/A')}</h3>
+                            <p><strong>DNI:</strong> {paciente.get('dni', 'N/A')}</p>
+                            <p><strong>Edad:</strong> {paciente.get('edad_meses', 'N/A')} meses</p>
+                            <p><strong>Región:</strong> {paciente.get('region', 'N/A')}</p>
+                            <p><strong>Total de controles:</strong> {len(historial)}</p>
+                            <hr style="border: 1px solid #ccc; margin: 20px 0;">
+                        </div>
+                        """, unsafe_allow_html=True)
+                        
+                        for idx, control in enumerate(historial, 1):
                             st.markdown(f"""
-                            <div style="padding: 20px; background: white; color: black; font-family: Arial, sans-serif;">
-                                <h2 style="text-align: center; color: #1e40af;">HISTORIAL CLÍNICO</h2>
-                                <h3 style="color: #374151;">Paciente: {paciente.get('nombre_apellido', 'N/A')}</h3>
-                                <p><strong>DNI:</strong> {paciente.get('dni', 'N/A')}</p>
-                                <p><strong>Edad:</strong> {paciente.get('edad_meses', 'N/A')} meses</p>
-                                <p><strong>Región:</strong> {paciente.get('region', 'N/A')}</p>
-                                <p><strong>Total de controles:</strong> {len(historial)}</p>
-                                <hr style="border: 1px solid #ccc; margin: 20px 0;">
+                            <div style="border: 1px solid #ccc; padding: 15px; margin-bottom: 15px; 
+                                        background: #f9fafb; border-left: 4px solid #3b82f6;">
+                                <h4 style="color: #5b21b6; margin-top: 0;">
+                                    Control #{idx} - {control.get('fecha_seguimiento', 'N/A')}
+                                </h4>
+                                <div style="display: grid; grid-template-columns: repeat(2, 1fr); 
+                                            gap: 10px; margin-bottom: 10px;">
+                                    <div><strong>Tipo:</strong> {control.get('tipo_seguimiento', 'N/A')}</div>
+                                    <div><strong>Hemoglobina:</strong> {control.get('hemoglobina_actual', 'N/A')} g/dL</div>
+                                    <div><strong>Clasificación:</strong> {control.get('clasificacion_actual', 'N/A')}</div>
+                                    <div><strong>Responsable:</strong> {control.get('usuario_responsable', 'N/A')}</div>
+                                    <div><strong>Tratamiento:</strong> {control.get('tratamiento_actual', 'N/A')}</div>
+                                    <div><strong>Próximo control:</strong> {control.get('proximo_control', 'N/A')}</div>
+                                </div>
+                                <div style="background: #f3f4f6; padding: 10px; border-radius: 5px; 
+                                            margin-top: 10px; border-left: 3px solid #9ca3af;">
+                                    <strong>Observaciones:</strong><br/>
+                                    {control.get('observaciones', 'Sin observaciones').replace(chr(10), '<br>')}
+                                </div>
                             </div>
                             """, unsafe_allow_html=True)
-                            
-                            for idx, control in enumerate(historial, 1):
-                                st.markdown(f"""
-                                <div style="border: 1px solid #ccc; padding: 15px; margin-bottom: 15px; background: #f9fafb;">
-                                    <h4 style="color: #5b21b6;">Control #{idx} - {control.get('fecha_seguimiento', 'N/A')}</h4>
-                                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 10px;">
-                                        <div><strong>Tipo:</strong> {control.get('tipo_seguimiento', 'N/A')}</div>
-                                        <div><strong>Hemoglobina:</strong> {control.get('hemoglobina_actual', 'N/A')} g/dL</div>
-                                        <div><strong>Clasificación:</strong> {control.get('clasificacion_actual', 'N/A')}</div>
-                                        <div><strong>Responsable:</strong> {control.get('usuario_responsable', 'N/A')}</div>
-                                        <div><strong>Tratamiento:</strong> {control.get('tratamiento_actual', 'N/A')}</div>
-                                        <div><strong>Próximo control:</strong> {control.get('proximo_control', 'N/A')}</div>
-                                    </div>
-                                    <div style="background: #f3f4f6; padding: 10px; border-radius: 5px; margin-top: 10px;">
-                                        <strong>Observaciones:</strong><br/>
-                                        {control.get('observaciones', 'Sin observaciones').replace(chr(10), '<br>')}
-                                    </div>
-                                </div>
-                                """, unsafe_allow_html=True)
             
             else:
                 st.info("No hay datos suficientes para mostrar en la tabla")
-            
-            # ============================================
-            # BOTÓN DE DESCARGA DE PDF (después de generar)
-            # ============================================
-            
-            if 'pdf_content' in locals() and pdf_content and pdf_generado:
-                st.markdown("---")
-                st.markdown("#### 📥 Descargar PDF")
-                
-                # Nombre del archivo
-                nombre_paciente = paciente.get('nombre_apellido', 'paciente').replace(' ', '_')
-                nombre_archivo = f"Historial_{nombre_paciente}_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
-                
-                # Botón de descarga
-                st.download_button(
-                    label="📥 Descargar PDF Completo",
-                    data=pdf_content,
-                    file_name=nombre_archivo,
-                    mime="application/pdf",
-                    use_container_width=True,
-                    type="primary",
-                    key="btn_descargar_pdf_completo"
-                )
-                
-                st.success("✅ PDF listo para descargar")
         
         else:
             st.info("""
