@@ -2019,135 +2019,173 @@ with tab2:
     ])
     
     # ============================================
-    # PESTAÑA 1: BUSCAR PACIENTE - CORREGIDA
-    # ============================================
+# PESTAÑA 1: BUSCAR PACIENTE - VERSIÓN CORREGIDA
+# ============================================
+
+with tab_seg1:
+    st.header("🔍 BUSCAR PACIENTE PARA SEGUIMIENTO")
     
-    with tab_seg1:
-        st.header("🔍 BUSCAR PACIENTE PARA SEGUIMIENTO")
+    # Botón para cargar pacientes - KEY ÚNICO
+    if st.button("🔄 Cargar Todos los Pacientes", type="primary", use_container_width=True, key="btn_cargar_pacientes_seg1"):
+        cargar_todos_pacientes()
+    
+    # Verificar si hay datos cargados
+    if not st.session_state.seguimiento_datos_pacientes.empty:
+        df = st.session_state.seguimiento_datos_pacientes
         
-        # Botón para cargar pacientes - KEY ÚNICO
-        if st.button("🔄 Cargar Todos los Pacientes", type="primary", use_container_width=True, key="btn_cargar_pacientes_seg1"):
-            cargar_todos_pacientes()
+        # Búsqueda - KEY ÚNICO
+        buscar = st.text_input("🔎 Buscar por nombre, DNI o región:", 
+                             placeholder="Ej: 'Mia' o '10096525' o 'LIMA'",
+                             key="buscar_paciente_input")
         
-        # Verificar si hay datos cargados
-        if not st.session_state.seguimiento_datos_pacientes.empty:
-            df = st.session_state.seguimiento_datos_pacientes
+        if buscar:
+            # Convertir a string para búsqueda
+            mask = (df['nombre_apellido'].astype(str).str.contains(buscar, case=False, na=False) |
+                   df['dni'].astype(str).str.contains(buscar, na=False) |
+                   df['region'].astype(str).str.contains(buscar, case=False, na=False))
+            df_filtrado = df[mask]
+        else:
+            df_filtrado = df
+        
+        # Mostrar resultados
+        if not df_filtrado.empty:
+            st.write(f"📊 **{len(df_filtrado)} pacientes encontrados**")
             
-            # Búsqueda - KEY ÚNICO
-            buscar = st.text_input("🔎 Buscar por nombre, DNI o región:", 
-                                 placeholder="Ej: 'Mia' o '10096525' o 'LIMA'",
-                                 key="buscar_paciente_input")
+            # Crear lista de selección
+            opciones = []
+            for _, row in df_filtrado.iterrows():
+                opcion_text = f"{row.get('nombre_apellido', 'N/A')} - DNI: {row.get('dni', 'N/A')} - Edad: {row.get('edad_meses', 'N/A')} meses - Hb: {row.get('hemoglobina_dl1', 'N/A')} g/dL"
+                opciones.append((opcion_text, row.get('dni')))
             
-            if buscar:
-                # Convertir a string para búsqueda
-                mask = (df['nombre_apellido'].astype(str).str.contains(buscar, case=False, na=False) |
-                       df['dni'].astype(str).str.contains(buscar, na=False) |
-                       df['region'].astype(str).str.contains(buscar, case=False, na=False))
-                df_filtrado = df[mask]
-            else:
-                df_filtrado = df
-            
-            # Mostrar resultados
-            if not df_filtrado.empty:
-                st.write(f"📊 **{len(df_filtrado)} pacientes encontrados**")
+            # Selector - KEY ÚNICO
+            if opciones:
+                opcion_seleccionada = st.selectbox(
+                    "Seleccione un paciente:",
+                    options=[op[0] for op in opciones],
+                    placeholder="Elija un paciente de la lista...",
+                    key="select_paciente_seguimiento"
+                )
                 
-                # Crear lista de selección
-                opciones = []
-                for _, row in df_filtrado.iterrows():
-                    opcion_text = f"{row.get('nombre_apellido', 'N/A')} - DNI: {row.get('dni', 'N/A')} - Edad: {row.get('edad_meses', 'N/A')} meses - Hb: {row.get('hemoglobina_dl1', 'N/A')} g/dL"
-                    opciones.append((opcion_text, row.get('dni')))
+                # Encontrar DNI seleccionado
+                dni_seleccionado = None
+                for opcion_text, dni in opciones:
+                    if opcion_text == opcion_seleccionada:
+                        dni_seleccionado = dni
+                        break
                 
-                # Selector - KEY ÚNICO
-                if opciones:
-                    opcion_seleccionada = st.selectbox(
-                        "Seleccione un paciente:",
-                        options=[op[0] for op in opciones],
-                        placeholder="Elija un paciente de la lista...",
-                        key="select_paciente_seguimiento"
-                    )
+                if dni_seleccionado:
+                    paciente_info = df_filtrado[df_filtrado['dni'] == dni_seleccionado].iloc[0]
                     
-                    # Encontrar DNI seleccionado
-                    dni_seleccionado = None
-                    for opcion_text, dni in opciones:
-                        if opcion_text == opcion_seleccionada:
-                            dni_seleccionado = dni
-                            break
+                    # Mostrar información del paciente seleccionado
+                    col_show1, col_show2 = st.columns(2)
                     
-                    if dni_seleccionado:
-                        paciente_info = df_filtrado[df_filtrado['dni'] == dni_seleccionado].iloc[0]
+                    with col_show1:
+                        st.info(f"**Paciente:** {paciente_info['nombre_apellido']}")
+                        st.info(f"**DNI:** {paciente_info['dni']}")
+                        st.info(f"**Edad:** {paciente_info['edad_meses']} meses")
+                    
+                    with col_show2:
+                        st.info(f"**Hemoglobina:** {paciente_info['hemoglobina_dl1']} g/dL")
+                        st.info(f"**Región:** {paciente_info['region']}")
+                        st.info(f"**Estado:** {paciente_info.get('estado_paciente', 'N/A')}")
+                    
+                    # Botón para seleccionar - KEY ÚNICO
+                    if st.button("✅ Seleccionar este paciente", 
+                               use_container_width=True, 
+                               type="primary",
+                               key=f"btn_seleccionar_{dni_seleccionado}"):
                         
-                        # Mostrar información del paciente seleccionado
-                        col_show1, col_show2 = st.columns(2)
+                        # GUARDAR PACIENTE EN SESSION STATE
+                        st.session_state.seguimiento_paciente = paciente_info.to_dict()
                         
-                        with col_show1:
-                            st.info(f"**Paciente:** {paciente_info['nombre_apellido']}")
-                            st.info(f"**DNI:** {paciente_info['dni']}")
-                            st.info(f"**Edad:** {paciente_info['edad_meses']} meses")
-                        
-                        with col_show2:
-                            st.info(f"**Hemoglobina:** {paciente_info['hemoglobina_dl1']} g/dL")
-                            st.info(f"**Región:** {paciente_info['region']}")
-                            st.info(f"**Estado:** {paciente_info.get('estado_paciente', 'N/A')}")
-                        
-                        # Botón para seleccionar - KEY ÚNICO
-                        if st.button("✅ Seleccionar este paciente", 
-                                   use_container_width=True, 
-                                   type="primary",
-                                   key=f"btn_seleccionar_{dni_seleccionado}"):
+                        # Cargar historial
+                        try:
+                            response = supabase.table("seguimiento_clinico")\
+                                .select("*")\
+                                .eq("dni_paciente", str(dni_seleccionado))\
+                                .order("fecha_seguimiento", desc=True)\
+                                .execute()
                             
-                            # GUARDAR PACIENTE EN SESSION STATE
-                            st.session_state.seguimiento_paciente = paciente_info.to_dict()
-                            
-                            # Cargar historial
-                            try:
-                                response = supabase.table("seguimiento_clinico")\
-                                    .select("*")\
-                                    .eq("dni_paciente", str(dni_seleccionado))\
-                                    .order("fecha_seguimiento", desc=True)\
-                                    .execute()
-                                
-                                if response.data:
-                                    st.session_state.seguimiento_historial = response.data
-                                    cantidad = len(response.data)
-                                else:
-                                    st.session_state.seguimiento_historial = []
-                                    cantidad = 0
-                                    
-                            except Exception:
+                            if response.data:
+                                st.session_state.seguimiento_historial = response.data
+                                cantidad = len(response.data)
+                            else:
                                 st.session_state.seguimiento_historial = []
                                 cantidad = 0
-                            
-                            st.success(f"✅ Paciente seleccionado: {paciente_info['nombre_apellido']}")
-                            st.info(f"📋 Se cargaron {cantidad} controles previos")
-                            
-                            # Redirección usando JavaScript
-                            st.markdown("""
-                            <script>
-                            const tabs = document.querySelectorAll('button[role="tab"]');
-                            if (tabs.length >= 3) {
-                                tabs[2].click(); // Índice 2 = tercera pestaña (Nuevo Seguimiento)
-                            }
-                            </script>
-                            """, unsafe_allow_html=True)
-                            
-                            time.sleep(1)
-                            st.rerun()
+                                
+                        except Exception:
+                            st.session_state.seguimiento_historial = []
+                            cantidad = 0
+                        
+                        st.success(f"✅ Paciente seleccionado: {paciente_info['nombre_apellido']}")
+                        st.info(f"📋 Se cargaron {cantidad} controles previos")
+                        
+                        # Redirección usando JavaScript
+                        st.markdown("""
+                        <script>
+                        const tabs = document.querySelectorAll('button[role="tab"]');
+                        if (tabs.length >= 3) {
+                            tabs[2].click(); // Índice 2 = tercera pestaña (Nuevo Seguimiento)
+                        }
+                        </script>
+                        """, unsafe_allow_html=True)
+                        
+                        time.sleep(1)
+                        st.rerun()
+            
+            # Mostrar tabla de pacientes - VERSIÓN CORREGIDA
+            st.markdown("### 📋 Lista de Pacientes")
+            
+            # Definir columnas a mostrar
+            columnas_mostrar = ['nombre_apellido', 'dni', 'edad_meses', 'hemoglobina_dl1', 'region', 'riesgo']
+            
+            # Filtrar solo columnas existentes
+            columnas_disponibles = [c for c in columnas_mostrar if c in df_filtrado.columns]
+            
+            if columnas_disponibles:
+                # Crear copia del dataframe para limpiar datos
+                df_mostrar = df_filtrado[columnas_disponibles].copy()
                 
-                # Mostrar tabla de pacientes
-                st.markdown("### 📋 Lista de Pacientes")
-                columnas_mostrar = ['nombre_apellido', 'dni', 'edad_meses', 'hemoglobina_dl1', 'region', 'riesgo']
-                columnas_disponibles = [c for c in columnas_mostrar if c in df_filtrado.columns]
+                # Limpiar datos: reemplazar NaN con "N/A" y asegurar tipos string
+                for col in df_mostrar.columns:
+                    df_mostrar[col] = df_mostrar[col].fillna('N/A')
+                    df_mostrar[col] = df_mostrar[col].astype(str)
                 
+                # Renombrar columnas para mejor presentación
+                nombres_columnas = {
+                    'nombre_apellido': 'Nombre',
+                    'dni': 'DNI',
+                    'edad_meses': 'Edad (meses)',
+                    'hemoglobina_dl1': 'Hb (g/dL)',
+                    'region': 'Región',
+                    'riesgo': 'Riesgo'
+                }
+                
+                # Aplicar renombres solo a las columnas existentes
+                nombres_columnas_filtrados = {k: v for k, v in nombres_columnas.items() if k in df_mostrar.columns}
+                df_mostrar = df_mostrar.rename(columns=nombres_columnas_filtrados)
+                
+                # Mostrar tabla con formato mejorado
                 st.dataframe(
-                    df_filtrado[columnas_disponibles],
+                    df_mostrar,
                     use_container_width=True,
-                    height=300
+                    height=300,
+                    hide_index=True,
+                    column_config={
+                        "Nombre": st.column_config.TextColumn("Nombre", width="large"),
+                        "DNI": st.column_config.TextColumn("DNI", width="medium"),
+                        "Edad (meses)": st.column_config.NumberColumn("Edad", format="%d"),
+                        "Hb (g/dL)": st.column_config.NumberColumn("Hb", format="%.1f"),
+                        "Región": st.column_config.TextColumn("Región", width="medium"),
+                        "Riesgo": st.column_config.TextColumn("Riesgo", width="medium")
+                    }
                 )
             else:
-                st.info("🔍 No se encontraron pacientes con los criterios de búsqueda")
+                st.info("No hay datos suficientes para mostrar en la tabla")
         else:
-            st.info("👆 Presiona 'Cargar Todos los Pacientes' para buscar pacientes")
-    
+            st.info("🔍 No se encontraron pacientes con los criterios de búsqueda")
+    else:
+        st.info("👆 Presiona 'Cargar Todos los Pacientes' para buscar pacientes")
     # ============================================
     # PESTAÑA 2: NUEVO SEGUIMIENTO - CORREGIDA
     # ============================================
