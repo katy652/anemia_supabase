@@ -1970,7 +1970,7 @@ with tab2:
     st.markdown("""
     <div style="background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%); 
                 padding: 1rem; border-radius: 10px; border-left: 5px solid #0ea5e9; 
-                margin-bottom: 2rem;">
+                margin-bottom: 1rem;">
         <p style="margin: 0; color: #0369a1; font-weight: 500;">
         ✅ <strong>Sistema de seguimientos clínicos con conexión directa a Supabase</strong><br>
         <small>Seleccione un paciente y navegue entre las pestañas para gestionar su seguimiento</small>
@@ -2055,159 +2055,229 @@ with tab2:
     ])
     
     # ============================================
-# PESTAÑA 1: BUSCAR PACIENTE (SOLO BÚSQUEDA)
-# ============================================
-
-with tab_seg1:
-    st.header("🔍 BUSCAR PACIENTE PARA SEGUIMIENTO")
+    # PESTAÑA 1: BUSCAR PACIENTE (SOLO BÚSQUEDA)
+    # ============================================
     
-    # Sección para cargar pacientes
-    col_carga1, col_carga2 = st.columns([3, 1])
-    
-    with col_carga1:
-        st.markdown("### 📋 Cargar Base de Datos")
-        st.caption("Cargue todos los pacientes para poder seleccionar uno")
-    
-    with col_carga2:
-        if st.button("🔄 Cargar Todos los Pacientes", use_container_width=True, type="primary"):
-            if cargar_todos_pacientes():
-                st.success(f"✅ {len(st.session_state.seguimiento_datos_pacientes)} pacientes cargados")
-            else:
-                st.warning("No hay pacientes registrados en la base de datos")
-    
-    st.markdown("---")
-    
-    # Mostrar pacientes si existen
-    if not st.session_state.seguimiento_datos_pacientes.empty:
-        df = st.session_state.seguimiento_datos_pacientes
+    with tab_seg1:
+        st.header("🔍 BUSCAR PACIENTE PARA SEGUIMIENTO")
         
-        # Búsqueda por texto - CORRECCIÓN: usar 'buscar' en lugar de 'busbar'
-        buscar = st.text_input("🔎 Buscar por nombre, DNI o región:", 
-                             placeholder="Ej: 'Marcos' o '44545432' o 'AMAZONAS'")
-        
-        if buscar:
-            mask = (df['nombre_apellido'].str.contains(buscar, case=False, na=False) | 
-                   df['dni'].astype(str).str.contains(buscar, na=False) |  # <-- AQUÍ ERA 'busbar', ahora es 'buscar'
-                   df['region'].str.contains(buscar, case=False, na=False))
-            df_filtrado = df[mask]
-        else:
-            df_filtrado = df
-        
-        # Resto del código permanece igual...
-        # Mostrar tabla con opción de selección
-        if not df_filtrado.empty:
-            # Crear una lista de opciones para el selectbox
-            opciones_pacientes = []
-            for _, row in df_filtrado.iterrows():
-                opcion = f"{row['nombre_apellido']} - DNI: {row['dni']} - Edad: {row['edad_meses']} meses - Hb: {row['hemoglobina_dl1']} g/dL"
-                opciones_pacientes.append((opcion, row['dni']))
+        # MOSTRAR SI YA HAY UN PACIENTE SELECCIONADO
+        if st.session_state.seguimiento_paciente:
+            paciente_actual = st.session_state.seguimiento_paciente
             
-            # Selector de pacientes
-            opcion_seleccionada = st.selectbox(
-                "Seleccione un paciente:",
-                options=[op[0] for op in opciones_pacientes],
-                index=None,
-                placeholder="Elija un paciente de la lista..."
-            )
-            
-            # Extraer DNI del paciente seleccionado
-            dni_seleccionado = None
-            if opcion_seleccionada:
-                for opcion, dni in opciones_pacientes:
-                    if opcion == opcion_seleccionada:
-                        dni_seleccionado = dni
-                        break
-            
-            # Mostrar información del paciente seleccionado
-            if dni_seleccionado:
-                paciente_info = df_filtrado[df_filtrado['dni'] == dni_seleccionado].iloc[0]
-                
-                # Guardar en session state
-                st.session_state.seguimiento_paciente = paciente_info.to_dict()
-                
-                # Mostrar información en tarjetas
-                st.markdown("### 🩺 INFORMACIÓN DEL PACIENTE")
-                
-                col_info1, col_info2 = st.columns(2)
-                
-                with col_info1:
-                    st.markdown("""
-                    <div style="background: #f0f9ff; padding: 1rem; border-radius: 8px; border: 1px solid #bae6fd;">
-                        <h4 style="color: #0369a1; margin-top: 0;">📋 Datos Personales</h4>
-                        <p><strong>Nombre:</strong> {nombre}</p>
-                        <p><strong>DNI:</strong> {dni}</p>
-                        <p><strong>Edad:</strong> {edad} meses</p>
-                        <p><strong>Género:</strong> {genero}</p>
+            # TARJETA COMPACTA DEL PACIENTE ACTUAL
+            st.markdown(f"""
+            <div style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); 
+                        padding: 1rem; border-radius: 10px; border: 2px solid #7dd3fc; 
+                        margin-bottom: 1rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h4 style="margin: 0 0 5px 0; color: #0369a1;">📋 Paciente Actualmente Seleccionado</h4>
+                        <div style="display: flex; gap: 20px; font-size: 0.9rem;">
+                            <div><strong>👤 Nombre:</strong> {paciente_actual['nombre_apellido']}</div>
+                            <div><strong>🆔 DNI:</strong> {paciente_actual['dni']}</div>
+                            <div><strong>🎂 Edad:</strong> {paciente_actual['edad_meses']} meses</div>
+                            <div><strong>🩺 Hb:</strong> {paciente_actual['hemoglobina_dl1']} g/dL</div>
+                        </div>
                     </div>
-                    """.format(
-                        nombre=paciente_info['nombre_apellido'],
-                        dni=paciente_info['dni'],
-                        edad=paciente_info['edad_meses'],
-                        genero=paciente_info['genero']
-                    ), unsafe_allow_html=True)
-                
-                with col_info2:
-                    hb_medida = paciente_info['hemoglobina_dl1']
-                    # Clasificar anemia
-                    clasificacion, recomendacion, _ = clasificar_anemia(hb_medida, paciente_info['edad_meses'])
-                    
-                    st.markdown("""
-                    <div style="background: #fef2f2; padding: 1rem; border-radius: 8px; border: 1px solid #fecaca;">
-                        <h4 style="color: #dc2626; margin-top: 0;">🩺 Datos Clínicos</h4>
-                        <p><strong>Hb original:</strong> {hb} g/dL</p>
-                        <p><strong>Clasificación:</strong> {clasificacion}</p>
-                        <p><strong>Recomendación:</strong> {recomendacion}</p>
-                    </div>
-                    """.format(
-                        hb=hb_medida,
-                        clasificacion=clasificacion,
-                        recomendacion=recomendacion
-                    ), unsafe_allow_html=True)
-                
-                # Información adicional
-                st.markdown("""
-                <div style="background: #f0fdf4; padding: 1rem; border-radius: 8px; border: 1px solid #bbf7d0; margin-top: 1rem;">
-                    <h4 style="color: #059669; margin-top: 0;">📍 Información Adicional</h4>
-                    <p><strong>Región:</strong> {region}</p>
-                    <p><strong>Altitud:</strong> {altitud} msnm</p>
-                    <p><strong>Nivel educativo:</strong> {nivel_edu}</p>
-                    <p><strong>Estado:</strong> {estado}</p>
+                    <button onclick="window.location.reload()" style="
+                        background: #dc2626; color: white; border: none; padding: 8px 16px; 
+                        border-radius: 6px; cursor: pointer; font-weight: bold;">
+                        🔄 Cambiar
+                    </button>
                 </div>
-                """.format(
-                    region=paciente_info['region'],
-                    altitud=paciente_info.get('altitud_msnm', 'N/A'),
-                    nivel_edu=paciente_info.get('nivel_educativo', 'N/A'),
-                    estado=paciente_info.get('estado_paciente', 'Activo')
-                ), unsafe_allow_html=True)
+            </div>
+            """, unsafe_allow_html=True)
+        
+        # Sección para cargar pacientes
+        col_carga1, col_carga2 = st.columns([3, 1])
+        
+        with col_carga1:
+            st.markdown("### 📋 Cargar Base de Datos")
+            st.caption("Cargue todos los pacientes para poder seleccionar uno")
+        
+        with col_carga2:
+            if st.button("🔄 Cargar Todos los Pacientes", use_container_width=True, type="primary"):
+                if cargar_todos_pacientes():
+                    st.success(f"✅ {len(st.session_state.seguimiento_datos_pacientes)} pacientes cargados")
+                else:
+                    st.warning("No hay pacientes registrados en la base de datos")
+        
+        st.markdown("---")
+        
+        # Mostrar pacientes si existen
+        if not st.session_state.seguimiento_datos_pacientes.empty:
+            df = st.session_state.seguimiento_datos_pacientes
+            
+            # Búsqueda por texto
+            buscar = st.text_input("🔎 Buscar por nombre, DNI o región:", 
+                                 placeholder="Ej: 'Marcos' o '44545432' o 'AMAZONAS'")
+            
+            if buscar:
+                mask = (df['nombre_apellido'].str.contains(buscar, case=False, na=False) | 
+                       df['dni'].astype(str).str.contains(buscar, na=False) |
+                       df['region'].str.contains(buscar, case=False, na=False))
+                df_filtrado = df[mask]
+            else:
+                df_filtrado = df
+            
+            # Mostrar tabla con opción de selección
+            if not df_filtrado.empty:
+                # Crear una lista de opciones para el selectbox
+                opciones_pacientes = []
+                for _, row in df_filtrado.iterrows():
+                    opcion = f"{row['nombre_apellido']} - DNI: {row['dni']} - Edad: {row['edad_meses']} meses - Hb: {row['hemoglobina_dl1']} g/dL"
+                    opciones_pacientes.append((opcion, row['dni']))
                 
-                # Botón para ir directamente a Seguimiento
-                st.markdown("---")
-                col_acc1, col_acc2 = st.columns(2)
+                # Selector de pacientes
+                opcion_seleccionada = st.selectbox(
+                    "Seleccione un paciente:",
+                    options=[op[0] for op in opciones_pacientes],
+                    index=None,
+                    placeholder="Elija un paciente de la lista..."
+                )
                 
-                with col_acc1:
-                    if st.button("📝 Ir a Seguimiento", 
-                               use_container_width=True, 
-                               type="primary",
-                               help="Ir a la pestaña de seguimiento para este paciente"):
-                        # Cambiar a la pestaña de seguimiento
-                        st.success(f"✅ Paciente {paciente_info['nombre_apellido']} seleccionado")
-                        # No podemos cambiar pestañas programáticamente, pero mostramos mensaje
-                        st.info("👆 Ahora vaya a la pestaña '📝 Nuevo Seguimiento' para continuar")
+                # Extraer DNI del paciente seleccionado
+                dni_seleccionado = None
+                if opcion_seleccionada:
+                    for opcion, dni in opciones_pacientes:
+                        if opcion == opcion_seleccionada:
+                            dni_seleccionado = dni
+                            break
                 
-                with col_acc2:
-                    if st.button("📋 Ver Historial", 
-                               use_container_width=True,
-                               type="secondary",
-                               help="Ver historial completo del paciente"):
-                        cargar_historial_paciente(dni_seleccionado)
-                        st.success("✅ Historial cargado")
-                        st.info("👆 Ahora vaya a la pestaña '📋 Historial Completo' para ver el historial")
+                # Mostrar información del paciente seleccionado
+                if dni_seleccionado:
+                    paciente_info = df_filtrado[df_filtrado['dni'] == dni_seleccionado].iloc[0]
+                    
+                    # Guardar en session state
+                    st.session_state.seguimiento_paciente = paciente_info.to_dict()
+                    
+                    # INFORMACIÓN COMPACTA EN UNA SOLA FILA
+                    st.markdown("### 🩺 INFORMACIÓN DEL PACIENTE")
+                    
+                    # Primera fila: Datos principales
+                    col1, col2, col3, col4 = st.columns(4)
+                    
+                    with col1:
+                        st.markdown(f"""
+                        <div style="background: #f0f9ff; padding: 1rem; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 0.9rem; color: #0369a1; margin-bottom: 5px;">👤 Nombre</div>
+                            <div style="font-weight: bold; color: #1e40af;">{paciente_info['nombre_apellido'][:15]}{'...' if len(paciente_info['nombre_apellido']) > 15 else ''}</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    
+                    with col2:
+                        st.markdown(f"""
+                        <div style="background: #f0f9ff; padding: 1rem; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 0.9rem; color: #0369a1; margin-bottom: 5px;">🆔 DNI</div>
+                            <div style="font-weight: bold; color: #1e40af;">{paciente_info['dni']}</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    
+                    with col3:
+                        st.markdown(f"""
+                        <div style="background: #f0f9ff; padding: 1rem; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 0.9rem; color: #0369a1; margin-bottom: 5px;">🎂 Edad</div>
+                            <div style="font-weight: bold; color: #1e40af;">{paciente_info['edad_meses']} meses</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    
+                    with col4:
+                        genero_texto = "👧 Niña" if paciente_info['genero'] == 'F' else "👦 Niño"
+                        st.markdown(f"""
+                        <div style="background: #f0f9ff; padding: 1rem; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 0.9rem; color: #0369a1; margin-bottom: 5px;">⚧ Género</div>
+                            <div style="font-weight: bold; color: #1e40af;">{genero_texto}</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    
+                    # Segunda fila: Datos clínicos
+                    col5, col6, col7, col8 = st.columns(4)
+                    
+                    with col5:
+                        hb_medida = paciente_info['hemoglobina_dl1']
+                        st.markdown(f"""
+                        <div style="background: #fef2f2; padding: 1rem; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 0.9rem; color: #dc2626; margin-bottom: 5px;">🩺 Hemoglobina</div>
+                            <div style="font-weight: bold; color: #b91c1c;">{hb_medida} g/dL</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    
+                    with col6:
+                        # Clasificar anemia
+                        clasificacion, recomendacion, _ = clasificar_anemia(hb_medida, paciente_info['edad_meses'])
+                        
+                        # Color según severidad
+                        if "SEVERA" in clasificacion:
+                            color_bg = "#fee2e2"
+                            color_text = "#dc2626"
+                        elif "MODERADA" in clasificacion:
+                            color_bg = "#fef3c7"
+                            color_text = "#d97706"
+                        elif "LEVE" in clasificacion:
+                            color_bg = "#dbeafe"
+                            color_text = "#2563eb"
+                        else:
+                            color_bg = "#d1fae5"
+                            color_text = "#059669"
+                        
+                        st.markdown(f"""
+                        <div style="background: {color_bg}; padding: 1rem; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 0.9rem; color: {color_text}; margin-bottom: 5px;">📊 Clasificación</div>
+                            <div style="font-weight: bold; color: {color_text};">{clasificacion[:12]}{'...' if len(clasificacion) > 12 else ''}</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    
+                    with col7:
+                        st.markdown(f"""
+                        <div style="background: #f0fdf4; padding: 1rem; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 0.9rem; color: #059669; margin-bottom: 5px;">📍 Región</div>
+                            <div style="font-weight: bold; color: #047857;">{paciente_info['region'][:10]}{'...' if len(paciente_info['region']) > 10 else ''}</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    
+                    with col8:
+                        riesgo = paciente_info.get('riesgo', 'N/A')
+                        st.markdown(f"""
+                        <div style="background: #fef3c7; padding: 1rem; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 0.9rem; color: #d97706; margin-bottom: 5px;">⚠️ Riesgo</div>
+                            <div style="font-weight: bold; color: #92400e;">{riesgo[:10]}{'...' if len(riesgo) > 10 else ''}</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    
+                    # Botón para ir directamente a Seguimiento
+                    st.markdown("---")
+                    col_acc1, col_acc2, col_acc3 = st.columns(3)
+                    
+                    with col_acc1:
+                        if st.button("📝 Ir a Seguimiento", 
+                                   use_container_width=True, 
+                                   type="primary",
+                                   help="Ir a la pestaña de seguimiento para este paciente"):
+                            st.success(f"✅ Paciente {paciente_info['nombre_apellido']} seleccionado")
+                            st.info("👆 Ahora vaya a la pestaña '📝 Nuevo Seguimiento' para continuar")
+                    
+                    with col_acc2:
+                        if st.button("📋 Ver Historial", 
+                                   use_container_width=True,
+                                   type="secondary",
+                                   help="Ver historial completo del paciente"):
+                            cargar_historial_paciente(dni_seleccionado)
+                            st.success("✅ Historial cargado")
+                            st.info("👆 Ahora vaya a la pestaña '📋 Historial Completo' para ver el historial")
+                    
+                    with col_acc3:
+                        if st.button("🔄 Cambiar Paciente", 
+                                   use_container_width=True,
+                                   type="secondary",
+                                   help="Seleccionar otro paciente"):
+                            st.session_state.seguimiento_paciente = None
+                            st.success("✅ Selección limpiada")
+                            st.rerun()
         
         else:
-            st.warning("⚠️ No se encontraron pacientes con esos criterios")
+            st.info("👆 Presione 'Cargar Todos los Pacientes' para comenzar la búsqueda")
     
-    else:
-        st.info("👆 Presione 'Cargar Todos los Pacientes' para comenzar la búsqueda")
     # ============================================
     # PESTAÑA 2: NUEVO SEGUIMIENTO (FORMULARIO COMPLETO)
     # ============================================
@@ -2233,20 +2303,56 @@ with tab_seg1:
         else:
             paciente = st.session_state.seguimiento_paciente
             
-            # Mostrar información del paciente
-            st.markdown(f"""
-            <div style="background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); 
-                        padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem;">
-                <h3 style="margin: 0 0 10px 0; color: #1e40af;">📋 Paciente Seleccionado</h3>
-                <p style="margin: 5px 0;"><strong>Nombre:</strong> {paciente['nombre_apellido']}</p>
-                <p style="margin: 5px 0;"><strong>DNI:</strong> {paciente['dni']} | <strong>Edad:</strong> {paciente['edad_meses']} meses</p>
-                <p style="margin: 5px 0;"><strong>Hemoglobina actual:</strong> {paciente['hemoglobina_dl1']} g/dL</p>
-                <p style="margin: 5px 0;"><strong>Estado:</strong> {paciente.get('estado_paciente', 'Activo')}</p>
-            </div>
-            """, unsafe_allow_html=True)
+            # CABECERA COMPACTA DEL PACIENTE EN UNA SOLA FILA
+            col_header1, col_header2, col_header3, col_header4, col_header5 = st.columns([2, 1, 1, 1, 1])
+            
+            with col_header1:
+                st.markdown(f"""
+                <div style="background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); 
+                            padding: 0.8rem; border-radius: 8px; margin-bottom: 1rem;">
+                    <div style="font-weight: bold; color: #1e40af; margin-bottom: 5px;">📋 PACIENTE ACTUAL</div>
+                    <div style="font-size: 1.1rem; color: #1e3a8a;">{paciente['nombre_apellido']}</div>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            with col_header2:
+                st.markdown(f"""
+                <div style="background: #e0f2fe; padding: 0.8rem; border-radius: 8px; text-align: center; margin-bottom: 1rem;">
+                    <div style="font-size: 0.8rem; color: #0369a1;">🆔 DNI</div>
+                    <div style="font-weight: bold; color: #1e40af;">{paciente['dni']}</div>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            with col_header3:
+                st.markdown(f"""
+                <div style="background: #e0f2fe; padding: 0.8rem; border-radius: 8px; text-align: center; margin-bottom: 1rem;">
+                    <div style="font-size: 0.8rem; color: #0369a1;">🎂 Edad</div>
+                    <div style="font-weight: bold; color: #1e40af;">{paciente['edad_meses']} m</div>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            with col_header4:
+                hb_color = "#dc2626" if paciente['hemoglobina_dl1'] < 11 else "#d97706" if paciente['hemoglobina_dl1'] < 12 else "#059669"
+                st.markdown(f"""
+                <div style="background: #e0f2fe; padding: 0.8rem; border-radius: 8px; text-align: center; margin-bottom: 1rem;">
+                    <div style="font-size: 0.8rem; color: #0369a1;">🩺 Hb</div>
+                    <div style="font-weight: bold; color: {hb_color};">{paciente['hemoglobina_dl1']} g/dL</div>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            with col_header5:
+                if st.button("🔄 Cambiar", 
+                           use_container_width=True,
+                           type="secondary",
+                           help="Seleccionar otro paciente"):
+                    st.session_state.seguimiento_paciente = None
+                    st.success("✅ Paciente deseleccionado")
+                    st.rerun()
+            
+            st.markdown("---")
             
             # FORMULARIO DE SEGUIMIENTO - SIEMPRE VISIBLE
-            with st.form("form_seguimiento_completo", clear_on_submit=True):
+            with st.form("form_seguimiento_completo", clear_on_submit=False):
                 st.subheader("📊 Datos del Control Actual")
                 
                 # Fecha y hora
@@ -2291,13 +2397,15 @@ with tab_seg1:
                     paciente['edad_meses'], peso_control, talla_control, paciente['genero']
                 )
                 
-                # Mostrar evaluación nutricional
-                st.info(f"""
-                **Evaluación Nutricional:**
-                - Peso para la edad: **{estado_peso}**
-                - Talla para la edad: **{estado_talla}**
-                - Estado nutricional: **{estado_nutricional}**
-                """)
+                # Mostrar evaluación nutricional en línea
+                col_nut1, col_nut2, col_nut3 = st.columns(3)
+                with col_nut1:
+                    st.info(f"**Peso:** {estado_peso}")
+                with col_nut2:
+                    st.info(f"**Talla:** {estado_talla}")
+                with col_nut3:
+                    color_nut = "#dc2626" if "DESNUTRICIÓN" in estado_nutricional else "#d97706" if "SOBREPESO" in estado_nutricional else "#059669"
+                    st.markdown(f"**Estado:** <span style='color:{color_nut}'>{estado_nutricional}</span>", unsafe_allow_html=True)
                 
                 st.markdown("---")
                 
@@ -2314,14 +2422,14 @@ with tab_seg1:
                 observaciones = st.text_area(
                     "Observaciones clínicas*",
                     placeholder="Describa el estado del paciente, síntomas, evolución, respuesta al tratamiento...",
-                    height=120,
+                    height=100,
                     help="Observaciones detalladas sobre el control"
                 )
                 
                 tratamiento_actual = st.text_area(
                     "Tratamiento actual o modificaciones",
                     placeholder="Describa el tratamiento que sigue el paciente, dosis, frecuencia...",
-                    height=100,
+                    height=80,
                     help="Información sobre el tratamiento en curso"
                 )
                 
@@ -2412,26 +2520,19 @@ with tab_seg1:
                                     except Exception as e:
                                         st.warning(f"⚠️ No se pudo actualizar hemoglobina principal: {e}")
                                     
-                                    # Mostrar resumen
-                                    st.markdown("""
-                                    <div style="background: #f0fdf4; padding: 1rem; border-radius: 8px; border: 1px solid #bbf7d0;">
-                                        <h4 style="color: #059669; margin-top: 0;">📋 RESUMEN DEL CONTROL</h4>
-                                        <p><strong>Fecha:</strong> {fecha}</p>
-                                        <p><strong>Hemoglobina:</strong> {hb} g/dL</p>
-                                        <p><strong>Peso/Talla:</strong> {peso} kg / {talla} cm</p>
-                                        <p><strong>Estado nutricional:</strong> {estado_nut}</p>
-                                        <p><strong>Próximo control:</strong> {proximo}</p>
-                                    </div>
-                                    """.format(
-                                        fecha=fecha_control.strftime('%d/%m/%Y'),
-                                        hb=hemoglobina_control,
-                                        peso=peso_control,
-                                        talla=talla_control,
-                                        estado_nut=estado_nutricional,
-                                        proximo=proximo_control.strftime('%d/%m/%Y')
-                                    ), unsafe_allow_html=True)
+                                    # Mostrar resumen compacto
+                                    col_res1, col_res2, col_res3, col_res4 = st.columns(4)
+                                    with col_res1:
+                                        st.metric("📅 Fecha", fecha_control.strftime('%d/%m'))
+                                    with col_res2:
+                                        st.metric("🩺 Hb", f"{hemoglobina_control} g/dL")
+                                    with col_res3:
+                                        st.metric("⚖️ Peso", f"{peso_control} kg")
+                                    with col_res4:
+                                        st.metric("📏 Talla", f"{talla_control} cm")
                                     
                                     # Botones de acción después de guardar
+                                    st.markdown("---")
                                     col_acc1, col_acc2 = st.columns(2)
                                     
                                     with col_acc1:
@@ -2482,24 +2583,58 @@ with tab_seg1:
         else:
             paciente = st.session_state.seguimiento_paciente
             
-            # Mostrar información del paciente
-            st.markdown(f"""
-            <div style="background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%); 
-                        padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem;">
-                <h3 style="margin: 0 0 10px 0; color: #5b21b6;">📊 Historial de: {paciente['nombre_apellido']}</h3>
-                <p style="margin: 5px 0;"><strong>DNI:</strong> {paciente['dni']} | <strong>Edad:</strong> {paciente['edad_meses']} meses</p>
-                <p style="margin: 5px 0;"><strong>Región:</strong> {paciente['region']} | <strong>Altitud:</strong> {paciente.get('altitud_msnm', 'N/A')} msnm</p>
-                <p style="margin: 5px 0;"><strong>Hemoglobina actual:</strong> {paciente['hemoglobina_dl1']} g/dL | <strong>Riesgo:</strong> {paciente.get('riesgo', 'N/A')}</p>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            # Botón para cargar/actualizar historial
-            col_hist1, col_hist2 = st.columns([3, 1])
+            # CABECERA COMPACTA EN UNA FILA
+            col_hist1, col_hist2, col_hist3, col_hist4, col_hist5 = st.columns([2, 1, 1, 1, 1])
             
             with col_hist1:
-                st.markdown("### 📈 Controles Registrados")
+                st.markdown(f"""
+                <div style="background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%); 
+                            padding: 0.8rem; border-radius: 8px; margin-bottom: 1rem;">
+                    <div style="font-weight: bold; color: #5b21b6; margin-bottom: 5px;">📊 HISTORIAL DE</div>
+                    <div style="font-size: 1.1rem; color: #4c1d95;">{paciente['nombre_apellido']}</div>
+                </div>
+                """, unsafe_allow_html=True)
             
             with col_hist2:
+                st.markdown(f"""
+                <div style="background: #e9d5ff; padding: 0.8rem; border-radius: 8px; text-align: center; margin-bottom: 1rem;">
+                    <div style="font-size: 0.8rem; color: #6d28d9;">🆔 DNI</div>
+                    <div style="font-weight: bold; color: #5b21b6;">{paciente['dni']}</div>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            with col_hist3:
+                st.markdown(f"""
+                <div style="background: #e9d5ff; padding: 0.8rem; border-radius: 8px; text-align: center; margin-bottom: 1rem;">
+                    <div style="font-size: 0.8rem; color: #6d28d9;">🎂 Edad</div>
+                    <div style="font-weight: bold; color: #5b21b6;">{paciente['edad_meses']} m</div>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            with col_hist4:
+                st.markdown(f"""
+                <div style="background: #e9d5ff; padding: 0.8rem; border-radius: 8px; text-align: center; margin-bottom: 1rem;">
+                    <div style="font-size: 0.8rem; color: #6d28d9;">📍 Región</div>
+                    <div style="font-weight: bold; color: #5b21b6;">{paciente['region'][:8]}{'...' if len(paciente['region']) > 8 else ''}</div>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            with col_hist5:
+                if st.button("🔄 Cambiar Paciente", 
+                           use_container_width=True,
+                           type="secondary",
+                           help="Ver historial de otro paciente"):
+                    st.session_state.seguimiento_paciente = None
+                    st.success("✅ Selección limpiada")
+                    st.rerun()
+            
+            # Botón para cargar/actualizar historial
+            col_hist_btn1, col_hist_btn2 = st.columns([3, 1])
+            
+            with col_hist_btn1:
+                st.markdown("### 📈 Controles Registrados")
+            
+            with col_hist_btn2:
                 if st.button("🔄 Actualizar Historial", use_container_width=True):
                     with st.spinner("Cargando historial..."):
                         cantidad = cargar_historial_paciente(paciente['dni'])
@@ -2512,123 +2647,104 @@ with tab_seg1:
             if st.session_state.seguimiento_historial:
                 historial_df = pd.DataFrame(st.session_state.seguimiento_historial)
                 
-                # Métricas resumen
-                st.markdown("#### 📊 Estadísticas del Historial")
+                # Estadísticas en línea
+                col_stats1, col_stats2, col_stats3, col_stats4 = st.columns(4)
                 
-                col_stat1, col_stat2, col_stat3, col_stat4 = st.columns(4)
-                
-                with col_stat1:
+                with col_stats1:
                     total_controles = len(historial_df)
-                    st.metric("Total controles", total_controles)
+                    st.metric("📊 Total", total_controles)
                 
-                with col_stat2:
+                with col_stats2:
                     if 'hemoglobina_control' in historial_df.columns:
                         hb_promedio = historial_df['hemoglobina_control'].mean()
-                        st.metric("Hb promedio", f"{hb_promedio:.1f} g/dL")
+                        st.metric("🩺 Hb Prom", f"{hb_promedio:.1f}")
                 
-                with col_stat3:
+                with col_stats3:
                     if 'fecha_seguimiento' in historial_df.columns:
                         ultima_fecha = historial_df['fecha_seguimiento'].max()
-                        st.metric("Último control", str(ultima_fecha)[:10])
+                        st.metric("📅 Último", str(ultima_fecha)[:10])
                 
-                with col_stat4:
+                with col_stats4:
                     if 'peso_control' in historial_df.columns and total_controles > 1:
                         primer_peso = historial_df['peso_control'].iloc[-1] if not historial_df.empty else 0
                         ultimo_peso = historial_df['peso_control'].iloc[0] if not historial_df.empty else 0
                         evolucion = ultimo_peso - primer_peso
-                        st.metric("Evolución peso", f"{evolucion:+.1f} kg")
+                        st.metric("📈 Evolución", f"{evolucion:+.1f} kg")
                 
                 # Tabla de historial
                 st.markdown("#### 📋 Lista Completa de Controles")
                 
                 # Preparar datos para la tabla
-                columnas_mostrar = ['fecha_seguimiento', 'tipo_seguimiento', 
-                                   'hemoglobina_control', 'peso_control', 'talla_control',
-                                   'estado_nutricional', 'observaciones']
-                
-                columnas_disponibles = [col for col in columnas_mostrar if col in historial_df.columns]
-                
-                if columnas_disponibles:
+                if not historial_df.empty:
+                    # Ordenar por fecha
                     historial_df['fecha_seguimiento'] = pd.to_datetime(historial_df['fecha_seguimiento'])
                     historial_df = historial_df.sort_values('fecha_seguimiento', ascending=False)
                     
                     st.dataframe(
-                        historial_df[columnas_disponibles],
+                        historial_df[['fecha_seguimiento', 'tipo_seguimiento', 
+                                     'hemoglobina_control', 'peso_control', 'talla_control',
+                                     'estado_nutricional', 'observaciones']],
                         use_container_width=True,
-                        height=400,
+                        height=300,
                         column_config={
                             "fecha_seguimiento": st.column_config.DateColumn("Fecha", format="DD/MM/YYYY"),
                             "tipo_seguimiento": "Tipo",
-                            "hemoglobina_control": st.column_config.NumberColumn("Hb (g/dL)", format="%.1f"),
-                            "peso_control": st.column_config.NumberColumn("Peso (kg)", format="%.1f"),
-                            "talla_control": st.column_config.NumberColumn("Talla (cm)", format="%.1f"),
-                            "estado_nutricional": "Estado Nut.",
+                            "hemoglobina_control": st.column_config.NumberColumn("Hb", format="%.1f"),
+                            "peso_control": st.column_config.NumberColumn("Peso", format="%.1f"),
+                            "talla_control": st.column_config.NumberColumn("Talla", format="%.1f"),
+                            "estado_nutricional": "Nutrición",
                             "observaciones": st.column_config.TextColumn("Observaciones", width="large")
                         }
                     )
                     
-                    # Gráfico de evolución de hemoglobina
-                    st.markdown("#### 📈 Evolución de Hemoglobina")
-                    
+                    # Gráfico de evolución
                     if len(historial_df) >= 2:
+                        st.markdown("#### 📈 Evolución de Hemoglobina")
+                        
                         fig_hb = px.line(
                             historial_df.sort_values('fecha_seguimiento'),
                             x='fecha_seguimiento',
                             y='hemoglobina_control',
                             markers=True,
-                            title='<b>Evolución de Hemoglobina</b>',
+                            title='',
                             labels={'fecha_seguimiento': 'Fecha', 'hemoglobina_control': 'Hemoglobina (g/dL)'}
                         )
                         
-                        # Añadir línea de referencia para anemia
+                        # Línea de referencia para anemia
                         if paciente['edad_meses'] < 60:
-                            fig_hb.add_hline(y=11.0, line_dash="dash", line_color="red", 
-                                           annotation_text="Límite anemia (11 g/dL)")
+                            fig_hb.add_hline(y=11.0, line_dash="dash", line_color="red")
                         else:
-                            fig_hb.add_hline(y=12.0, line_dash="dash", line_color="red",
-                                           annotation_text="Límite anemia (12 g/dL)")
+                            fig_hb.add_hline(y=12.0, line_dash="dash", line_color="red")
                         
                         st.plotly_chart(fig_hb, use_container_width=True)
-                    
-                    # Opciones de exportación
-                    st.markdown("---")
-                    col_exp1, col_exp2 = st.columns(2)
-                    
-                    with col_exp1:
-                        # Exportar a CSV
-                        csv = historial_df.to_csv(index=False)
-                        st.download_button(
-                            label="📥 Descargar Historial (CSV)",
-                            data=csv,
-                            file_name=f"historial_{paciente['dni']}_{datetime.now().strftime('%Y%m%d')}.csv",
-                            mime="text/csv",
-                            use_container_width=True
-                        )
-                    
-                    with col_exp2:
-                        if st.button("📝 Nuevo Control para este Paciente", 
-                                   use_container_width=True):
-                            st.success(f"✅ Paciente {paciente['nombre_apellido']} listo para nuevo control")
-                            st.info("👆 Vaya a la pestaña '📝 Nuevo Seguimiento' para agregar un nuevo control")
                 
-                else:
-                    st.warning("El historial no tiene las columnas esperadas")
+                # Exportación
+                st.markdown("---")
+                col_exp1, col_exp2 = st.columns(2)
+                
+                with col_exp1:
+                    csv = historial_df.to_csv(index=False)
+                    st.download_button(
+                        label="📥 Descargar CSV",
+                        data=csv,
+                        file_name=f"historial_{paciente['dni']}.csv",
+                        mime="text/csv",
+                        use_container_width=True
+                    )
+                
+                with col_exp2:
+                    if st.button("📝 Nuevo Control", 
+                               use_container_width=True):
+                        st.success("✅ Listo para nuevo control")
+                        st.info("👆 Vaya a la pestaña '📝 Nuevo Seguimiento'")
             
             else:
                 st.info("""
                 ℹ️ **Este paciente no tiene historial de controles**
                 
                 Para agregar el primer control:
-                1. Vaya a la pestaña **📝 Nuevo Seguimiento**
-                2. Complete el formulario con los datos del primer control
-                3. Guarde los datos
-                4. Regrese aquí para ver el historial actualizado
+                👉 Vaya a la pestaña **📝 Nuevo Seguimiento**
                 """)
-                
-                # Botón para ir directamente a nuevo seguimiento
-                if st.button("➕ Agregar Primer Control", use_container_width=True, type="primary"):
-                    st.success(f"✅ Paciente {paciente['nombre_apellido']} listo para primer control")
-                    st.info("👆 Vaya a la pestaña '📝 Nuevo Seguimiento' para agregar el primer control")
 # ==================================================
 # PESTAÑA 3: DASHBOARD NACIONAL
 # ==================================================
