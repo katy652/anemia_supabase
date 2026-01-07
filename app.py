@@ -2055,159 +2055,159 @@ with tab2:
     ])
     
     # ============================================
-    # PESTAÑA 1: BUSCAR PACIENTE (SOLO BÚSQUEDA)
-    # ============================================
+# PESTAÑA 1: BUSCAR PACIENTE (SOLO BÚSQUEDA)
+# ============================================
+
+with tab_seg1:
+    st.header("🔍 BUSCAR PACIENTE PARA SEGUIMIENTO")
     
-    with tab_seg1:
-        st.header("🔍 BUSCAR PACIENTE PARA SEGUIMIENTO")
-        
-        # Sección para cargar pacientes
-        col_carga1, col_carga2 = st.columns([3, 1])
-        
-        with col_carga1:
-            st.markdown("### 📋 Cargar Base de Datos")
-            st.caption("Cargue todos los pacientes para poder seleccionar uno")
-        
-        with col_carga2:
-            if st.button("🔄 Cargar Todos los Pacientes", use_container_width=True, type="primary"):
-                if cargar_todos_pacientes():
-                    st.success(f"✅ {len(st.session_state.seguimiento_datos_pacientes)} pacientes cargados")
-                else:
-                    st.warning("No hay pacientes registrados en la base de datos")
-        
-        st.markdown("---")
-        
-        # Mostrar pacientes si existen
-        if not st.session_state.seguimiento_datos_pacientes.empty:
-            df = st.session_state.seguimiento_datos_pacientes
-            
-            # Búsqueda por texto
-            buscar = st.text_input("🔎 Buscar por nombre, DNI o región:", 
-                                 placeholder="Ej: 'Marcos' o '44545432' o 'AMAZONAS'")
-            
-            if buscar:
-                mask = (df['nombre_apellido'].str.contains(buscar, case=False, na=False) | 
-                       df['dni'].astype(str).str.contains(busbar, na=False) |
-                       df['region'].str.contains(buscar, case=False, na=False))
-                df_filtrado = df[mask]
+    # Sección para cargar pacientes
+    col_carga1, col_carga2 = st.columns([3, 1])
+    
+    with col_carga1:
+        st.markdown("### 📋 Cargar Base de Datos")
+        st.caption("Cargue todos los pacientes para poder seleccionar uno")
+    
+    with col_carga2:
+        if st.button("🔄 Cargar Todos los Pacientes", use_container_width=True, type="primary"):
+            if cargar_todos_pacientes():
+                st.success(f"✅ {len(st.session_state.seguimiento_datos_pacientes)} pacientes cargados")
             else:
-                df_filtrado = df
+                st.warning("No hay pacientes registrados en la base de datos")
+    
+    st.markdown("---")
+    
+    # Mostrar pacientes si existen
+    if not st.session_state.seguimiento_datos_pacientes.empty:
+        df = st.session_state.seguimiento_datos_pacientes
+        
+        # Búsqueda por texto - CORRECCIÓN: usar 'buscar' en lugar de 'busbar'
+        buscar = st.text_input("🔎 Buscar por nombre, DNI o región:", 
+                             placeholder="Ej: 'Marcos' o '44545432' o 'AMAZONAS'")
+        
+        if buscar:
+            mask = (df['nombre_apellido'].str.contains(buscar, case=False, na=False) | 
+                   df['dni'].astype(str).str.contains(buscar, na=False) |  # <-- AQUÍ ERA 'busbar', ahora es 'buscar'
+                   df['region'].str.contains(buscar, case=False, na=False))
+            df_filtrado = df[mask]
+        else:
+            df_filtrado = df
+        
+        # Resto del código permanece igual...
+        # Mostrar tabla con opción de selección
+        if not df_filtrado.empty:
+            # Crear una lista de opciones para el selectbox
+            opciones_pacientes = []
+            for _, row in df_filtrado.iterrows():
+                opcion = f"{row['nombre_apellido']} - DNI: {row['dni']} - Edad: {row['edad_meses']} meses - Hb: {row['hemoglobina_dl1']} g/dL"
+                opciones_pacientes.append((opcion, row['dni']))
             
-            # Mostrar tabla con opción de selección
-            if not df_filtrado.empty:
-                # Crear una lista de opciones para el selectbox
-                opciones_pacientes = []
-                for _, row in df_filtrado.iterrows():
-                    opcion = f"{row['nombre_apellido']} - DNI: {row['dni']} - Edad: {row['edad_meses']} meses - Hb: {row['hemoglobina_dl1']} g/dL"
-                    opciones_pacientes.append((opcion, row['dni']))
+            # Selector de pacientes
+            opcion_seleccionada = st.selectbox(
+                "Seleccione un paciente:",
+                options=[op[0] for op in opciones_pacientes],
+                index=None,
+                placeholder="Elija un paciente de la lista..."
+            )
+            
+            # Extraer DNI del paciente seleccionado
+            dni_seleccionado = None
+            if opcion_seleccionada:
+                for opcion, dni in opciones_pacientes:
+                    if opcion == opcion_seleccionada:
+                        dni_seleccionado = dni
+                        break
+            
+            # Mostrar información del paciente seleccionado
+            if dni_seleccionado:
+                paciente_info = df_filtrado[df_filtrado['dni'] == dni_seleccionado].iloc[0]
                 
-                # Selector de pacientes
-                opcion_seleccionada = st.selectbox(
-                    "Seleccione un paciente:",
-                    options=[op[0] for op in opciones_pacientes],
-                    index=None,
-                    placeholder="Elija un paciente de la lista..."
-                )
+                # Guardar en session state
+                st.session_state.seguimiento_paciente = paciente_info.to_dict()
                 
-                # Extraer DNI del paciente seleccionado
-                dni_seleccionado = None
-                if opcion_seleccionada:
-                    for opcion, dni in opciones_pacientes:
-                        if opcion == opcion_seleccionada:
-                            dni_seleccionado = dni
-                            break
+                # Mostrar información en tarjetas
+                st.markdown("### 🩺 INFORMACIÓN DEL PACIENTE")
                 
-                # Mostrar información del paciente seleccionado
-                if dni_seleccionado:
-                    paciente_info = df_filtrado[df_filtrado['dni'] == dni_seleccionado].iloc[0]
-                    
-                    # Guardar en session state
-                    st.session_state.seguimiento_paciente = paciente_info.to_dict()
-                    
-                    # Mostrar información en tarjetas
-                    st.markdown("### 🩺 INFORMACIÓN DEL PACIENTE")
-                    
-                    col_info1, col_info2 = st.columns(2)
-                    
-                    with col_info1:
-                        st.markdown("""
-                        <div style="background: #f0f9ff; padding: 1rem; border-radius: 8px; border: 1px solid #bae6fd;">
-                            <h4 style="color: #0369a1; margin-top: 0;">📋 Datos Personales</h4>
-                            <p><strong>Nombre:</strong> {nombre}</p>
-                            <p><strong>DNI:</strong> {dni}</p>
-                            <p><strong>Edad:</strong> {edad} meses</p>
-                            <p><strong>Género:</strong> {genero}</p>
-                        </div>
-                        """.format(
-                            nombre=paciente_info['nombre_apellido'],
-                            dni=paciente_info['dni'],
-                            edad=paciente_info['edad_meses'],
-                            genero=paciente_info['genero']
-                        ), unsafe_allow_html=True)
-                    
-                    with col_info2:
-                        hb_medida = paciente_info['hemoglobina_dl1']
-                        # Clasificar anemia
-                        clasificacion, recomendacion, _ = clasificar_anemia(hb_medida, paciente_info['edad_meses'])
-                        
-                        st.markdown("""
-                        <div style="background: #fef2f2; padding: 1rem; border-radius: 8px; border: 1px solid #fecaca;">
-                            <h4 style="color: #dc2626; margin-top: 0;">🩺 Datos Clínicos</h4>
-                            <p><strong>Hb original:</strong> {hb} g/dL</p>
-                            <p><strong>Clasificación:</strong> {clasificacion}</p>
-                            <p><strong>Recomendación:</strong> {recomendacion}</p>
-                        </div>
-                        """.format(
-                            hb=hb_medida,
-                            clasificacion=clasificacion,
-                            recomendacion=recomendacion
-                        ), unsafe_allow_html=True)
-                    
-                    # Información adicional
+                col_info1, col_info2 = st.columns(2)
+                
+                with col_info1:
                     st.markdown("""
-                    <div style="background: #f0fdf4; padding: 1rem; border-radius: 8px; border: 1px solid #bbf7d0; margin-top: 1rem;">
-                        <h4 style="color: #059669; margin-top: 0;">📍 Información Adicional</h4>
-                        <p><strong>Región:</strong> {region}</p>
-                        <p><strong>Altitud:</strong> {altitud} msnm</p>
-                        <p><strong>Nivel educativo:</strong> {nivel_edu}</p>
-                        <p><strong>Estado:</strong> {estado}</p>
+                    <div style="background: #f0f9ff; padding: 1rem; border-radius: 8px; border: 1px solid #bae6fd;">
+                        <h4 style="color: #0369a1; margin-top: 0;">📋 Datos Personales</h4>
+                        <p><strong>Nombre:</strong> {nombre}</p>
+                        <p><strong>DNI:</strong> {dni}</p>
+                        <p><strong>Edad:</strong> {edad} meses</p>
+                        <p><strong>Género:</strong> {genero}</p>
                     </div>
                     """.format(
-                        region=paciente_info['region'],
-                        altitud=paciente_info.get('altitud_msnm', 'N/A'),
-                        nivel_edu=paciente_info.get('nivel_educativo', 'N/A'),
-                        estado=paciente_info.get('estado_paciente', 'Activo')
+                        nombre=paciente_info['nombre_apellido'],
+                        dni=paciente_info['dni'],
+                        edad=paciente_info['edad_meses'],
+                        genero=paciente_info['genero']
                     ), unsafe_allow_html=True)
+                
+                with col_info2:
+                    hb_medida = paciente_info['hemoglobina_dl1']
+                    # Clasificar anemia
+                    clasificacion, recomendacion, _ = clasificar_anemia(hb_medida, paciente_info['edad_meses'])
                     
-                    # Botón para ir directamente a Seguimiento
-                    st.markdown("---")
-                    col_acc1, col_acc2 = st.columns(2)
-                    
-                    with col_acc1:
-                        if st.button("📝 Ir a Seguimiento", 
-                                   use_container_width=True, 
-                                   type="primary",
-                                   help="Ir a la pestaña de seguimiento para este paciente"):
-                            # Cambiar a la pestaña de seguimiento
-                            st.success(f"✅ Paciente {paciente_info['nombre_apellido']} seleccionado")
-                            # No podemos cambiar pestañas programáticamente, pero mostramos mensaje
-                            st.info("👆 Ahora vaya a la pestaña '📝 Nuevo Seguimiento' para continuar")
-                    
-                    with col_acc2:
-                        if st.button("📋 Ver Historial", 
-                                   use_container_width=True,
-                                   type="secondary",
-                                   help="Ver historial completo del paciente"):
-                            cargar_historial_paciente(dni_seleccionado)
-                            st.success("✅ Historial cargado")
-                            st.info("👆 Ahora vaya a la pestaña '📋 Historial Completo' para ver el historial")
-                    
-            else:
-                st.warning("⚠️ No se encontraron pacientes con esos criterios")
+                    st.markdown("""
+                    <div style="background: #fef2f2; padding: 1rem; border-radius: 8px; border: 1px solid #fecaca;">
+                        <h4 style="color: #dc2626; margin-top: 0;">🩺 Datos Clínicos</h4>
+                        <p><strong>Hb original:</strong> {hb} g/dL</p>
+                        <p><strong>Clasificación:</strong> {clasificacion}</p>
+                        <p><strong>Recomendación:</strong> {recomendacion}</p>
+                    </div>
+                    """.format(
+                        hb=hb_medida,
+                        clasificacion=clasificacion,
+                        recomendacion=recomendacion
+                    ), unsafe_allow_html=True)
+                
+                # Información adicional
+                st.markdown("""
+                <div style="background: #f0fdf4; padding: 1rem; border-radius: 8px; border: 1px solid #bbf7d0; margin-top: 1rem;">
+                    <h4 style="color: #059669; margin-top: 0;">📍 Información Adicional</h4>
+                    <p><strong>Región:</strong> {region}</p>
+                    <p><strong>Altitud:</strong> {altitud} msnm</p>
+                    <p><strong>Nivel educativo:</strong> {nivel_edu}</p>
+                    <p><strong>Estado:</strong> {estado}</p>
+                </div>
+                """.format(
+                    region=paciente_info['region'],
+                    altitud=paciente_info.get('altitud_msnm', 'N/A'),
+                    nivel_edu=paciente_info.get('nivel_educativo', 'N/A'),
+                    estado=paciente_info.get('estado_paciente', 'Activo')
+                ), unsafe_allow_html=True)
+                
+                # Botón para ir directamente a Seguimiento
+                st.markdown("---")
+                col_acc1, col_acc2 = st.columns(2)
+                
+                with col_acc1:
+                    if st.button("📝 Ir a Seguimiento", 
+                               use_container_width=True, 
+                               type="primary",
+                               help="Ir a la pestaña de seguimiento para este paciente"):
+                        # Cambiar a la pestaña de seguimiento
+                        st.success(f"✅ Paciente {paciente_info['nombre_apellido']} seleccionado")
+                        # No podemos cambiar pestañas programáticamente, pero mostramos mensaje
+                        st.info("👆 Ahora vaya a la pestaña '📝 Nuevo Seguimiento' para continuar")
+                
+                with col_acc2:
+                    if st.button("📋 Ver Historial", 
+                               use_container_width=True,
+                               type="secondary",
+                               help="Ver historial completo del paciente"):
+                        cargar_historial_paciente(dni_seleccionado)
+                        st.success("✅ Historial cargado")
+                        st.info("👆 Ahora vaya a la pestaña '📋 Historial Completo' para ver el historial")
         
         else:
-            st.info("👆 Presione 'Cargar Todos los Pacientes' para comenzar la búsqueda")
+            st.warning("⚠️ No se encontraron pacientes con esos criterios")
     
+    else:
+        st.info("👆 Presione 'Cargar Todos los Pacientes' para comenzar la búsqueda")
     # ============================================
     # PESTAÑA 2: NUEVO SEGUIMIENTO (FORMULARIO COMPLETO)
     # ============================================
