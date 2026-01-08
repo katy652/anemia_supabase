@@ -1666,10 +1666,32 @@ with tab1:
             enfermedades_cronicas = st.text_area("Enfermedades crónicas", placeholder="Ej: Asma, alergias, etc.", key="enfermedades_input")
         
         with col4:
-            st.markdown('<div class="section-title-blue" style="font-size: 1.4rem;">📋 Factores de Riesgo</div>', unsafe_allow_html=True)
-            
-            st.markdown('<div style="color: #1e40af; font-weight: 600; margin: 10px 0;">🏥 Factores Clínicos</div>', unsafe_allow_html=True)
-            factores_clinicos = st.multiselect("Seleccione factores clínicos:", FACTORES_CLINICOS, key="factores_clinicos_input")
+    st.markdown('<div class="section-title-blue" style="font-size: 1.4rem;">📋 Factores de Riesgo</div>', unsafe_allow_html=True)
+    
+    st.markdown('<div style="color: #1e40af; font-weight: 600; margin: 10px 0;">🏥 Factores Clínicos</div>', unsafe_allow_html=True)
+    factores_clinicos = st.multiselect("Seleccione factores clínicos:", FACTORES_CLINICOS, key="factores_clinicos_input")
+    
+    # ==================================================
+    # NUEVA SECCIÓN COMPLETAMENTE INDEPENDIENTE
+    # ==================================================
+    st.markdown('<div style="color: #1e40af; font-weight: 600; margin: 20px 0 10px 0;">🏛️ Registro de Programa Nacional de Alimentación</div>', unsafe_allow_html=True)
+    
+    programas_nacionales = st.multiselect(
+        "Seleccione programa al que pertenece:", 
+        ["CUNA MÁS", "JUNTOS", "QALI WARMA", "NO PARTICIPA"],
+        key="programas_nacionales_input"
+    )
+    
+    st.markdown('<div style="color: #1e40af; font-weight: 600; margin: 10px 0;">💰 Factores Socioeconómicos del Apoderado</div>', unsafe_allow_html=True)
+    factores_sociales = st.multiselect("Seleccione factores socioeconómicos:", [
+        "Bajo nivel educativo del apoderado",
+        "Ingresos familiares reducidos",
+        "Hacinamiento en vivienda",
+        "Acceso limitado a agua potable",
+        "Zona rural o alejada",
+        "Trabajo informal o precario del apoderado",
+        "Falta de acceso a servicios básicos"
+    ], key="factores_sociales_input")
             
             # ==================================================
             # NUEVA SECCIÓN AGREGADA: REGISTRO DE PROGRAMA NACIONAL DE ALIMENTACIÓN
