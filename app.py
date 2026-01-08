@@ -1671,7 +1671,18 @@ with tab1:
                 "Trabajo informal o precario del apoderado",
                 "Falta de acceso a servicios básicos"
             ], key="factores_sociales_input")
-        
+    # ============================================
+    # AGREGAR AQUÍ: PROGRAMA NACIONAL DE ALIMENTACIÓN
+    # ============================================
+    st.markdown('<div style="color: #1e40af; font-weight: 600; margin: 10px 0;">🍎 Programa Nacional de Alimentación</div>', unsafe_allow_html=True)
+    programas_alimentacion = st.multiselect("Seleccione programa(s) de alimentación:", [
+        "Cuna Más",
+        "Qali Warma",
+        "Otro programa social",
+        "No participa en programas"
+    ], key="programas_alimentacion_input")
+
+    
         # Mostrar resumen de validación
         st.markdown("---")
         
@@ -1736,6 +1747,9 @@ with tab1:
                 use_container_width=True,
                 disabled=tiene_errores
             )
+
+
+
     
     # ============================================
     # ACCIONES FUERA DEL FORMULARIO
