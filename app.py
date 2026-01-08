@@ -1671,6 +1671,18 @@ with tab1:
             st.markdown('<div style="color: #1e40af; font-weight: 600; margin: 10px 0;">🏥 Factores Clínicos</div>', unsafe_allow_html=True)
             factores_clinicos = st.multiselect("Seleccione factores clínicos:", FACTORES_CLINICOS, key="factores_clinicos_input")
             
+            # ==================================================
+            # NUEVA SECCIÓN AGREGADA: REGISTRO DE PROGRAMA NACIONAL DE ALIMENTACIÓN
+            # ==================================================
+            st.markdown('<div style="color: #1e40af; font-weight: 600; margin: 20px 0 10px 0;">🏛️ Registro de Programa Nacional de Alimentación</div>', unsafe_allow_html=True)
+            
+            programas_nacionales = st.multiselect(
+                "Seleccione programa al que pertenece:", 
+                ["CUNA MÁS", "JUNTOS", "QALI WARMA", "VASO DE LECHE", "NO PARTICIPA"],
+                key="programas_nacionales_input"
+            )
+            # ==================================================
+            
             st.markdown('<div style="color: #1e40af; font-weight: 600; margin: 10px 0;">💰 Factores Socioeconómicos del Apoderado</div>', unsafe_allow_html=True)
             factores_sociales = st.multiselect("Seleccione factores socioeconómicos:", [
                 "Bajo nivel educativo del apoderado",
@@ -1800,11 +1812,15 @@ with tab1:
         else:
             # Si no hay errores, proceder con los cálculos
             try:
+                # ==================================================
+                # ACTUALIZAR LA LLAMADA A LA FUNCIÓN PARA INCLUIR PROGRAMAS NACIONALES
+                # ==================================================
                 nivel_riesgo, puntaje, estado = calcular_riesgo_anemia(
                     hemoglobina_ajustada,
                     edad_meses,
                     factores_clinicos,
-                    factores_sociales
+                    factores_sociales,
+                    programas_nacionales  # ← NUEVO PARÁMETRO AGREGADO
                 )
                 
                 sugerencias = generar_sugerencias(nivel_riesgo, hemoglobina_ajustada, edad_meses)
@@ -2031,7 +2047,8 @@ with tab1:
                     "estado_talla": estado_talla,
                     "estado_nutricional": estado_nutricional,
                     "interpretacion_auto": interpretacion_auto,
-                    "parametros_simulados": parametros_simulados
+                    "parametros_simulados": parametros_simulados,
+                    "programas_nacionales": programas_nacionales  # ← AGREGAR ESTO
                 }
                 
                 st.success("✅ Análisis completado. Puede guardar los datos.")
@@ -2114,7 +2131,11 @@ with tab1:
                             "fecha_alerta": datetime.now().strftime("%Y-%m-%d"),
                             "estado_alerta": datos["estado"],
                             "sugerencias": datos["sugerencias"],
-                            "severidad_interpretacion": datos["interpretacion_auto"]['severidad']
+                            "severidad_interpretacion": datos["interpretacion_auto"]['severidad'],
+                            # ==================================================
+                            # AGREGAR EL NUEVO CAMPO PARA PROGRAMAS NACIONALES
+                            # ==================================================
+                            "programas_nacionales": ", ".join(programas_nacionales) if programas_nacionales else None
                         }
                         
                         resultado = insertar_datos_supabase(record)
