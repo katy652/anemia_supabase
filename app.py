@@ -2861,85 +2861,181 @@ with tab_seg3:
                 """, unsafe_allow_html=True)
                 st.rerun()
         
-        # ============================================
-        # INFORMACIÓN PRINCIPAL - VERSIÓN STREAMLIT NATIVO
+               # ============================================
+        # INFORMACIÓN PRINCIPAL - VERSIÓN CON NOMBRES EXACTOS DE COLUMNAS
         # ============================================
         
-        # Obtener valores del paciente
+        # Obtener valores EXACTOS de las columnas de la tabla pacientes
         nombre_completo = paciente.get('nombre_apellido', 'N/A').upper()
         dni_valor = paciente.get('dni', 'N/A')
+        
+        # EDAD - columna exacta: 'edad_meses'
         edad_valor = paciente.get('edad_meses', 'N/A')
+        
+        # REGIÓN - columna exacta: 'region'
         region_valor = paciente.get('region', 'N/A')
-        hb_valor = paciente.get('hemoglobina_dl1', 'N/A')
-        estado_valor = paciente.get('estado_paciente', 'N/A')
-        riesgo_valor = paciente.get('riesgo', 'N/A')
+        
+        # HEMOGLOBINA - columna exacta: 'hemoglobina' (numérica)
+        hb_valor = paciente.get('hemoglobina', 'N/A')
+        
+        # ESTADO del paciente - verificar columna correcta
+        estado_valor = paciente.get('estado_paciente', 'Activo')
+        
+        # RIESGO - verificar columna correcta
+        riesgo_valor = paciente.get('riesgo', 'ALTO RIESGO')
+        
+        # DEPARTAMENTO - columna exacta: 'departamento'
+        departamento_valor = paciente.get('departamento', 'N/A')
+        
         num_controles = len(historial)
         
         # Título principal
         st.markdown(f"### 📊 HISTORIAL DE: {nombre_completo}")
         
-        # Estado del paciente con icono
+        # Estado del seguimiento (diferente al estado del paciente)
         col_estado1, col_estado2 = st.columns([1, 4])
         with col_estado1:
             st.markdown(f"<h1 style='text-align: center; margin: 0;'>{icono}</h1>", unsafe_allow_html=True)
         with col_estado2:
             st.markdown(f"""
             <div style='background: {color}20; padding: 12px; border-radius: 10px; border-left: 5px solid {color}; margin-bottom: 20px;'>
-                <div style='font-weight: bold; color: {color}; font-size: 1.1rem;'>{estado}</div>
+                <div style='font-weight: bold; color: {color}; font-size: 1.1rem;'>ESTADO DE SEGUIMIENTO: {estado}</div>
                 <div style='color: #666; font-size: 0.9rem;'>{descripcion}</div>
             </div>
             """, unsafe_allow_html=True)
         
-        # Grid de información usando st.metric
+        # Grid de información usando st.metric - CON NOMBRES CORRECTOS
         st.markdown("#### 📋 Información del Paciente")
         
         col1, col2, col3 = st.columns(3)
         
         with col1:
+            # DNI
             st.metric("DNI", dni_valor, delta=None)
-            st.metric("Edad", f"{edad_valor} meses", delta=None)
+            
+            # Edad - columna 'edad_meses'
+            if edad_valor != 'N/A':
+                try:
+                    edad_int = int(edad_valor)
+                    st.metric("Edad", f"{edad_int} meses", delta=None)
+                except:
+                    st.metric("Edad", f"{edad_valor} meses", delta=None)
+            else:
+                st.metric("Edad", "N/A", delta=None)
         
         with col2:
+            # Región - columna 'region'
             st.metric("Región", region_valor, delta=None)
-            st.metric("Hb actual", f"{hb_valor} g/dL", delta=None)
+            
+            # Departamento - columna 'departamento'
+            if departamento_valor and departamento_valor != 'N/A' and departamento_valor != 'NULL':
+                st.metric("Departamento", departamento_valor, delta=None)
+            else:
+                st.metric("Departamento", region_valor, delta=None)  # Usar región si no hay departamento
         
         with col3:
-            st.metric("Estado", estado_valor, delta=None)
+            # Hemoglobina - columna 'hemoglobina' (numérica)
+            if hb_valor != 'N/A':
+                try:
+                    hb_num = float(hb_valor)
+                    st.metric("Hemoglobina", f"{hb_num:.1f} g/dL", delta=None)
+                except:
+                    st.metric("Hemoglobina", f"{hb_valor} g/dL", delta=None)
+            else:
+                st.metric("Hemoglobina", "N/A", delta=None)
+        
+        # Segunda fila de información
+        col4, col5, col6 = st.columns(3)
+        
+        with col4:
+            # Estado del paciente (de la tabla pacientes)
+            st.metric("Estado Paciente", estado_valor, delta=None)
+        
+        with col5:
+            # Riesgo
             st.metric("Riesgo", riesgo_valor, delta=None)
         
+        with col6:
+            # Número de controles
+            st.metric("Controles", num_controles, delta=None)
+        
         # Badges/información adicional
-        st.markdown("#### 📊 Resumen")
+        st.markdown("#### 📊 Resumen de Seguimiento")
         
         # Crear badges con información importante
         badge_cols = st.columns(4)
         
         with badge_cols[0]:
+            # Número de controles
+            badge_color = "#10b981" if num_controles > 0 else "#6b7280"
+            badge_icon = "📋" if num_controles > 0 else "📭"
+            badge_text = "controles" if num_controles > 0 else "sin controles"
+            
             st.markdown(f"""
-            <div style='background: #100081; color: white; padding: 15px; border-radius: 10px; text-align: center; height: 100%;'>
-                <div style='font-size: 1.5rem; margin-bottom: 5px;'>📋</div>
+            <div style='background: {badge_color}; color: white; padding: 15px; border-radius: 10px; text-align: center; height: 100%;'>
+                <div style='font-size: 1.5rem; margin-bottom: 5px;'>{badge_icon}</div>
                 <div style='font-weight: bold; font-size: 1.2rem;'>{num_controles}</div>
-                <div style='font-size: 0.9rem;'>controles</div>
+                <div style='font-size: 0.9rem;'>{badge_text}</div>
             </div>
             """, unsafe_allow_html=True)
         
         with badge_cols[1]:
-            st.markdown(f"""
-            <div style='background: #8b5cf6; color: white; padding: 15px; border-radius: 10px; text-align: center; height: 100%;'>
-                <div style='font-size: 1.5rem; margin-bottom: 5px;'>🩺</div>
-                <div style='font-weight: bold; font-size: 1.2rem;'>{hb_valor}</div>
-                <div style='font-size: 0.9rem;'>g/dL actual</div>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        with badge_cols[2]:
-            if ultima_fecha_str:
+            # Hemoglobina actual
+            if hb_valor != 'N/A':
+                try:
+                    hb_num = float(hb_valor)
+                    # Color según nivel de hemoglobina
+                    if hb_num < 11.0:
+                        hb_color = "#ef4444"  # Rojo para anemia
+                    elif hb_num < 12.0:
+                        hb_color = "#f59e0b"  # Amarillo para riesgo
+                    else:
+                        hb_color = "#10b981"  # Verde para normal
+                    
+                    st.markdown(f"""
+                    <div style='background: {hb_color}; color: white; padding: 15px; border-radius: 10px; text-align: center; height: 100%;'>
+                        <div style='font-size: 1.5rem; margin-bottom: 5px;'>🩺</div>
+                        <div style='font-weight: bold; font-size: 1.2rem;'>{hb_num:.1f}</div>
+                        <div style='font-size: 0.9rem;'>g/dL actual</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                except:
+                    st.markdown(f"""
+                    <div style='background: #8b5cf6; color: white; padding: 15px; border-radius: 10px; text-align: center; height: 100%;'>
+                        <div style='font-size: 1.5rem; margin-bottom: 5px;'>🩺</div>
+                        <div style='font-weight: bold; font-size: 1.2rem;'>{hb_valor}</div>
+                        <div style='font-size: 0.9rem;'>g/dL actual</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+            else:
                 st.markdown(f"""
-                <div style='background: #f59e0b; color: white; padding: 15px; border-radius: 10px; text-align: center; height: 100%;'>
-                    <div style='font-size: 1.5rem; margin-bottom: 5px;'>⏰</div>
-                    <div style='font-weight: bold; font-size: 1rem;'>Último control</div>
-                    <div style='font-size: 0.8rem;'>{ultima_fecha_str}</div>
+                <div style='background: #6b7280; color: white; padding: 15px; border-radius: 10px; text-align: center; height: 100%;'>
+                    <div style='font-size: 1.5rem; margin-bottom: 5px;'>🩺</div>
+                    <div style='font-weight: bold; font-size: 1.2rem;'>N/A</div>
+                    <div style='font-size: 0.9rem;'>sin datos Hb</div>
                 </div>
                 """, unsafe_allow_html=True)
+        
+        with badge_cols[2]:
+            # Último control
+            if ultima_fecha_str:
+                try:
+                    fecha_formateada = datetime.strptime(ultima_fecha_str, '%Y-%m-%d').strftime('%d/%m/%Y')
+                    st.markdown(f"""
+                    <div style='background: #f59e0b; color: white; padding: 15px; border-radius: 10px; text-align: center; height: 100%;'>
+                        <div style='font-size: 1.5rem; margin-bottom: 5px;'>⏰</div>
+                        <div style='font-weight: bold; font-size: 1rem;'>Último control</div>
+                        <div style='font-size: 0.8rem;'>{fecha_formateada}</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                except:
+                    st.markdown(f"""
+                    <div style='background: #f59e0b; color: white; padding: 15px; border-radius: 10px; text-align: center; height: 100%;'>
+                        <div style='font-size: 1.5rem; margin-bottom: 5px;'>⏰</div>
+                        <div style='font-weight: bold; font-size: 1rem;'>Último control</div>
+                        <div style='font-size: 0.8rem;'>{ultima_fecha_str}</div>
+                    </div>
+                    """, unsafe_allow_html=True)
             else:
                 st.markdown(f"""
                 <div style='background: #6b7280; color: white; padding: 15px; border-radius: 10px; text-align: center; height: 100%;'>
@@ -2950,6 +3046,7 @@ with tab_seg3:
                 """, unsafe_allow_html=True)
         
         with badge_cols[3]:
+            # Próxima cita
             if proxima_cita_fecha:
                 st.markdown(f"""
                 <div style='background: #ef4444; color: white; padding: 15px; border-radius: 10px; text-align: center; height: 100%;'>
