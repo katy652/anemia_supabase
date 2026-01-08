@@ -515,6 +515,19 @@ USUARIOS_SALUD = {
     }
 }
 
+def verificar_login(username, password):
+    """Verifica si el usuario y contraseña son correctos"""
+    if username in USUARIOS_SALUD and USUARIOS_SALUD[username]["password"] == password:
+        return USUARIOS_SALUD[username]
+    return None
+
+def logout():
+    """Cierra sesión del usuario"""
+    st.session_state.logged_in = False
+    st.session_state.user_info = None
+    st.session_state.current_username = None
+    st.rerun()
+
 def show_login_page():
     """Muestra la página de login"""
     
@@ -638,7 +651,7 @@ def show_login_page():
     # Contenedor principal del login
     st.markdown('<div class="login-container">', unsafe_allow_html=True)
     
-    # ENCABEZADO
+    # Header con icono
     st.markdown("""
     <div class="login-header">
         <div class="hospital-icon">🏥</div>
@@ -648,45 +661,72 @@ def show_login_page():
     </div>
     """, unsafe_allow_html=True)
     
-    # FORMULARIO DE LOGIN
-    col1, col2 = st.columns([1, 1])
-    
-    with col1:
-        username = st.text_input("👤 Usuario", placeholder="Ingrese su usuario", key="login_user")
-    
-    with col2:
-        password = st.text_input("🔒 Contraseña", type="password", placeholder="Ingrese su contraseña", key="login_pass")
-    
-    # Botón de login - ¡AQUÍ ESTÁ LA CORRECCIÓN!
-    if st.button("🚀 Iniciar Sesión", type="primary", key="login_btn"):
-        if username and password:
-            # CORREGIR ESTA LÍNEA (línea 644):
-            user_info = verificar_login(username, password)  # ← ¡CORRECTO!
-            
-            if user_info:
-                st.session_state.logged_in = True
-                st.session_state.user_info = user_info
-                st.session_state.current_username = username
-                st.rerun()
+    # Formulario de login
+    with st.form("login_form"):
+        st.markdown('<div class="form-label">👤 Nombre de Usuario</div>', unsafe_allow_html=True)
+        username = st.text_input("", placeholder="Ingresa tu usuario", label_visibility="collapsed")
+        
+        st.markdown('<div class="form-label">🔒 Contraseña</div>', unsafe_allow_html=True)
+        password = st.text_input("", type="password", placeholder="Ingresa tu contraseña", label_visibility="collapsed")
+        
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            remember_me = st.checkbox("Recordar sesión", value=True)
+        
+        submit = st.form_submit_button("🚀 INICIAR SESIÓN", use_container_width=True)
+        
+        if submit:
+            if not username or not password:
+                st.error("❌ Por favor, ingresa usuario y contraseña")
             else:
-                st.error("❌ Usuario o contraseña incorrectos")
-        else:
-            st.warning("⚠️ Por favor ingrese usuario y contraseña")
+                usuario_info = verificar_login(username, password)
+                if usuario_info:
+                    st.session_state.logged_in = True
+                    st.session_state.user_info = usuario_info
+                    st.session_state.current_username = username
+                    st.success(f"✅ ¡Bienvenido/a, {usuario_info['nombre']}!")
+                    time.sleep(1)
+                    st.rerun()
+                else:
+                    st.error("❌ Usuario o contraseña incorrectos")
     
-    # USUARIOS DE PRUEBA
+    # Información de usuarios de prueba
+    with st.expander("👥 USUARIOS AUTORIZADOS DEL SISTEMA", expanded=True):
+        st.markdown('<div class="test-users">', unsafe_allow_html=True)
+        st.markdown("**Personal de Salud Autorizado:**")
+        
+        for username, info in USUARIOS_SALUD.items():
+            role_class = info['rol'].lower().replace("á", "a").replace("é", "e")
+            st.markdown(f"""
+            <div class="user-card">
+                <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                    <strong style="font-size: 1.1rem;">{info['nombre']}</strong>
+                    <span class="role-badge">{info['rol']}</span>
+                </div>
+                <div style="font-size: 0.9rem; color: #4b5563;">
+                    <div><strong>Especialidad:</strong> {info['especialidad']}</div>
+                    <div><strong>Usuario:</strong> <code>{username}</code></div>
+                    <div><strong>Contraseña:</strong> <code>{info['password']}</code></div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+    
+    # Footer del login
     st.markdown("""
-    <div class="test-users">
-        <h4>👥 Usuarios de Prueba:</h4>
-        <div class="user-card">
-            <strong>Dr. Carlos Martínez</strong><span class="role-badge">Administrador</span><br>
-            <small><strong>Usuario:</strong> cmartinez | <strong>Contraseña:</strong> pediatria123</small>
-        </div>
-        <div class="user-card">
-            <strong>Dra. Ana López</strong><span class="role-badge">Médico</span><br>
-            <small><strong>Usuario:</strong> alopez | <strong>Contraseña:</strong> nutricion456</small>
-        </div>
+    <div style="text-align: center; margin-top: 40px; color: #6b7280; font-size: 14px;">
+        <p>© 2024 Sistema Nixon - Control de Anemia Infantil</p>
+        <p>Sistema exclusivo para personal de salud autorizado</p>
+        <div style="height: 1px; background: #e5e7eb; margin: 20px 0;"></div>
+        <p style="font-size: 12px; margin-top: 20px;">
+            <strong>🔒 Acceso restringido:</strong> Solo personal médico autorizado<br>
+            <strong>📞 Soporte técnico:</strong> soporte@sistemasnixon.com
+        </p>
     </div>
     """, unsafe_allow_html=True)
+    
+    st.markdown('</div>', unsafe_allow_html=True)
+
     
     st.markdown('</div>', unsafe_allow_html=True)
     # Formulario de login
