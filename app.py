@@ -3576,115 +3576,70 @@ with tab3:
                     key="btn_no_data_tab3"
                 )
 
-       # COLUMNA 3: Informe ejecutivo (PDF + CSV)
+    # COLUMNA 3: Informe ejecutivo (PDF + CSV) - VERSIÓN SIMPLIFICADA
 with col_exp3:
     col_pdf, col_csv = st.columns(2)
     
     with col_pdf:
-        # Botón para generar PDF del dashboard nacional
-        if st.button("📄 Generar PDF Nacional",
+        # Botón para generar PDF
+        if st.button("📄 Generar PDF",
                     use_container_width=True,
                     type="primary",
                     key="btn_generar_pdf_nacional_tab3"):
             
-            with st.spinner("Generando informe PDF nacional..."):
+            with st.spinner("Generando informe PDF..."):
                 try:
-                    # Generar PDF usando tu misma estructura
+                    # Verificar que la función existe
                     pdf_bytes = generar_pdf_dashboard_nacional(
                         indicadores=indicadores,
                         datos=datos,
-                        mapa_df=st.session_state.get('mapa_peru')
+                        mapa_df=st.session_state.get('mapa_peru', None)
                     )
                     
-                    # Botón de descarga del PDF
+                    # Mostrar botón de descarga
                     st.download_button(
-                        label="📥 Descargar PDF Nacional",
+                        label="📥 Descargar PDF",
                         data=pdf_bytes,
-                        file_name=f"dashboard_anemia_nacional_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf",
+                        file_name=f"dashboard_anemia_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf",
                         mime="application/pdf",
                         use_container_width=True,
                         key="btn_download_pdf_nacional_tab3"
                     )
                     
-                    st.success("✅ PDF nacional generado exitosamente")
-                    
+                except NameError:
+                    st.error("❌ La función 'generar_pdf_dashboard_nacional' no está definida")
                 except Exception as e:
-                    st.error(f"❌ Error al generar PDF: {str(e)}")
-                    st.info("💡 Asegúrate de tener FPDF instalado: `pip install fpdf2`")
+                    st.error(f"❌ Error: {str(e)[:100]}")
     
     with col_csv:
-        # Crear informe ejecutivo en formato CSV simple
-        informe_csv = "INFORME NACIONAL DE ANEMIA\n"
-        informe_csv += f"Fecha: {datetime.now().strftime('%d/%m/%Y %H:%M')}\n\n"
-        informe_csv += "RESUMEN NACIONAL\n"
-        informe_csv += f"Total Pacientes,{indicadores['total_pacientes']}\n"
-        informe_csv += f"Prevalencia Nacional,{indicadores['prevalencia_nacional']}%\n"
-        informe_csv += f"Con Anemia,{indicadores['con_anemia']}\n"
-        informe_csv += f"Hb Promedio,{indicadores['hb_promedio_nacional']:.1f} g/dL\n"
-        informe_csv += f"Tasa Seguimiento,{indicadores['tasa_seguimiento']}%\n\n"
+        # Crear CSV simple
+        informe_csv = f"""INFORME NACIONAL DE ANEMIA
+Fecha: {datetime.now().strftime('%d/%m/%Y %H:%M')}
+
+RESUMEN NACIONAL
+Total Pacientes,{indicadores['total_pacientes']}
+Prevalencia Nacional,{indicadores['prevalencia_nacional']}%
+Con Anemia,{indicadores['con_anemia']}
+Hb Promedio,{indicadores['hb_promedio_nacional']:.1f} g/dL
+Tasa Seguimiento,{indicadores['tasa_seguimiento']}%
+
+DISTRIBUCIÓN POR GRAVEDAD
+Anemia Severa,{indicadores['severa']}
+Anemia Moderada,{indicadores['moderada']}
+Anemia Leve,{indicadores['leve']}
+Normal,{indicadores['normal']}
+"""
         
-        informe_csv += "DISTRIBUCIÓN POR GRAVEDAD\n"
-        informe_csv += f"Anemia Severa,{indicadores['severa']}\n"
-        informe_csv += f"Anemia Moderada,{indicadores['moderada']}\n"
-        informe_csv += f"Anemia Leve,{indicadores['leve']}\n"
-        informe_csv += f"Normal,{indicadores['normal']}\n\n"
-        
+        # Agregar regiones si existen
         if 'por_region' in indicadores:
-            informe_csv += "DATOS POR REGIÓN\n"
-            informe_csv += "Region,Prevalencia(%),Total_Pacientes,Con_Anemia,Hb_Promedio\n"
+            informe_csv += "\nDATOS POR REGIÓN\nRegion,Prevalencia(%),Total,Con_Anemia,Hb_Promedio\n"
             for region, stats in indicadores['por_region'].items():
                 informe_csv += f"{region},{stats['prevalencia']}%,{stats['total']},{stats['con_anemia']},{stats['hb_promedio']:.1f}\n"
         
-        # Agregar estadísticas adicionales
-        informe_csv += "\nESTADÍSTICAS ADICIONALES\n"
-        
-        # Edad promedio si existe
-        if 'edad_meses' in datos.columns:
-            edad_prom = datos['edad_meses'].mean()
-            informe_csv += f"Edad Promedio,{edad_prom:.1f} meses\n"
-        
-        # Top regiones si existen
-        if 'por_region' in indicadores and indicadores['por_region']:
-            # Encontrar región con mayor prevalencia
-            regiones_ordenadas = sorted(
-                indicadores['por_region'].items(),
-                key=lambda x: x[1]['prevalencia'],
-                reverse=True
-            )
-            
-            if regiones_ordenadas:
-                top_region = regiones_ordenadas[0]
-                informe_csv += f"Region_Mas_Afectada,{top_region[0]}\n"
-                informe_csv += f"Prevalencia_Maxima,{top_region[1]['prevalencia']}%\n"
-        
-        # Meta OMS comparación
-        meta_oms = 20
-        diferencia_oms = indicadores['prevalencia_nacional'] - meta_oms
-        informe_csv += f"Meta_OMS,{meta_oms}%\n"
-        informe_csv += f"Diferencia_OMS,{diferencia_oms:+.1f}%\n"
-        
-        # Tasa de casos severos
-        if indicadores['con_anemia'] > 0:
-            tasa_severa = (indicadores['severa'] / indicadores['con_anemia']) * 100
-            informe_csv += f"Tasa_Casos_Severos,{tasa_severa:.1f}%\n"
-        
-        # Interpretación
-        prevalencia = indicadores['prevalencia_nacional']
-        if prevalencia >= 40:
-            situacion = "ALTA_PRIORIDAD_Intervencion_Inmediata"
-        elif prevalencia >= 20:
-            situacion = "ATENCION_REQUERIDA_Acciones_Preventivas"
-        else:
-            situacion = "SITUACION_CONTROLADA_Meta_OMS_Alcanzada"
-        
-        informe_csv += f"Situacion_General,{situacion}\n"
-        informe_csv += f"Fecha_Generacion,{datetime.now().strftime('%d/%m/%Y %H:%M')}\n"
-        informe_csv += f"Sistema,Sistema_Nacional_Monitoreo_Anemia\n"
-        
         st.download_button(
-            label="📊 Descargar CSV Completo",
+            label="📊 Descargar CSV",
             data=informe_csv.encode('utf-8'),
-            file_name=f"informe_anemia_completo_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
+            file_name=f"informe_anemia_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
             mime="text/csv",
             use_container_width=True,
             type="secondary",
