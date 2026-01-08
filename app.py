@@ -3764,57 +3764,99 @@ with tab3:
             
             st.plotly_chart(fig_niveles, use_container_width=True)
         
-        with col_graf2:
-            # Gráfico ALTERNATIVO SEGURO - distribución por género
-            if 'genero' in datos.columns:
-                genero_counts = datos['genero'].value_counts()
-                fig_genero = px.pie(
-                    values=genero_counts.values,
-                    names=genero_counts.index.map({'M': 'Niños', 'F': 'Niñas'}).fillna('Otro'),
-                    title='<b>Distribución por Género</b>',
-                    color_discrete_sequence=['#3b82f6', '#ef4444'],
-                    height=350
+       with col_graf2:
+    # Gráfico ALTERNATIVO SEGURO - distribución por género - VERSIÓN CORREGIDA
+    if 'genero' in datos.columns:
+        # Limpiar y normalizar los datos de género
+        datos_genero = datos['genero'].astype(str).str.upper().str.strip()
+        
+        # Filtrar solo valores válidos
+        genero_valido = datos_genero[datos_genero.isin(['M', 'F', 'MASCULINO', 'FEMENINO', 'NIÑO', 'NIÑA'])]
+        
+        # Normalizar a 'M' y 'F'
+        genero_normalizado = genero_valido.replace({
+            'MASCULINO': 'M',
+            'FEMENINO': 'F', 
+            'NIÑO': 'M',
+            'NIÑA': 'F'
+        })
+        
+        # Contar solo géneros válidos
+        genero_counts = genero_normalizado.value_counts()
+        
+        if len(genero_counts) > 0:
+            # Crear labels descriptivos
+            labels_map = {'M': 'Niños 👦', 'F': 'Niñas 👧'}
+            labels = [labels_map.get(g, g) for g in genero_counts.index]
+            
+            # Mostrar estadísticas
+            total_genero = genero_counts.sum()
+            porcentajes = (genero_counts / total_genero * 100).round(1)
+            
+            # Crear tooltip con información detallada
+            custom_data = []
+            for i, (count, porcentaje) in enumerate(zip(genero_counts.values, porcentajes)):
+                custom_data.append(f"{count} ({porcentaje}%)")
+            
+            fig_genero = px.pie(
+                values=genero_counts.values,
+                names=labels,
+                title='<b>Distribución por Género</b>',
+                color_discrete_sequence=['#3b82f6', '#ef4444', '#10b981'],  # Azul para niños, Rojo para niñas
+                height=350,
+                hover_data=[custom_data]
+            )
+            
+            # Agregar anotación con total
+            fig_genero.update_layout(
+                annotations=[
+                    dict(
+                        text=f'Total: {total_genero}',
+                        x=0.5, y=0.5,
+                        font_size=12,
+                        showarrow=False,
+                        font=dict(color='gray')
+                    )
+                ],
+                showlegend=True,
+                legend_title="Género"
+            )
+            
+            st.plotly_chart(fig_genero, use_container_width=True)
+            
+            # Mostrar estadísticas adicionales
+            col_stats1, col_stats2 = st.columns(2)
+            with col_stats1:
+                if 'M' in genero_counts.index:
+                    st.metric("Niños 👦", f"{genero_counts['M']}", 
+                             delta=f"{porcentajes.get('M', 0):.1f}%")
+            with col_stats2:
+                if 'F' in genero_counts.index:
+                    st.metric("Niñas 👧", f"{genero_counts['F']}", 
+                             delta=f"{porcentajes.get('F', 0):.1f}%")
+        else:
+            # Si no hay datos de género, mostrar gráfico alternativo
+            st.warning("⚠️ No se encontraron datos de género válidos")
+            
+            # Gráfico alternativo: distribución por nivel de anemia
+            if 'nivel_anemia' in datos.columns:
+                niveles_data = datos['nivel_anemia'].value_counts()
+                fig_alternativo = px.bar(
+                    x=niveles_data.index,
+                    y=niveles_data.values,
+                    title='<b>Distribución por Nivel de Anemia</b>',
+                    color=niveles_data.index,
+                    color_discrete_sequence=['#dc2626', '#f59e0b', '#3b82f6', '#10b981'],
+                    text=niveles_data.values
                 )
-                st.plotly_chart(fig_genero, use_container_width=True)
-            else:
-                # Si no hay datos de género, mostrar gráfico simple de distribución regional
-                if 'por_region' in indicadores:
-                    # Tomar top 5 regiones por prevalencia
-                    region_data = []
-                    for region, stats in indicadores['por_region'].items():
-                        if stats['total'] > 0:
-                            region_data.append({
-                                'region': region,
-                                'prevalencia': stats['prevalencia']
-                            })
-                    
-                    if region_data:
-                        region_df = pd.DataFrame(region_data)
-                        region_df = region_df.sort_values('prevalencia', ascending=False).head(5)
-                        
-                        fig_regiones = px.bar(
-                            region_df,
-                            x='region',
-                            y='prevalencia',
-                            title='<b>Top 5 Regiones con Mayor Prevalencia</b>',
-                            color='prevalencia',
-                            color_continuous_scale='Reds',
-                            text='prevalencia'
-                        )
-                        
-                        fig_regiones.update_traces(
-                            texttemplate='%{y:.1f}%',
-                            textposition='outside'
-                        )
-                        
-                        fig_regiones.update_layout(
-                            xaxis_title="Región",
-                            yaxis_title="Prevalencia (%)",
-                            height=350,
-                            coloraxis_showscale=False
-                        )
-                        
-                        st.plotly_chart(fig_regiones, use_container_width=True)
+                fig_alternativo.update_traces(texttemplate='%{y}')
+                st.plotly_chart(fig_alternativo, use_container_width=True)
+    else:
+        # Si no existe la columna 'genero', mostrar mensaje claro
+        st.info("📊 La columna 'genero' no está presente en los datos")
+        
+        # Mostrar columnas disponibles para diagnóstico
+        st.caption(f"Columnas disponibles: {', '.join(datos.columns.tolist()[:10])}")
         
         # ============================================
         # TABLA DE REGIONES
