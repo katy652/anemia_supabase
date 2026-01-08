@@ -518,7 +518,7 @@ USUARIOS_SALUD = {
 def show_login_page():
     """Muestra la página de login"""
     
-    # Estilos CSS para el login (SIN ENCABEZADO)
+    # Estilos CSS para el login
     st.markdown("""
     <style>
     .login-container {
@@ -531,9 +531,33 @@ def show_login_page():
         border: 2px solid #e0f2fe;
     }
     
-    /* ELIMINÉ TODAS LAS CLASES DEL ENCABEZADO: 
-       .login-header, .hospital-icon, .login-title, .login-subtitle 
-       Estas clases causaban el duplicado */
+    .login-header {
+        text-align: center;
+        margin-bottom: 40px;
+    }
+    
+    .hospital-icon {
+        font-size: 60px;
+        margin-bottom: 20px;
+        color: #1e40af;
+    }
+    
+    .login-title {
+        color: #1e3a8a;
+        font-size: 2.2rem;
+        font-weight: 800;
+        margin: 0;
+        background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    
+    .login-subtitle {
+        color: #6b7280;
+        font-size: 1rem;
+        margin-top: 10px;
+        font-weight: 500;
+    }
     
     .stButton > button {
         width: 100%;
@@ -614,34 +638,31 @@ def show_login_page():
     # Contenedor principal del login
     st.markdown('<div class="login-container">', unsafe_allow_html=True)
     
-    # ENCABEZADO DEL LOGIN (ÚNICO - no tiene clases que dupliquen)
+    # ENCABEZADO
     st.markdown("""
-    <div style="text-align: center; margin-bottom: 40px;">
-        <div style="font-size: 60px; margin-bottom: 20px; color: #1e40af;">🏥</div>
-        <h1 style="color: #1e3a8a; font-size: 2.2rem; font-weight: 800; margin: 0;
-                   background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
-                   -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-            SISTEMA NIXON
-        </h1>
-        <p style="color: #6b7280; font-size: 1rem; margin-top: 10px; font-weight: 500;">
-            Control de Anemia y Nutrición Infantil
-        </p>
-        <div style="height: 3px; width: 80px; background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); 
-                    margin: 20px auto; border-radius: 10px;"></div>
+    <div class="login-header">
+        <div class="hospital-icon">🏥</div>
+        <h1 class="login-title">SISTEMA NIXON</h1>
+        <p class="login-subtitle">Control de Anemia y Nutrición Infantil</p>
+        <div style="height: 3px; width: 80px; background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); margin: 20px auto; border-radius: 10px;"></div>
     </div>
     """, unsafe_allow_html=True)
     
     # FORMULARIO DE LOGIN
-    st.markdown('<div class="form-label">👤 Usuario</div>', unsafe_allow_html=True)
-    username = st.text_input("", placeholder="Ingrese su usuario", label_visibility="collapsed")
+    col1, col2 = st.columns([1, 1])
     
-    st.markdown('<div class="form-label">🔒 Contraseña</div>', unsafe_allow_html=True)
-    password = st.text_input("", type="password", placeholder="Ingrese su contraseña", label_visibility="collapsed")
+    with col1:
+        username = st.text_input("👤 Usuario", placeholder="Ingrese su usuario", key="login_user")
     
-    # Botón de login
-    if st.button("🚀 Iniciar Sesión", type="primary"):
+    with col2:
+        password = st.text_input("🔒 Contraseña", type="password", placeholder="Ingrese su contraseña", key="login_pass")
+    
+    # Botón de login - ¡AQUÍ ESTÁ LA CORRECCIÓN!
+    if st.button("🚀 Iniciar Sesión", type="primary", key="login_btn"):
         if username and password:
-            user_info = verificar_login(username, password)
+            # CORREGIR ESTA LÍNEA (línea 644):
+            user_info = verificar_login(username, password)  # ← ¡CORRECTO!
+            
             if user_info:
                 st.session_state.logged_in = True
                 st.session_state.user_info = user_info
@@ -655,7 +676,7 @@ def show_login_page():
     # USUARIOS DE PRUEBA
     st.markdown("""
     <div class="test-users">
-        <h4 style="margin-top: 0; color: #1e40af;">👥 Usuarios de Prueba:</h4>
+        <h4>👥 Usuarios de Prueba:</h4>
         <div class="user-card">
             <strong>Dr. Carlos Martínez</strong><span class="role-badge">Administrador</span><br>
             <small><strong>Usuario:</strong> cmartinez | <strong>Contraseña:</strong> pediatria123</small>
@@ -668,9 +689,6 @@ def show_login_page():
     """, unsafe_allow_html=True)
     
     st.markdown('</div>', unsafe_allow_html=True)
-    
-   
-    
     # Formulario de login
     with st.form("login_form"):
         st.markdown('<div class="form-label">👤 Nombre de Usuario</div>', unsafe_allow_html=True)
