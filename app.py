@@ -516,9 +516,9 @@ USUARIOS_SALUD = {
 }
 
 def show_login_page():
-    """Muestra la página de login SIN DUPLICADOS"""
+    """Muestra la página de login"""
     
-    # CSS SIN CLASES DE ENCABEZADO (para evitar conflictos)
+    # Estilos CSS para el login
     st.markdown("""
     <style>
     .login-container {
@@ -529,6 +529,34 @@ def show_login_page():
         border-radius: 20px;
         box-shadow: 0 15px 35px rgba(30, 64, 175, 0.1);
         border: 2px solid #e0f2fe;
+    }
+    
+    .login-header {
+        text-align: center;
+        margin-bottom: 40px;
+    }
+    
+    .hospital-icon {
+        font-size: 60px;
+        margin-bottom: 20px;
+        color: #1e40af;
+    }
+    
+    .login-title {
+        color: #1e3a8a;
+        font-size: 2.2rem;
+        font-weight: 800;
+        margin: 0;
+        background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    
+    .login-subtitle {
+        color: #6b7280;
+        font-size: 1rem;
+        margin-top: 10px;
+        font-weight: 500;
     }
     
     .stButton > button {
@@ -607,29 +635,20 @@ def show_login_page():
     </style>
     """, unsafe_allow_html=True)
     
-    # Contenedor principal
+    # Contenedor principal del login
     st.markdown('<div class="login-container">', unsafe_allow_html=True)
     
-    # ===== ENCABEZADO ÚNICO CON ESTILOS EN LÍNEA =====
-    # Esto evita conflictos con otras clases CSS
+    # Header con icono
     st.markdown("""
-    <div style="text-align: center; margin-bottom: 40px;">
-        <div style="font-size: 60px; color: #1e40af; margin-bottom: 20px;">🏥</div>
-        <h1 style="color: #1e3a8a; font-size: 2.2rem; font-weight: 800; margin: 0;
-                   background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
-                   -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-            SISTEMA NIXON
-        </h1>
-        <p style="color: #6b7280; font-size: 1rem; margin-top: 10px; font-weight: 500;">
-            Control de Anemia y Nutrición Infantil
-        </p>
-        <div style="height: 3px; width: 80px; 
-                    background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); 
-                    margin: 20px auto; border-radius: 10px;"></div>
+    <div class="login-header">
+        <div class="hospital-icon">🏥</div>
+        <h1 class="login-title">SISTEMA NIXON</h1>
+        <p class="login-subtitle">Control de Anemia y Nutrición Infantil</p>
+        <div style="height: 3px; width: 80px; background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); margin: 20px auto; border-radius: 10px;"></div>
     </div>
     """, unsafe_allow_html=True)
     
-    # ===== FORMULARIO DE LOGIN =====
+    # Formulario de login
     with st.form("login_form"):
         st.markdown('<div class="form-label">👤 Nombre de Usuario</div>', unsafe_allow_html=True)
         username = st.text_input("", placeholder="Ingresa tu usuario", label_visibility="collapsed")
@@ -658,12 +677,13 @@ def show_login_page():
                 else:
                     st.error("❌ Usuario o contraseña incorrectos")
     
-    # ===== USUARIOS AUTORIZADOS =====
+    # Información de usuarios de prueba
     with st.expander("👥 USUARIOS AUTORIZADOS DEL SISTEMA", expanded=True):
         st.markdown('<div class="test-users">', unsafe_allow_html=True)
         st.markdown("**Personal de Salud Autorizado:**")
         
         for username, info in USUARIOS_SALUD.items():
+            role_class = info['rol'].lower().replace("á", "a").replace("é", "e")
             st.markdown(f"""
             <div class="user-card">
                 <div style="display: flex; align-items: center; margin-bottom: 8px;">
@@ -679,7 +699,7 @@ def show_login_page():
             """, unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
     
-    # ===== FOOTER =====
+    # Footer del login
     st.markdown("""
     <div style="text-align: center; margin-top: 40px; color: #6b7280; font-size: 14px;">
         <p>© 2024 Sistema Nixon - Control de Anemia Infantil</p>
