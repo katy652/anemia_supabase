@@ -2832,16 +2832,20 @@ with tab_seg3:
                        type="secondary", 
                        use_container_width=True,
                        key="btn_nuevo_seguimiento_desde_historial"):
+                # Método SIMPLE para cambiar a la pestaña Nuevo Seguimiento
                 st.markdown("""
                 <script>
                 setTimeout(() => {
+                    // Buscar todos los botones de pestaña
                     const tabs = document.querySelectorAll('button[role="tab"]');
-                    if (tabs.length >= 3) {
-                        tabs[2].click();
+                    // La segunda pestaña (índice 1) es "Nuevo Seguimiento"
+                    if (tabs.length > 1) {
+                        tabs[1].click();
                     }
-                }, 500);
+                }, 100);
                 </script>
                 """, unsafe_allow_html=True)
+                time.sleep(0.1)
                 st.rerun()
         
         with col_btn_estado3:
@@ -2861,7 +2865,7 @@ with tab_seg3:
                 """, unsafe_allow_html=True)
                 st.rerun()
         
-               # ============================================
+        # ============================================
         # INFORMACIÓN PRINCIPAL - VERSIÓN CON NOMBRES EXACTOS DE COLUMNAS
         # ============================================
         
@@ -3374,12 +3378,14 @@ with tab_seg3:
                 <script>
                 setTimeout(() => {
                     const tabs = document.querySelectorAll('button[role="tab"]');
-                    if (tabs.length >= 3) {
-                        tabs[2].click();
+                    // La segunda pestaña (índice 1) es "Nuevo Seguimiento"
+                    if (tabs.length > 1) {
+                        tabs[1].click();
                     }
-                }, 500);
+                }, 100);
                 </script>
                 """, unsafe_allow_html=True)
+                time.sleep(0.1)
                 st.rerun()
 # ==================================================
 # PESTAÑA 3: DASHBOARD NACIONAL
