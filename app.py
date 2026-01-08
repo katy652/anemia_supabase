@@ -3775,39 +3775,37 @@ Normal,{indicadores['normal']}
                 st.code(resumen_texto, language="text")
                 st.success("✅ Copia el texto de arriba manualmente")
 
-        # ============================================
-        # 📌 INFORMACIÓN ADICIONAL
-        # ============================================
-        
-        with st.expander("📌 **INFORMACIÓN TÉCNICA DEL DASHBOARD**", expanded=False):
-            st.markdown("""
-            **Definiciones utilizadas:**
-            
-            **Prevalencia de anemia:** Porcentaje de pacientes con hemoglobina < 11 g/dL (OMS)
-            
-            **Clasificación por niveles:**
-            - **Anemia severa:** Hb < 7 g/dL
-            - **Anemia moderada:** Hb 7-9.9 g/dL  
-            - **Anemia leve:** Hb 10-10.9 g/dL
-            - **Normal:** Hb ≥ 11 g/dL
-            
-            **Indicadores de seguimiento:**
-            - **Tasa de seguimiento:** % de pacientes con anemia que están en control activo
-            - **Meta OMS:** Prevalencia < 20% en población infantil
-            
-            **Interpretación de colores en el mapa:**
-            - 🔴 **Rojo:** Prevalencia > 40% (Alta prioridad)
-            - 🟡 **Amarillo:** Prevalencia 20-40% (Atención requerida)
-            - 🟢 **Verde:** Prevalencia < 20% (Dentro de meta OMS)
-            
-            **Fuentes de datos:**
-            - Sistema Nixon v2.0
-            - Base de datos nacional consolidada
-            - Criterios OMS para diagnóstico de anemia
-            - Coordenadas aproximadas de regiones del Perú
-            """)
+# ============================================
+# 📌 INFORMACIÓN ADICIONAL
+# ============================================
+
+with st.expander("📌 **INFORMACIÓN TÉCNICA DEL DASHBOARD**", expanded=False):
+    st.markdown("""
+    **Definiciones utilizadas:**
     
-          else:
+    **Prevalencia de anemia:** Porcentaje de pacientes con hemoglobina < 11 g/dL (OMS)
+    
+    **Clasificación por niveles:**
+    - **Anemia severa:** Hb < 7 g/dL
+    - **Anemia moderada:** Hb 7-9.9 g/dL  
+    - **Anemia leve:** Hb 10-10.9 g/dL
+    - **Normal:** Hb ≥ 11 g/dL
+    
+    **Indicadores de seguimiento:**
+    - **Tasa de seguimiento:** % de pacientes con anemia que están en control activo
+    - **Meta OMS:** Prevalencia < 20% en población infantil
+    
+    **Interpretación de colores en el mapa:**
+    - 🔴 **Rojo:** Prevalencia > 40% (Alta prioridad)
+    - 🟡 **Amarillo:** Prevalencia 20-40% (Atención requerida)
+    - 🟢 **Verde:** Prevalencia < 20% (Dentro de meta OMS)
+    
+    **Fuentes de datos:**
+    - Sistema Nixon v2.0
+    - Base de datos nacional consolidada
+    - Criterios OMS para diagnóstico de anemia
+    - Coordenadas aproximadas de regiones del Perú
+    """)
         # ============================================
         # SIN DATOS CARGADOS
         # ============================================
