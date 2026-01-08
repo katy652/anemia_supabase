@@ -3675,105 +3675,42 @@ Sistema Nacional de Monitoreo de Anemia"""
                 key="btn_copiar_resumen_tab3"):
         st.code(resumen_texto, language="text")
         st.success("✅ Copia el texto de arriba manualmente")
-    # COLUMNA 3: Informe ejecutivo (PDF + CSV) - VERSIÓN SIMPLIFICADA
-with col_exp3:
-    col_pdf, col_csv = st.columns(2)
+
+# ============================================
+# 📌 INFORMACIÓN ADICIONAL
+# ============================================
+
+with st.expander("📌 **INFORMACIÓN TÉCNICA DEL DASHBOARD**", expanded=False):
+    st.markdown("""
+    **Definiciones utilizadas:**
     
-    with col_pdf:
-        # Botón para generar PDF
-        if st.button("📄 Generar PDF",
-                    use_container_width=True,
-                    type="primary",
-                    key="btn_generar_pdf_nacional_tab3"):
-            
-            with st.spinner("Generando informe PDF..."):
-                try:
-                    # Verificar que la función existe
-                    pdf_bytes = generar_pdf_dashboard_nacional(
-                        indicadores=indicadores,
-                        datos=datos,
-                        mapa_df=st.session_state.get('mapa_peru', None)
-                    )
-                    
-                    # Mostrar botón de descarga
-                    st.download_button(
-                        label="📥 Descargar PDF",
-                        data=pdf_bytes,
-                        file_name=f"dashboard_anemia_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf",
-                        mime="application/pdf",
-                        use_container_width=True,
-                        key="btn_download_pdf_nacional_tab3"
-                    )
-                    
-                except NameError:
-                    st.error("❌ La función 'generar_pdf_dashboard_nacional' no está definida")
-                except Exception as e:
-                    st.error(f"❌ Error: {str(e)[:100]}")
+    **Prevalencia de anemia:** Porcentaje de pacientes con hemoglobina < 11 g/dL (OMS)
     
-    with col_csv:
-        # Crear CSV simple
-        informe_csv = f"""INFORME NACIONAL DE ANEMIA
-Fecha: {datetime.now().strftime('%d/%m/%Y %H:%M')}
+    **Clasificación por niveles:**
+    - **Anemia severa:** Hb < 7 g/dL
+    - **Anemia moderada:** Hb 7-9.9 g/dL  
+    - **Anemia leve:** Hb 10-10.9 g/dL
+    - **Normal:** Hb ≥ 11 g/dL
+    
+    **Indicadores de seguimiento:**
+    - **Tasa de seguimiento:** % de pacientes con anemia que están en control activo
+    - **Meta OMS:** Prevalencia < 20% en población infantil
+    
+    **Interpretación de colores en el mapa:**
+    - 🔴 **Rojo:** Prevalencia > 40% (Alta prioridad)
+    - 🟡 **Amarillo:** Prevalencia 20-40% (Atención requerida)
+    - 🟢 **Verde:** Prevalencia < 20% (Dentro de meta OMS)
+    
+    **Fuentes de datos:**
+    - Sistema Nixon v2.0
+    - Base de datos nacional consolidada
+    - Criterios OMS para diagnóstico de anemia
+    - Coordenadas aproximadas de regiones del Perú
+    """)
 
-RESUMEN NACIONAL
-Total Pacientes,{indicadores['total_pacientes']}
-Prevalencia Nacional,{indicadores['prevalencia_nacional']}%
-Con Anemia,{indicadores['con_anemia']}
-Hb Promedio,{indicadores['hb_promedio_nacional']:.1f} g/dL
-Tasa Seguimiento,{indicadores['tasa_seguimiento']}%
-
-DISTRIBUCIÓN POR GRAVEDAD
-Anemia Severa,{indicadores['severa']}
-Anemia Moderada,{indicadores['moderada']}
-Anemia Leve,{indicadores['leve']}
-Normal,{indicadores['normal']}
-"""
-        
-        # Agregar regiones si existen
-        if 'por_region' in indicadores:
-            informe_csv += "\nDATOS POR REGIÓN\nRegion,Prevalencia(%),Total,Con_Anemia,Hb_Promedio\n"
-            for region, stats in indicadores['por_region'].items():
-                informe_csv += f"{region},{stats['prevalencia']}%,{stats['total']},{stats['con_anemia']},{stats['hb_promedio']:.1f}\n"
-        
-        st.download_button(
-            label="📊 Descargar CSV",
-            data=informe_csv.encode('utf-8'),
-            file_name=f"informe_anemia_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
-            mime="text/csv",
-            use_container_width=True,
-            type="secondary",
-            key="btn_download_csv_informe_tab3"
-        )
-
-        # COLUMNA 4: Resumen para portapapeles
-        with col_exp4:
-            # Crear texto para portapapeles
-            resumen_texto = f"""📊 RESUMEN ANEMIA NACIONAL
-        Fecha: {datetime.now().strftime('%d/%m/%Y %H:%M')}
-
-        📈 INDICADORES:
-        • Total: {indicadores['total_pacientes']} pacientes
-        • Prevalencia: {indicadores['prevalencia_nacional']}%
-        • Con anemia: {indicadores['con_anemia']}
-        • Hb promedio: {indicadores['hb_promedio_nacional']:.1f} g/dL
-        • Tasa seguimiento: {indicadores['tasa_seguimiento']}%
-
-        🎯 DISTRIBUCIÓN:
-        • Severa: {indicadores['severa']}
-        • Moderada: {indicadores['moderada']}
-        • Leve: {indicadores['leve']}
-        • Normal: {indicadores['normal']}
-
-        ---
-        Sistema Nacional de Monitoreo de Anemia"""
-            
-            # Mostrar código para copiar manualmente
-            if st.button("📋 Copiar Resumen",
-                        use_container_width=True,
-                        type="secondary",
-                        key="btn_copiar_resumen_tab3"):
-                st.code(resumen_texto, language="text")
-                st.success("✅ Copia el texto de arriba manualmente")
+# ============================================
+# FIN DE LA PESTAÑA 3
+# ============================================
 
 # ============================================
 # 📌 INFORMACIÓN ADICIONAL
