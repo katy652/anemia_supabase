@@ -515,6 +515,20 @@ USUARIOS_SALUD = {
     }
 }
 
+def verificar_login(username, password):
+    """Verifica si el usuario y contraseña son correctos"""
+    if username in USUARIOS_SALUD and USUARIOS_SALUD[username]["password"] == password:
+        return USUARIOS_SALUD[username]
+    return None
+
+def logout():
+    """Cierra sesión del usuario"""
+    st.session_state.logged_in = False
+    st.session_state.user_info = None
+    st.session_state.current_username = None
+    st.rerun()
+
+
 def show_login_page():
     """Muestra la página de login"""
     
