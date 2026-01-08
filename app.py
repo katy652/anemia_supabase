@@ -3509,73 +3509,172 @@ with tab3:
         # Línea separadora
         st.markdown("---")
 
-        # ============================================
-        # 📥 EXPORTAR REPORTES
-        # ============================================
+       # ============================================
+# 📥 EXPORTAR REPORTES
+# ============================================
+
+st.markdown("""
+<div class="section-title-blue" style="font-size: 1.3rem;">
+    📥 EXPORTAR REPORTES
+</div>
+""", unsafe_allow_html=True)
+
+# Contenedor para exportación
+col_exp1, col_exp2, col_exp3, col_exp4 = st.columns(4)
+
+# COLUMNA 1: Datos completos
+with col_exp1:
+    csv_full = datos.to_csv(index=False).encode('utf-8')
+    st.download_button(
+        label="📊 Datos Completos (CSV)",
+        data=csv_full,
+        file_name=f"datos_anemia_nacional_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
+        mime="text/csv",
+        use_container_width=True,
+        type="primary",
+        key="btn_download_full_tab3"
+    )
+
+# COLUMNA 2: Indicadores por región
+with col_exp2:
+    if 'por_region' in indicadores and indicadores['por_region']:
+        reporte_data = []
+        for region, stats in indicadores['por_region'].items():
+            reporte_data.append({
+                'Región': region,
+                'Prevalencia (%)': stats['prevalencia'],
+                'Total Pacientes': stats['total'],
+                'Con Anemia': stats['con_anemia'],
+                'Hb Promedio': stats['hb_promedio'],
+                'Anemia Severa': stats['severa'],
+                'Anemia Moderada': stats['moderada'],
+                'Anemia Leve': stats['leve'],
+                'En Seguimiento': stats['en_seguimiento']
+            })
         
-        st.markdown("""
-        <div class="section-title-blue" style="font-size: 1.3rem;">
-            📥 EXPORTAR REPORTES
-        </div>
-        """, unsafe_allow_html=True)
-
-        # Contenedor para exportación
-        col_exp1, col_exp2, col_exp3, col_exp4 = st.columns(4)
-
-        # COLUMNA 1: Datos completos
-        with col_exp1:
-            csv_full = datos.to_csv(index=False).encode('utf-8')
+        if reporte_data:
+            reporte_df = pd.DataFrame(reporte_data)
+            csv_indicadores = reporte_df.to_csv(index=False).encode('utf-8')
+            
             st.download_button(
-                label="📊 Datos Completos (CSV)",
-                data=csv_full,
-                file_name=f"datos_anemia_nacional_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
+                label="📈 Indicadores (CSV)",
+                data=csv_indicadores,
+                file_name=f"indicadores_anemia_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
                 mime="text/csv",
                 use_container_width=True,
-                type="primary",
-                key="btn_download_full_tab3"
+                type="secondary",
+                key="btn_download_indicadores_tab3"
             )
+    else:
+        st.download_button(
+            label="📈 Indicadores (CSV)",
+            data="No hay datos regionales".encode('utf-8'),
+            file_name="sin_datos.csv",
+            mime="text/csv",
+            use_container_width=True,
+            disabled=True,
+            key="btn_no_data_tab3"
+        )
 
-        # COLUMNA 2: Indicadores por región
-        with col_exp2:
-            if 'por_region' in indicadores and indicadores['por_region']:
-                reporte_data = []
-                for region, stats in indicadores['por_region'].items():
-                    reporte_data.append({
-                        'Región': region,
-                        'Prevalencia (%)': stats['prevalencia'],
-                        'Total Pacientes': stats['total'],
-                        'Con Anemia': stats['con_anemia'],
-                        'Hb Promedio': stats['hb_promedio'],
-                        'Anemia Severa': stats['severa'],
-                        'Anemia Moderada': stats['moderada'],
-                        'Anemia Leve': stats['leve'],
-                        'En Seguimiento': stats['en_seguimiento']
-                    })
-                
-                if reporte_data:
-                    reporte_df = pd.DataFrame(reporte_data)
-                    csv_indicadores = reporte_df.to_csv(index=False).encode('utf-8')
-                    
-                    st.download_button(
-                        label="📈 Indicadores (CSV)",
-                        data=csv_indicadores,
-                        file_name=f"indicadores_anemia_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
-                        mime="text/csv",
-                        use_container_width=True,
-                        type="secondary",
-                        key="btn_download_indicadores_tab3"
-                    )
-            else:
-                st.download_button(
-                    label="📈 Indicadores (CSV)",
-                    data="No hay datos regionales".encode('utf-8'),
-                    file_name="sin_datos.csv",
-                    mime="text/csv",
+# COLUMNA 3: Informe ejecutivo (PDF + CSV)
+with col_exp3:
+    col_pdf, col_csv = st.columns(2)
+    
+    with col_pdf:
+        # Botón para generar PDF
+        if st.button("📄 Generar PDF",
                     use_container_width=True,
-                    disabled=True,
-                    key="btn_no_data_tab3"
-                )
+                    type="primary",
+                    key="btn_generar_pdf_nacional_tab3"):
+            
+            with st.spinner("Generando informe PDF..."):
+                try:
+                    # Verificar que la función existe
+                    pdf_bytes = generar_pdf_dashboard_nacional(
+                        indicadores=indicadores,
+                        datos=datos,
+                        mapa_df=st.session_state.get('mapa_peru', None)
+                    )
+                    
+                    # Mostrar botón de descarga
+                    st.download_button(
+                        label="📥 Descargar PDF",
+                        data=pdf_bytes,
+                        file_name=f"dashboard_anemia_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf",
+                        mime="application/pdf",
+                        use_container_width=True,
+                        key="btn_download_pdf_nacional_tab3"
+                    )
+                    
+                except NameError:
+                    st.error("❌ La función 'generar_pdf_dashboard_nacional' no está definida")
+                except Exception as e:
+                    st.error(f"❌ Error: {str(e)[:100]}")
+    
+    with col_csv:
+        # Crear CSV simple
+        informe_csv = f"""INFORME NACIONAL DE ANEMIA
+Fecha: {datetime.now().strftime('%d/%m/%Y %H:%M')}
 
+RESUMEN NACIONAL
+Total Pacientes,{indicadores['total_pacientes']}
+Prevalencia Nacional,{indicadores['prevalencia_nacional']}%
+Con Anemia,{indicadores['con_anemia']}
+Hb Promedio,{indicadores['hb_promedio_nacional']:.1f} g/dL
+Tasa Seguimiento,{indicadores['tasa_seguimiento']}%
+
+DISTRIBUCIÓN POR GRAVEDAD
+Anemia Severa,{indicadores['severa']}
+Anemia Moderada,{indicadores['moderada']}
+Anemia Leve,{indicadores['leve']}
+Normal,{indicadores['normal']}
+"""
+        
+        # Agregar regiones si existen
+        if 'por_region' in indicadores:
+            informe_csv += "\nDATOS POR REGIÓN\nRegion,Prevalencia(%),Total,Con_Anemia,Hb_Promedio\n"
+            for region, stats in indicadores['por_region'].items():
+                informe_csv += f"{region},{stats['prevalencia']}%,{stats['total']},{stats['con_anemia']},{stats['hb_promedio']:.1f}\n"
+        
+        st.download_button(
+            label="📊 Descargar CSV",
+            data=informe_csv.encode('utf-8'),
+            file_name=f"informe_anemia_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
+            mime="text/csv",
+            use_container_width=True,
+            type="secondary",
+            key="btn_download_csv_informe_tab3"
+        )
+
+# COLUMNA 4: Resumen para portapapeles
+with col_exp4:
+    # Crear texto para portapapeles
+    resumen_texto = f"""📊 RESUMEN ANEMIA NACIONAL
+Fecha: {datetime.now().strftime('%d/%m/%Y %H:%M')}
+
+📈 INDICADORES:
+• Total: {indicadores['total_pacientes']} pacientes
+• Prevalencia: {indicadores['prevalencia_nacional']}%
+• Con anemia: {indicadores['con_anemia']}
+• Hb promedio: {indicadores['hb_promedio_nacional']:.1f} g/dL
+• Tasa seguimiento: {indicadores['tasa_seguimiento']}%
+
+🎯 DISTRIBUCIÓN:
+• Severa: {indicadores['severa']}
+• Moderada: {indicadores['moderada']}
+• Leve: {indicadores['leve']}
+• Normal: {indicadores['normal']}
+
+---
+Sistema Nacional de Monitoreo de Anemia"""
+    
+    # Mostrar código para copiar manualmente
+    if st.button("📋 Copiar Resumen",
+                use_container_width=True,
+                type="secondary",
+                key="btn_copiar_resumen_tab3"):
+        st.code(resumen_texto, language="text")
+        st.success("✅ Copia el texto de arriba manualmente")
     # COLUMNA 3: Informe ejecutivo (PDF + CSV) - VERSIÓN SIMPLIFICADA
 with col_exp3:
     col_pdf, col_csv = st.columns(2)
