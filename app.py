@@ -1661,6 +1661,226 @@ def calcular_riesgo_anemia(hb_ajustada, edad_meses, factores_clinicos, factores_
     else:
         return "BAJO RIESGO", puntaje, "VIGILANCIA"
 
+# ==================================================
+# FUNCIÓN PARA ANALIZAR ANEMIA (NUEVA)
+# ==================================================
+
+def analizar_anemia(hemoglobina_ajustada, edad_meses, nombre_paciente="", fecha_analisis=""):
+    """
+    Analiza la anemia según los criterios proporcionados:
+    - Sin anemia: Hemoglobina ajustada ≥ 11.0 g/dL
+    - Anemia leve: Hemoglobina ajustada entre 10.0 y 10.9 g/dL
+    - Anemia moderada: Hemoglobina ajustada entre 7.0 y 9.9 g/dL
+    - Anemia severa: Hemoglobina ajustada < 7.0 g/dL
+    """
+    
+    # Determinar rangos según la edad
+    if edad_meses < 24:
+        rangos = {
+            "sin_anemia": 11.0,
+            "leve_inicio": 10.0,
+            "leve_fin": 10.9,
+            "moderada_inicio": 7.0,
+            "moderada_fin": 9.9,
+            "severa": 7.0
+        }
+    elif 24 <= edad_meses < 60:
+        rangos = {
+            "sin_anemia": 11.5,
+            "leve_inicio": 10.5,
+            "leve_fin": 11.4,
+            "moderada_inicio": 7.0,
+            "moderada_fin": 10.4,
+            "severa": 7.0
+        }
+    else:
+        rangos = {
+            "sin_anemia": 12.0,
+            "leve_inicio": 11.0,
+            "leve_fin": 11.9,
+            "moderada_inicio": 7.0,
+            "moderada_fin": 10.9,
+            "severa": 7.0
+        }
+    
+    # Análisis según los rangos ajustados
+    if hemoglobina_ajustada >= rangos["sin_anemia"]:
+        clasificacion = "SIN ANEMIA"
+        alerta_color = "🟢"
+        alerta_titulo = "Estado nutricional hematológico adecuado"
+        recomendacion = "El sistema indica un estado nutricional hematológico adecuado, sin alertas clínicas inmediatas."
+        acciones = ["Control rutinario según protocolo", "Educación nutricional preventiva"]
+        color_css = "#10b981"  # Verde
+        
+    elif rangos["leve_inicio"] <= hemoglobina_ajustada <= rangos["leve_fin"]:
+        clasificacion = "ANEMIA LEVE"
+        alerta_color = "🟡"
+        alerta_titulo = "Vigilancia y seguimiento regular"
+        recomendacion = "Se sugiere seguimiento regular y refuerzo de prácticas preventivas."
+        acciones = [
+            "Control cada 3 meses",
+            "Refuerzo nutricional con alimentos ricos en hierro",
+            "Evaluación de factores de riesgo",
+            "Educación a padres/cuidadores"
+        ]
+        color_css = "#f59e0b"  # Amarillo
+        
+    elif rangos["moderada_inicio"] <= hemoglobina_ajustada <= rangos["moderada_fin"]:
+        clasificacion = "ANEMIA MODERADA"
+        alerta_color = "🟠"
+        alerta_titulo = "Riesgo intermedio - Acción requerida"
+        recomendacion = "El sistema activa alertas de riesgo intermedio y recomienda control clínico más frecuente y evaluación de adherencia a suplementación."
+        acciones = [
+            "Control clínico mensual obligatorio",
+            "Iniciar suplementación con hierro si no está presente",
+            "Evaluar adherencia al tratamiento",
+            "Estudio de causas secundarias",
+            "Monitoreo familiar cercano"
+        ]
+        color_css = "#f97316"  # Naranja
+        
+    else:  # hemoglobina_ajustada < rangos["severa"]
+        clasificacion = "ANEMIA SEVERA"
+        alerta_color = "🔴"
+        alerta_titulo = "ALERTA CRÍTICA - INTERVENCIÓN URGENTE"
+        recomendacion = "Se muestra una alerta crítica en color rojo, acompañada de una recomendación operativa clara: 'Seguimiento urgente semanal y derivación inmediata según protocolo clínico'."
+        acciones = [
+            "DERIVACIÓN INMEDIATA a especialista",
+            "Seguimiento semanal obligatorio",
+            "Evaluación hospitalaria si hay síntomas",
+            "Iniciar tratamiento farmacológico urgente",
+            "Monitoreo de constantes vitales",
+            "Coordinación con equipo multidisciplinario"
+        ]
+        color_css = "#dc2626"  # Rojo
+    
+    # Información adicional
+    progresion_riesgo = ""
+    if clasificacion == "ANEMIA SEVERA":
+        progresion_riesgo = "⚠️ **RIESGO ALTO**: Posible daño orgánico, compromiso del desarrollo, necesidad de intervención inmediata."
+    elif clasificacion == "ANEMIA MODERADA":
+        progresion_riesgo = "⚠️ **RIESGO INTERMEDIO**: Si no se interviene, puede progresar a anemia severa en 1-2 meses."
+    elif clasificacion == "ANEMIA LEVE":
+        progresion_riesgo = "⚠️ **RIESGO BAJO-MODERADO**: Posible progresión si no se toman medidas preventivas."
+    else:
+        progresion_riesgo = "✅ **RIESGO BAJO**: Estado estable, mantener medidas preventivas."
+    
+    return {
+        "clasificacion": clasificacion,
+        "hemoglobina": hemoglobina_ajustada,
+        "alerta_color": alerta_color,
+        "alerta_titulo": alerta_titulo,
+        "recomendacion": recomendacion,
+        "acciones": acciones,
+        "color_css": color_css,
+        "progresion_riesgo": progresion_riesgo,
+        "nombre_paciente": nombre_paciente,
+        "fecha_analisis": fecha_analisis,
+        "edad_meses": edad_meses,
+        "rangos_usados": rangos
+    }
+
+# ==================================================
+# FUNCIÓN PARA MOSTRAR ANÁLISIS DE ANEMIA EN INTERFAZ
+# ==================================================
+
+def mostrar_analisis_anemia(analisis_resultado):
+    """
+    Muestra el análisis de anemia en una interfaz visual atractiva
+    """
+    
+    analisis = analisis_resultado
+    
+    # Crear tarjeta de análisis
+    st.markdown(f"""
+    <div style="
+        background: {analisis['color_css']}15;
+        border-radius: 12px;
+        padding: 1.5rem;
+        border-left: 5px solid {analisis['color_css']};
+        margin: 1rem 0;
+        box-shadow: 0 4px 12px {analisis['color_css']}20;
+    ">
+        <div style="display: flex; align-items: center; margin-bottom: 1rem;">
+            <div style="font-size: 2rem; margin-right: 15px;">{analisis['alerta_color']}</div>
+            <div>
+                <h3 style="margin: 0; color: {analisis['color_css']}; font-size: 1.5rem;">
+                    {analisis['clasificacion']}
+                </h3>
+                <p style="margin: 5px 0 0 0; color: #6b7280; font-size: 0.9rem;">
+                    Hemoglobina ajustada: <strong>{analisis['hemoglobina']:.1f} g/dL</strong>
+                </p>
+            </div>
+        </div>
+        
+        <div style="background: white; padding: 1rem; border-radius: 8px; margin: 1rem 0;">
+            <h4 style="margin: 0 0 10px 0; color: #374151;">📋 {analisis['alerta_titulo']}</h4>
+            <p style="margin: 0; color: #4b5563; line-height: 1.5;">{analisis['recomendacion']}</p>
+        </div>
+        
+        <div style="margin-top: 1.5rem;">
+            <h4 style="margin: 0 0 10px 0; color: #374151;">📋 ACCIONES RECOMENDADAS:</h4>
+            <div style="background: #f9fafb; padding: 1rem; border-radius: 8px;">
+    """, unsafe_allow_html=True)
+    
+    # Mostrar acciones recomendadas
+    for i, accion in enumerate(analisis['acciones'], 1):
+        st.markdown(f"""
+        <div style="display: flex; align-items: flex-start; margin-bottom: 8px;">
+            <div style="
+                background: {analisis['color_css']};
+                color: white;
+                width: 24px;
+                height: 24px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 0.8rem;
+                margin-right: 10px;
+                flex-shrink: 0;
+            ">{i}</div>
+            <div style="color: #4b5563; flex: 1;">{accion}</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    # Cerrar divs
+    st.markdown("""
+            </div>
+        </div>
+        
+        <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #e5e7eb;">
+            <h4 style="margin: 0 0 10px 0; color: #374151;">⚠️ RIESGO DE PROGRESIÓN:</h4>
+            <div style="color: #4b5563; background: #fef3c7; padding: 0.8rem; border-radius: 6px;">
+                {progresion_riesgo}
+            </div>
+        </div>
+    </div>
+    """.format(progresion_riesgo=analisis['progresion_riesgo']), unsafe_allow_html=True)
+    
+    # Información adicional
+    with st.expander("📊 **INFORMACIÓN TÉCNICA DEL ANÁLISIS**"):
+        col_info1, col_info2 = st.columns(2)
+        
+        with col_info1:
+            st.markdown("**📈 Rangos aplicados:**")
+            st.write(f"- Sin anemia: ≥ {analisis['rangos_usados']['sin_anemia']} g/dL")
+            st.write(f"- Anemia leve: {analisis['rangos_usados']['leve_inicio']} - {analisis['rangos_usados']['leve_fin']} g/dL")
+            st.write(f"- Anemia moderada: {analisis['rangos_usados']['moderada_inicio']} - {analisis['rangos_usados']['moderada_fin']} g/dL")
+            st.write(f"- Anemia severa: < {analisis['rangos_usados']['severa']} g/dL")
+        
+        with col_info2:
+            st.markdown("**👤 Datos del análisis:**")
+            if analisis['nombre_paciente']:
+                st.write(f"- Paciente: {analisis['nombre_paciente']}")
+            st.write(f"- Edad: {analisis['edad_meses']} meses")
+            st.write(f"- Hemoglobina: {analisis['hemoglobina']:.1f} g/dL")
+            st.write(f"- Clasificación: {analisis['clasificacion']}")
+            if analisis['fecha_analisis']:
+                st.write(f"- Fecha: {analisis['fecha_analisis']}")
+    
+    return analisis
+
 def generar_sugerencias(riesgo, hemoglobina_ajustada, edad_meses):
     clasificacion, recomendacion, _ = clasificar_anemia(hemoglobina_ajustada, edad_meses)
     
