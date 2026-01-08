@@ -651,15 +651,7 @@ def show_login_page():
     # Contenedor principal del login
     st.markdown('<div class="login-container">', unsafe_allow_html=True)
     
-    # Header con icono
-    st.markdown("""
-    <div class="login-header">
-        <div class="hospital-icon">🏥</div>
-        <h1 class="login-title">SISTEMA NIXON</h1>
-        <p class="login-subtitle">Control de Anemia y Nutrición Infantil</p>
-        <div style="height: 3px; width: 80px; background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); margin: 20px auto; border-radius: 10px;"></div>
-    </div>
-    """, unsafe_allow_html=True)
+   
     
     # Formulario de login
     with st.form("login_form"):
