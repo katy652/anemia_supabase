@@ -3715,7 +3715,7 @@ with tab3:
                 </div>
                 """, unsafe_allow_html=True)
         
-        # ============================================
+              # ============================================
         # GRÁFICOS DE DISTRIBUCIÓN
         # ============================================
         
@@ -3764,120 +3764,119 @@ with tab3:
             
             st.plotly_chart(fig_niveles, use_container_width=True)
         
-       with col_graf2:
-    # Gráfico ALTERNATIVO SEGURO - distribución por género - VERSIÓN SIMPLIFICADA
-    if 'genero' in datos.columns:
-        # DIAGNÓSTICO RÁPIDO: Mostrar información básica
-        st.write(f"**📊 DIAGNÓSTICO:** Total de pacientes: {len(datos)}")
-        
-        # Verificar valores en la columna 'genero'
-        st.write("**🎯 Valores en columna 'genero':**")
-        
-        # Mostrar primeros 10 valores para diagnóstico
-        for i in range(min(10, len(datos))):
-            genero_val = datos.iloc[i]['genero'] if 'genero' in datos.iloc[i] else 'NO EXISTE'
-            nombre_val = datos.iloc[i].get('nombre', datos.iloc[i].get('nombres', 'Sin nombre'))
-            st.caption(f"  {i+1}. {nombre_val}: '{genero_val}'")
-        
-        # Limpiar y normalizar
-        datos_genero = datos['genero'].astype(str).str.upper().str.strip()
-        
-        # Contar valores únicos
-        conteo_valores = datos_genero.value_counts()
-        st.write("**📈 Conteo de valores en 'genero':**")
-        for valor, count in conteo_valores.items():
-            st.caption(f"  '{valor}': {count} pacientes")
-        
-        # Filtrar valores válidos
-        genero_valido = datos_genero[datos_genero.isin(['M', 'F'])]
-        
-        # Si no hay suficientes con M/F, buscar más variaciones
-        if len(genero_valido) < len(datos):
-            genero_valido = datos_genero[datos_genero.isin(['M', 'F', 'MASCULINO', 'FEMENINO', 'NIÑO', 'NIÑA'])]
-            # Normalizar
-            genero_valido = genero_valido.replace({
-                'MASCULINO': 'M',
-                'FEMENINO': 'F', 
-                'NIÑO': 'M',
-                'NIÑA': 'F'
-            })
-        
-        # Contar
-        genero_counts = genero_valido.value_counts()
-        
-        st.write(f"**👥 RESULTADO:** {len(genero_valido)}/{len(datos)} pacientes con género válido")
-        
-        if len(genero_valido) > 0:
-            # Crear gráfico
-            labels_map = {'M': 'Niños 👦', 'F': 'Niñas 👧'}
-            labels = [labels_map.get(g, g) for g in genero_counts.index]
-            
-            total_genero = genero_counts.sum()
-            porcentajes = (genero_counts / total_genero * 100).round(1)
-            
-            fig_genero = px.pie(
-                values=genero_counts.values,
-                names=labels,
-                title='<b>Distribución por Género</b>',
-                color_discrete_sequence=['#3b82f6', '#ef4444'],
-                height=350
-            )
-            
-            # Agregar anotación
-            fig_genero.update_layout(
-                annotations=[
-                    dict(
-                        text=f'Total con género: {total_genero}',
-                        x=0.5, y=0.5,
-                        font_size=14,
-                        showarrow=False
+        with col_graf2:  # ← ¡CORREGIDO! Ahora tiene `:` y está indentado correctamente
+            # Gráfico ALTERNATIVO SEGURO - distribución por género - VERSIÓN SIMPLIFICADA
+            if 'genero' in datos.columns:
+                # DIAGNÓSTICO RÁPIDO: Mostrar información básica
+                st.write(f"**📊 DIAGNÓSTICO:** Total de pacientes: {len(datos)}")
+                
+                # Verificar valores en la columna 'genero'
+                st.write("**🎯 Valores en columna 'genero':**")
+                
+                # Mostrar primeros 10 valores para diagnóstico
+                for i in range(min(10, len(datos))):
+                    genero_val = datos.iloc[i]['genero'] if 'genero' in datos.iloc[i] else 'NO EXISTE'
+                    nombre_val = datos.iloc[i].get('nombre', datos.iloc[i].get('nombres', 'Sin nombre'))
+                    st.caption(f"  {i+1}. {nombre_val}: '{genero_val}'")
+                
+                # Limpiar y normalizar
+                datos_genero = datos['genero'].astype(str).str.upper().str.strip()
+                
+                # Contar valores únicos
+                conteo_valores = datos_genero.value_counts()
+                st.write("**📈 Conteo de valores en 'genero':**")
+                for valor, count in conteo_valores.items():
+                    st.caption(f"  '{valor}': {count} pacientes")
+                
+                # Filtrar valores válidos
+                genero_valido = datos_genero[datos_genero.isin(['M', 'F'])]
+                
+                # Si no hay suficientes con M/F, buscar más variaciones
+                if len(genero_valido) < len(datos):
+                    genero_valido = datos_genero[datos_genero.isin(['M', 'F', 'MASCULINO', 'FEMENINO', 'NIÑO', 'NIÑA'])]
+                    # Normalizar
+                    genero_valido = genero_valido.replace({
+                        'MASCULINO': 'M',
+                        'FEMENINO': 'F', 
+                        'NIÑO': 'M',
+                        'NIÑA': 'F'
+                    })
+                
+                # Contar
+                genero_counts = genero_valido.value_counts()
+                
+                st.write(f"**👥 RESULTADO:** {len(genero_valido)}/{len(datos)} pacientes con género válido")
+                
+                if len(genero_valido) > 0:
+                    # Crear gráfico
+                    labels_map = {'M': 'Niños 👦', 'F': 'Niñas 👧'}
+                    labels = [labels_map.get(g, g) for g in genero_counts.index]
+                    
+                    total_genero = genero_counts.sum()
+                    porcentajes = (genero_counts / total_genero * 100).round(1)
+                    
+                    fig_genero = px.pie(
+                        values=genero_counts.values,
+                        names=labels,
+                        title='<b>Distribución por Género</b>',
+                        color_discrete_sequence=['#3b82f6', '#ef4444'],
+                        height=350
                     )
-                ]
-            )
-            
-            st.plotly_chart(fig_genero, use_container_width=True)
-            
-            # Métricas
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                niños = genero_counts.get('M', 0)
-                st.metric("Niños 👦", niños, 
-                         delta=f"{porcentajes.get('M', 0):.1f}%" if 'M' in genero_counts.index else "0%")
-            
-            with col2:
-                niñas = genero_counts.get('F', 0)
-                st.metric("Niñas 👧", niñas, 
-                         delta=f"{porcentajes.get('F', 0):.1f}%" if 'F' in genero_counts.index else "0%")
-            
-            with col3:
-                sin_genero = len(datos) - total_genero
-                porcentaje_sin = round(sin_genero/len(datos)*100, 1) if len(datos) > 0 else 0
-                st.metric("Sin género", sin_genero, 
-                         delta=f"{porcentaje_sin:.1f}%")
-            
-            # Mostrar pacientes sin género
-            if sin_genero > 0:
-                st.warning(f"⚠️ {sin_genero} paciente(s) no tienen género válido")
+                    
+                    # Agregar anotación
+                    fig_genero.update_layout(
+                        annotations=[
+                            dict(
+                                text=f'Total con género: {total_genero}',
+                                x=0.5, y=0.5,
+                                font_size=14,
+                                showarrow=False
+                            )
+                        ]
+                    )
+                    
+                    st.plotly_chart(fig_genero, use_container_width=True)
+                    
+                    # Métricas
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        niños = genero_counts.get('M', 0)
+                        st.metric("Niños 👦", niños, 
+                                 delta=f"{porcentajes.get('M', 0):.1f}%" if 'M' in genero_counts.index else "0%")
+                    
+                    with col2:
+                        niñas = genero_counts.get('F', 0)
+                        st.metric("Niñas 👧", niñas, 
+                                 delta=f"{porcentajes.get('F', 0):.1f}%" if 'F' in genero_counts.index else "0%")
+                    
+                    with col3:
+                        sin_genero = len(datos) - total_genero
+                        porcentaje_sin = round(sin_genero/len(datos)*100, 1) if len(datos) > 0 else 0
+                        st.metric("Sin género", sin_genero, 
+                                 delta=f"{porcentaje_sin:.1f}%")
+                    
+                    # Mostrar pacientes sin género
+                    if sin_genero > 0:
+                        st.warning(f"⚠️ {sin_genero} paciente(s) no tienen género válido")
+                        
+                        # Identificar quiénes son
+                        sin_genero_indices = datos[~datos['genero'].astype(str).str.upper().str.strip().isin(['M', 'F', 'MASCULINO', 'FEMENINO', 'NIÑO', 'NIÑA'])].index
+                        
+                        st.write("**Pacientes sin género válido:**")
+                        for idx in sin_genero_indices:
+                            paciente = datos.loc[idx]
+                            nombre = paciente.get('nombre', paciente.get('nombres', 'Sin nombre'))
+                            dni = paciente.get('dni', 'Sin DNI')
+                            genero_raw = paciente.get('genero', 'No especificado')
+                            st.write(f"• {nombre} (DNI: {dni}) - Género actual: '{genero_raw}'")
                 
-                # Identificar quiénes son
-                sin_genero_indices = datos[~datos['genero'].astype(str).str.upper().str.strip().isin(['M', 'F', 'MASCULINO', 'FEMENINO', 'NIÑO', 'NIÑA'])].index
-                
-                st.write("**Pacientes sin género válido:**")
-                for idx in sin_genero_indices:
-                    paciente = datos.loc[idx]
-                    nombre = paciente.get('nombre', paciente.get('nombres', 'Sin nombre'))
-                    dni = paciente.get('dni', 'Sin DNI')
-                    genero_raw = paciente.get('genero', 'No especificado')
-                    st.write(f"• {nombre} (DNI: {dni}) - Género actual: '{genero_raw}'")
-        
-        else:
-            st.warning("No se encontraron datos de género válidos")
-            st.info("**Sugerencia:** Verifica que la columna 'genero' contenga valores como: M, F, MASCULINO, FEMENINO, NIÑO, NIÑA")
-    
-    else:
-        st.info("La columna 'genero' no existe en los datos")
-        st.write(f"Columnas disponibles: {list(datos.columns)}")
-        
+                else:
+                    st.warning("No se encontraron datos de género válidos")
+                    st.info("**Sugerencia:** Verifica que la columna 'genero' contenga valores como: M, F, MASCULINO, FEMENINO, NIÑO, NIÑA")
+            
+            else:
+                st.info("La columna 'genero' no existe en los datos")
+                st.write(f"Columnas disponibles: {list(datos.columns)}")
         # ============================================
         # TABLA DE REGIONES
         # ============================================
