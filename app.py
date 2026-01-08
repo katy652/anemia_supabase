@@ -3816,11 +3816,294 @@ with tab3:
                 }
             )
         
+      # ==================================================
+# PESTAÑA 3: DASHBOARD NACIONAL - VERSIÓN CORREGIDA
+# ==================================================
+
+with tab3:
+    # TÍTULO CON HTML CORREGIDO
+    st.markdown("""
+    <div class="main-title" style="background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%); padding: 2rem;">
+        <h2 style="margin: 0; color: white;">🗺️ DASHBOARD NACIONAL DE ANEMIA</h2>
+        <p style="margin: 10px 0 0 0; color: rgba(255,255,255,0.9);">
+        Mapa interactivo + Indicadores por región + Análisis de prevalencia
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # ============================================
+    # FUNCIONES ESPECIALES PARA EL DASHBOARD
+    # ============================================
+    
+    def calcular_indicadores_anemia(datos):
+        """Calcula indicadores específicos de anemia"""
+        if datos.empty:
+            return {}
+        
+        # Asegurar que tenemos las columnas necesarias
+        if 'hemoglobina_dl1' not in datos.columns:
+            datos['hemoglobina_dl1'] = 11.0
+        
+        # Clasificar pacientes por nivel de anemia
+        condiciones = [
+            (datos['hemoglobina_dl1'] < 7.0),
+            (datos['hemoglobina_dl1'] < 10.0),
+            (datos['hemoglobina_dl1'] < 11.0),
+            (datos['hemoglobina_dl1'] >= 11.0)
+        ]
+        
+        categorias = ['SEVERA', 'MODERADA', 'LEVE', 'NORMAL']
+        datos['nivel_anemia'] = np.select(condiciones, categorias, default='NORMAL')
+        
+        # Calcular indicadores nacionales
+        total = len(datos)
+        con_anemia = len(datos[datos['nivel_anemia'].isin(['SEVERA', 'MODERADA', 'LEVE'])])
+        
+        indicadores = {
+            'total_pacientes': total,
+            'con_anemia': con_anemia,
+            'prevalencia_nacional': round((con_anemia / total * 100), 1) if total > 0 else 0,
+            'severa': len(datos[datos['nivel_anemia'] == 'SEVERA']),
+            'moderada': len(datos[datos['nivel_anemia'] == 'MODERADA']),
+            'leve': len(datos[datos['nivel_anemia'] == 'LEVE']),
+            'normal': len(datos[datos['nivel_anemia'] == 'NORMAL']),
+            'en_seguimiento': datos['en_seguimiento'].sum() if 'en_seguimiento' in datos.columns else 0,
+            'tasa_seguimiento': 0,
+            'hb_promedio_nacional': datos['hemoglobina_dl1'].mean() if 'hemoglobina_dl1' in datos.columns else 0
+        }
+        
+        # Calcular tasa de seguimiento (EVITANDO DIVISIÓN POR CERO)
+        if con_anemia > 0:
+            anemia_df = datos[datos['nivel_anemia'].isin(['SEVERA', 'MODERADA', 'LEVE'])]
+            if len(anemia_df) > 0:
+                indicadores['tasa_seguimiento'] = round((anemia_df['en_seguimiento'].sum() / len(anemia_df)) * 100, 1)
+        
+        # Calcular por región
+        if 'region' in datos.columns:
+            region_stats = {}
+            for region in datos['region'].unique():
+                region_df = datos[datos['region'] == region]
+                total_region = len(region_df)
+                con_anemia_region = len(region_df[region_df['nivel_anemia'].isin(['SEVERA', 'MODERADA', 'LEVE'])])
+                
+                # CALCULAR PREVALENCIA EVITANDO DIVISIÓN POR CERO
+                prevalencia_region = 0
+                if total_region > 0:
+                    prevalencia_region = round((con_anemia_region / total_region * 100), 1)
+                
+                region_stats[region] = {
+                    'total': total_region,
+                    'con_anemia': con_anemia_region,
+                    'prevalencia': prevalencia_region,
+                    'hb_promedio': region_df['hemoglobina_dl1'].mean() if 'hemoglobina_dl1' in region_df.columns else 0,
+                    'severa': len(region_df[region_df['nivel_anemia'] == 'SEVERA']),
+                    'moderada': len(region_df[region_df['nivel_anemia'] == 'MODERADA']),
+                    'leve': len(region_df[region_df['nivel_anemia'] == 'LEVE']),
+                    'en_seguimiento': region_df['en_seguimiento'].sum() if 'en_seguimiento' in region_df.columns else 0
+                }
+            
+            indicadores['por_region'] = region_stats
+        
+        return indicadores
+    
+    def crear_mapa_peru(indicadores):
+        """Crea un mapa del Perú con colores según prevalencia de anemia"""
+        
+        # Datos geográficos básicos de las regiones del Perú
+        peru_geojson = {
+            "type": "FeatureCollection",
+            "features": [
+                {"type": "Feature", "properties": {"region": "AMAZONAS"}, "geometry": {"type": "Point", "coordinates": [-78.5, -5.2]}},
+                {"type": "Feature", "properties": {"region": "ANCASH"}, "geometry": {"type": "Point", "coordinates": [-77.5, -9.5]}},
+                {"type": "Feature", "properties": {"region": "APURIMAC"}, "geometry": {"type": "Point", "coordinates": [-72.9, -13.6]}},
+                {"type": "Feature", "properties": {"region": "AREQUIPA"}, "geometry": {"type": "Point", "coordinates": [-71.5, -16.4]}},
+                {"type": "Feature", "properties": {"region": "AYACUCHO"}, "geometry": {"type": "Point", "coordinates": [-74.2, -13.2]}},
+                {"type": "Feature", "properties": {"region": "CAJAMARCA"}, "geometry": {"type": "Point", "coordinates": [-78.5, -7.2]}},
+                {"type": "Feature", "properties": {"region": "CALLAO"}, "geometry": {"type": "Point", "coordinates": [-77.1, -12.0]}},
+                {"type": "Feature", "properties": {"region": "CUSCO"}, "geometry": {"type": "Point", "coordinates": [-71.9, -13.5]}},
+                {"type": "Feature", "properties": {"region": "HUANCAVELICA"}, "geometry": {"type": "Point", "coordinates": [-75.0, -12.8]}},
+                {"type": "Feature", "properties": {"region": "HUANUCO"}, "geometry": {"type": "Point", "coordinates": [-76.2, -9.9]}},
+                {"type": "Feature", "properties": {"region": "ICA"}, "geometry": {"type": "Point", "coordinates": [-75.7, -14.1]}},
+                {"type": "Feature", "properties": {"region": "JUNIN"}, "geometry": {"type": "Point", "coordinates": [-75.0, -11.5]}},
+                {"type": "Feature", "properties": {"region": "LA LIBERTAD"}, "geometry": {"type": "Point", "coordinates": [-79.0, -8.1]}},
+                {"type": "Feature", "properties": {"region": "LAMBAYEQUE"}, "geometry": {"type": "Point", "coordinates": [-79.9, -6.7]}},
+                {"type": "Feature", "properties": {"region": "LIMA"}, "geometry": {"type": "Point", "coordinates": [-77.0, -12.0]}},
+                {"type": "Feature", "properties": {"region": "LORETO"}, "geometry": {"type": "Point", "coordinates": [-73.2, -3.7]}},
+                {"type": "Feature", "properties": {"region": "MADRE DE DIOS"}, "geometry": {"type": "Point", "coordinates": [-69.2, -12.6]}},
+                {"type": "Feature", "properties": {"region": "MOQUEGUA"}, "geometry": {"type": "Point", "coordinates": [-70.9, -17.2]}},
+                {"type": "Feature", "properties": {"region": "PASCO"}, "geometry": {"type": "Point", "coordinates": [-76.2, -10.7]}},
+                {"type": "Feature", "properties": {"region": "PIURA"}, "geometry": {"type": "Point", "coordinates": [-80.6, -5.2]}},
+                {"type": "Feature", "properties": {"region": "PUNO"}, "geometry": {"type": "Point", "coordinates": [-70.0, -15.8]}},
+                {"type": "Feature", "properties": {"region": "SAN MARTIN"}, "geometry": {"type": "Point", "coordinates": [-76.1, -6.5]}},
+                {"type": "Feature", "properties": {"region": "TACNA"}, "geometry": {"type": "Point", "coordinates": [-70.2, -18.0]}},
+                {"type": "Feature", "properties": {"region": "TUMBES"}, "geometry": {"type": "Point", "coordinates": [-80.5, -3.6]}},
+                {"type": "Feature", "properties": {"region": "UCAYALI"}, "geometry": {"type": "Point", "coordinates": [-73.4, -8.4]}}
+            ]
+        }
+        
+        # Crear DataFrame para el mapa
+        map_data = []
+        if 'por_region' in indicadores:
+            for region, stats in indicadores.get('por_region', {}).items():
+                map_data.append({
+                    'region': region,
+                    'prevalencia': stats['prevalencia'],
+                    'total_pacientes': stats['total'],
+                    'con_anemia': stats['con_anemia'],
+                    'hb_promedio': stats['hb_promedio'],
+                    'lat': 0,
+                    'lon': 0
+                })
+        
+        # Asignar coordenadas desde el GeoJSON
+        for feature in peru_geojson['features']:
+            region_name = feature['properties']['region']
+            coords = feature['geometry']['coordinates']
+            
+            for item in map_data:
+                if item['region'] == region_name:
+                    item['lon'] = coords[0]
+                    item['lat'] = coords[1]
+                    break
+        
+        return pd.DataFrame(map_data)
+    
+    # ============================================
+    # INTERFAZ PRINCIPAL DEL DASHBOARD
+    # ============================================
+    
+    # Botón para cargar datos
+    col_btn1, col_btn2 = st.columns([2, 1])
+    
+    with col_btn1:
+        if st.button("🔄 CARGAR DATOS NACIONALES", type="primary", use_container_width=True):
+            with st.spinner("Cargando datos nacionales..."):
+                datos_nacionales = obtener_datos_supabase()
+                
+                if not datos_nacionales.empty:
+                    # Calcular indicadores
+                    indicadores = calcular_indicadores_anemia(datos_nacionales)
+                    mapa_data = crear_mapa_peru(indicadores)
+                    
+                    st.session_state.datos_nacionales = datos_nacionales
+                    st.session_state.indicadores_anemia = indicadores
+                    st.session_state.mapa_peru = mapa_data
+                    
+                    st.success(f"✅ {len(datos_nacionales)} registros cargados - {indicadores['prevalencia_nacional']}% de prevalencia")
+                else:
+                    st.error("❌ No se pudieron cargar datos nacionales")
+    
+    with col_btn2:
+        if st.button("🗺️ VER SOLO MAPA", type="secondary", use_container_width=True):
+            if 'mapa_peru' in st.session_state:
+                st.session_state.modo_mapa = True
+    
+    # ============================================
+    # MOSTRAR DASHBOARD SI HAY DATOS
+    # ============================================
+    
+    if 'indicadores_anemia' in st.session_state and st.session_state.indicadores_anemia:
+        indicadores = st.session_state.indicadores_anemia
+        datos = st.session_state.datos_nacionales
+        
         # ============================================
-        # GRÁFICOS DE DISTRIBUCIÓN
+        # MÉTRICAS PRINCIPALES
         # ============================================
         
-        st.markdown('<div class="section-title-blue" style="font-size: 1.3rem;">📈 DISTRIBUCIÓN Y TENDENCIAS</div>', unsafe_allow_html=True)
+        st.markdown("""
+        <div class="section-title-blue" style="font-size: 1.3rem;">
+            🎯 INDICADORES NACIONALES DE ANEMIA
+        </div>
+        """, unsafe_allow_html=True)
+        
+        col_met1, col_met2, col_met3, col_met4 = st.columns(4)
+        
+        with col_met1:
+            st.markdown(f"""
+            <div class="metric-card-blue">
+                <div class="metric-label">TOTAL EVALUADOS</div>
+                <div class="highlight-number highlight-blue">{indicadores['total_pacientes']}</div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col_met2:
+            st.markdown(f"""
+            <div class="metric-card-green">
+                <div class="metric-label">CON ANEMIA</div>
+                <div class="highlight-number highlight-green">{indicadores['con_anemia']}</div>
+                <div style="font-size: 0.9rem; color: #6b7280;">
+                {indicadores['prevalencia_nacional']}% de prevalencia
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col_met3:
+            st.markdown(f"""
+            <div class="metric-card-purple">
+                <div class="metric-label">HEMOGLOBINA NACIONAL</div>
+                <div class="highlight-number highlight-purple">{indicadores['hb_promedio_nacional']:.1f} g/dL</div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col_met4:
+            st.markdown(f"""
+            <div class="metric-card-yellow">
+                <div class="metric-label">EN SEGUIMIENTO</div>
+                <div class="highlight-number highlight-yellow">{indicadores['en_seguimiento']}</div>
+                <div style="font-size: 0.9rem; color: #6b7280;">
+                Tasa: {indicadores['tasa_seguimiento']}%
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        # ============================================
+        # MAPA INTERACTIVO DEL PERÚ
+        # ============================================
+        
+        st.markdown("""
+        <div class="section-title-blue" style="font-size: 1.3rem;">
+            🗺️ MAPA DE PREVALENCIA DE ANEMIA EN EL PERÚ
+        </div>
+        """, unsafe_allow_html=True)
+        
+        if 'mapa_peru' in st.session_state and not st.session_state.mapa_peru.empty:
+            mapa_df = st.session_state.mapa_peru
+            
+            fig_mapa = px.scatter_mapbox(
+                mapa_df,
+                lat="lat",
+                lon="lon",
+                color="prevalencia",
+                size="total_pacientes",
+                hover_name="region",
+                hover_data={
+                    "prevalencia": ":.1f%",
+                    "total_pacientes": True,
+                    "con_anemia": True,
+                    "hb_promedio": ":.1f"
+                },
+                color_continuous_scale="RdYlGn_r",
+                range_color=[0, 100],
+                size_max=30,
+                zoom=4.5,
+                center={"lat": -9.19, "lon": -75.0},
+                title="<b>Prevalencia de Anemia por Región</b>",
+                mapbox_style="carto-positron"
+            )
+            
+            fig_mapa.update_layout(height=500, margin={"r":0,"t":40,"l":0,"b":0})
+            
+            st.plotly_chart(fig_mapa, use_container_width=True)
+        
+        # ============================================
+        # GRÁFICOS DE DISTRIBUCIÓN - VERSIÓN SIMPLIFICADA Y SEGURA
+        # ============================================
+        
+        st.markdown("""
+        <div class="section-title-blue" style="font-size: 1.3rem;">
+            📈 DISTRIBUCIÓN Y TENDENCIAS
+        </div>
+        """, unsafe_allow_html=True)
         
         col_graf1, col_graf2 = st.columns(2)
         
@@ -3862,170 +4145,82 @@ with tab3:
             st.plotly_chart(fig_niveles, use_container_width=True)
         
         with col_graf2:
-            # Gráfico de prevalencia por edad
-            if 'edad_meses' in datos.columns:
-                datos['edad_grupo'] = pd.cut(
-                    datos['edad_meses'],
-                    bins=[0, 12, 24, 36, 48, 60, 120],
-                    labels=['0-1 año', '1-2 años', '2-3 años', '3-4 años', '4-5 años', '5+ años']
+            # Gráfico ALTERNATIVO SEGURO - distribución por género
+            if 'genero' in datos.columns:
+                genero_counts = datos['genero'].value_counts()
+                fig_genero = px.pie(
+                    values=genero_counts.values,
+                    names=genero_counts.index.map({'M': 'Niños', 'F': 'Niñas'}).fillna('Otro'),
+                    title='<b>Distribución por Género</b>',
+                    color_discrete_sequence=['#e74c3c', '#3498db'],
+                    height=350
                 )
-                
-                # Calcular prevalencia por grupo de edad
-                edad_stats = datos.groupby('edad_grupo').apply(
-                    lambda x: round((len(x[x['hemoglobina_dl1'] < 11]) / len(x) * 100), 1)
-                ).reset_index(name='prevalencia')
-                
-                fig_edad = px.bar(
-                    edad_stats,
-                    x='edad_grupo',
-                    y='prevalencia',
-                    title='<b>Prevalencia por Grupo de Edad</b>',
-                    color='prevalencia',
-                    color_continuous_scale='Reds',
-                    text='prevalencia'
+                st.plotly_chart(fig_genero, use_container_width=True)
+            else:
+                # Si no hay datos de género, mostrar gráfico simple de niveles
+                fig_simple = px.pie(
+                    values=[indicadores['severa'], indicadores['moderada'], indicadores['leve'], indicadores['normal']],
+                    names=['Severa', 'Moderada', 'Leve', 'Normal'],
+                    title='<b>Distribución de Anemia</b>',
+                    height=350
                 )
-                
-                fig_edad.update_traces(
-                    texttemplate='%{y:.1f}%',
-                    textposition='outside'
-                )
-                
-                fig_edad.update_layout(
-                    xaxis_title="Grupo de Edad",
-                    yaxis_title="Prevalencia (%)",
-                    height=350,
-                    coloraxis_showscale=False
-                )
-                
-                st.plotly_chart(fig_edad, use_container_width=True)
+                st.plotly_chart(fig_simple, use_container_width=True)
         
         # ============================================
-        # EXPORTACIÓN DE REPORTES
+        # TABLA DE REGIONES
         # ============================================
         
-        st.markdown('<div class="section-title-blue" style="font-size: 1.3rem;">📥 EXPORTAR REPORTES</div>', unsafe_allow_html=True)
+        st.markdown("""
+        <div class="section-title-blue" style="font-size: 1.3rem;">
+            📊 RANKING DE REGIONES POR PREVALENCIA
+        </div>
+        """, unsafe_allow_html=True)
         
-        col_exp1, col_exp2, col_exp3 = st.columns(3)
-        
-        with col_exp1:
-            if st.button("📊 Descargar Datos Completos", use_container_width=True):
-                csv = datos.to_csv(index=False).encode('utf-8')
-                st.download_button(
-                    label="📥 CSV Completo",
-                    data=csv,
-                    file_name=f"datos_anemia_nacional_{datetime.now().strftime('%Y%m%d')}.csv",
-                    mime="text/csv",
-                    use_container_width=True
-                )
-        
-        with col_exp2:
-            if st.button("📈 Descargar Indicadores", use_container_width=True):
-                # Crear reporte de indicadores
-                reporte_data = []
-                for region, stats in indicadores.get('por_region', {}).items():
-                    reporte_data.append({
-                        'region': region,
-                        'prevalencia_anemia': stats['prevalencia'],
-                        'total_pacientes': stats['total'],
-                        'con_anemia': stats['con_anemia'],
-                        'hemoglobina_promedio': stats['hb_promedio'],
-                        'anemia_severa': stats['severa'],
-                        'anemia_moderada': stats['moderada'],
-                        'anemia_leve': stats['leve'],
-                        'en_seguimiento': stats['en_seguimiento']
+        if 'por_region' in indicadores and indicadores['por_region']:
+            # Crear DataFrame para ranking
+            ranking_data = []
+            for region, stats in indicadores['por_region'].items():
+                if stats['total'] > 0:
+                    ranking_data.append({
+                        'Región': region,
+                        'Prevalencia (%)': stats['prevalencia'],
+                        'Total': stats['total'],
+                        'Con Anemia': stats['con_anemia'],
+                        'Hb Promedio': f"{stats['hb_promedio']:.1f}"
                     })
+            
+            if ranking_data:
+                ranking_df = pd.DataFrame(ranking_data)
+                ranking_df = ranking_df.sort_values('Prevalencia (%)', ascending=False)
                 
-                reporte_df = pd.DataFrame(reporte_data)
-                csv = reporte_df.to_csv(index=False).encode('utf-8')
-                
-                st.download_button(
-                    label="📥 Indicadores Regionales",
-                    data=csv,
-                    file_name=f"indicadores_anemia_{datetime.now().strftime('%Y%m%d')}.csv",
-                    mime="text/csv",
-                    use_container_width=True
-                )
-        
-        with col_exp3:
-            if st.button("📋 Generar Reporte PDF", use_container_width=True, type="primary"):
-                st.info("📄 Generando reporte PDF... (en desarrollo)")
-                st.markdown("""
-                **Próxima funcionalidad:**
-                - Reporte ejecutivo con gráficos
-                - Análisis por región
-                - Recomendaciones específicas
-                """)
+                st.dataframe(ranking_df, use_container_width=True, height=300)
         
         # ============================================
-        # INFORMACIÓN ADICIONAL
+        # EXPORTACIÓN
         # ============================================
         
-        with st.expander("📌 **INFORMACIÓN TÉCNICA DEL DASHBOARD**", expanded=False):
-            st.markdown("""
-            **Definiciones utilizadas:**
-            
-            **Prevalencia de anemia:** Porcentaje de pacientes con hemoglobina < 11 g/dL (OMS)
-            
-            **Clasificación por niveles:**
-            - **Anemia severa:** Hb < 7 g/dL
-            - **Anemia moderada:** Hb 7-9.9 g/dL  
-            - **Anemia leve:** Hb 10-10.9 g/dL
-            - **Normal:** Hb ≥ 11 g/dL
-            
-            **Indicadores de seguimiento:**
-            - **Tasa de seguimiento:** % de pacientes con anemia que están en control activo
-            - **Meta OMS:** Prevalencia < 20% en población infantil
-            
-            **Fuentes de datos:**
-            - Sistema Nixon v2.0
-            - Base de datos nacional consolidada
-            - Criterios OMS para diagnóstico de anemia
-            """)
+        st.markdown("""
+        <div class="section-title-blue" style="font-size: 1.3rem;">
+            📥 EXPORTAR REPORTES
+        </div>
+        """, unsafe_allow_html=True)
+        
+        if st.button("📊 Descargar Datos Completos", use_container_width=True):
+            csv = datos.to_csv(index=False).encode('utf-8')
+            st.download_button(
+                label="📥 CSV Completo",
+                data=csv,
+                file_name=f"datos_anemia_nacional_{datetime.now().strftime('%Y%m%d')}.csv",
+                mime="text/csv",
+                use_container_width=True
+            )
     
     else:
         # ============================================
         # SIN DATOS CARGADOS
         # ============================================
         
-        col_empty1, col_empty2, col_empty3 = st.columns([1, 2, 1])
-        
-        with col_empty2:
-            st.markdown("""
-            <div style="text-align: center; padding: 3rem; background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); 
-                        border-radius: 15px; border: 2px dashed #cbd5e1; margin: 2rem 0;">
-                <div style="font-size: 4rem; margin-bottom: 1rem;">🗺️</div>
-                <h3 style="color: #1e3a8a; margin-bottom: 1rem;">DASHBOARD NACIONAL DE ANEMIA</h3>
-                <p style="color: #64748b; margin-bottom: 2rem;">
-                Visualiza la prevalencia de anemia en todo el Perú con mapas interactivos, 
-                indicadores regionales y análisis comparativos.
-                </p>
-                
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 2rem;">
-                    <div style="background: white; padding: 1rem; border-radius: 10px; border: 1px solid #e2e8f0;">
-                        <div style="font-size: 1.5rem;">🗺️</div>
-                        <div style="font-weight: 600; color: #1e40af;">Mapa Interactivo</div>
-                        <div style="font-size: 0.9rem; color: #64748b;">Visual por regiones</div>
-                    </div>
-                    <div style="background: white; padding: 1rem; border-radius: 10px; border: 1px solid #e2e8f0;">
-                        <div style="font-size: 1.5rem;">📊</div>
-                        <div style="font-weight: 600; color: #059669;">Indicadores</div>
-                        <div style="font-size: 0.9rem; color: #64748b;">Prevalencia y seguimiento</div>
-                    </div>
-                    <div style="background: white; padding: 1rem; border-radius: 10px; border: 1px solid #e2e8f0;">
-                        <div style="font-size: 1.5rem;">📈</div>
-                        <div style="font-weight: 600; color: #d97706;">Ranking Regional</div>
-                        <div style="font-size: 0.9rem; color: #64748b;">Comparativa por región</div>
-                    </div>
-                    <div style="background: white; padding: 1rem; border-radius: 10px; border: 1px solid #e2e8f0;">
-                        <div style="font-size: 1.5rem;">📥</div>
-                        <div style="font-weight: 600; color: #7c3aed;">Reportes</div>
-                        <div style="font-size: 0.9rem; color: #64748b;">Exportación de datos</div>
-                    </div>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            st.info("👆 **Presiona 'CARGAR DATOS NACIONALES' para visualizar el dashboard completo**")
+        st.info("👆 **Presiona 'CARGAR DATOS NACIONALES' para visualizar el dashboard completo**")
 # ==================================================
 # PESTAÑA 4: SISTEMA DE CITAS MEJORADO Y CORREGIDO
 # ==================================================
