@@ -2861,47 +2861,47 @@ with tab_seg3:
                 """, unsafe_allow_html=True)
                 st.rerun()
         
-        # ============================================
-        # INFORMACIÓN PRINCIPAL DEL PACIENTE
-        # ============================================
-        
-        st.markdown(f"""
-        <div style="background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%); 
-                    padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem;">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
-                <div>
-                    <h3 style="margin: 0 0 10px 0; color: #5b21b6;">📊 HISTORIAL DE: {paciente.get('nombre_apellido', 'N/A').upper()}</h3>
-                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
-                        <span style="font-size: 1.5rem;">{icono}</span>
-                        <span style="font-weight: 600; color: {color}; background: {color}20; padding: 4px 12px; border-radius: 20px;">
-                            {estado}
-                        </span>
-                        {f'<span style="font-size: 0.9rem; color: #ef4444; background: #fee2e2; padding: 4px 12px; border-radius: 20px;">📅 Cita: {proxima_cita_fecha}</span>' if proxima_cita_proxima and proxima_cita_fecha else ''}
-                    </div>
-                </div>
-            </div>
-            
-            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 15px;">
-                <div><strong>DNI:</strong> {paciente.get('dni', 'N/A')}</div>
-                <div><strong>Edad:</strong> {paciente.get('edad_meses', 'N/A')} meses</div>
-                <div><strong>Región:</strong> {paciente.get('region', 'N/A')}</div>
-                <div><strong>Hb actual:</strong> {paciente.get('hemoglobina_dl1', 'N/A')} g/dL</div>
-                <div><strong>Estado:</strong> {paciente.get('estado_paciente', 'N/A')}</div>
-                <div><strong>Riesgo:</strong> {paciente.get('riesgo', 'N/A')}</div>
-            </div>
-            
-            <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;">
-                <div style="background: {color}; color: white; padding: 8px 16px; border-radius: 20px; font-size: 0.9rem; font-weight: bold;">
-                    📋 {len(historial)} controles
-                </div>
-                <div style="background: #8b5cf6; color: white; padding: 8px 16px; border-radius: 20px; font-size: 0.9rem; font-weight: bold;">
-                    🩺 {paciente.get('hemoglobina_dl1', 'N/A')} g/dL
-                </div>
-                {f'<div style="background: #ef4444; color: white; padding: 8px 16px; border-radius: 20px; font-size: 0.9rem; font-weight: bold;">📅 Próxima cita: {proxima_cita_fecha}</div>' if proxima_cita_fecha else ''}
-                {f'<div style="background: #f59e0b; color: white; padding: 8px 16px; border-radius: 20px; font-size: 0.9rem; font-weight: bold;">⏰ Último: {ultima_fecha_str}</div>' if ultima_fecha_str else ''}
+       # ============================================
+# INFORMACIÓN PRINCIPAL DEL PACIENTE - VERSIÓN CORREGIDA
+# ============================================
+
+st.markdown(f"""
+<div style="background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%); 
+            padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
+        <div>
+            <h3 style="margin: 0 0 10px 0; color: #5b21b6;">📊 HISTORIAL DE: {paciente.get('nombre_apellido', 'N/A').upper()}</h3>
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                <span style="font-size: 1.5rem;">{icono}</span>
+                <span style="font-weight: 600; color: {color}; background: {color}20; padding: 4px 12px; border-radius: 20px;">
+                    {estado}
+                </span>
+                {f'<span style="font-size: 0.9rem; color: #ef4444; background: #fee2e2; padding: 4px 12px; border-radius: 20px;">📅 Cita: {proxima_cita_fecha}</span>' if proxima_cita_proxima and proxima_cita_fecha else ''}
             </div>
         </div>
-        """, unsafe_allow_html=True)
+    </div>
+    
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 15px;">
+        <div><strong>DNI:</strong> {paciente.get('dni', 'N/A')}</div>
+        <div><strong>Edad:</strong> {paciente.get('edad_meses', 'N/A')} meses</div>
+        <div><strong>Región:</strong> {paciente.get('region', 'N/A')}</div>
+        <div><strong>Hb actual:</strong> {paciente.get('hemoglobina_dl1', 'N/A')} g/dL</div>
+        <div><strong>Estado:</strong> {paciente.get('estado_paciente', 'N/A')}</div>
+        <div><strong>Riesgo:</strong> {paciente.get('riesgo', 'N/A')}</div>
+    </div>
+    
+    <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;">
+        <div style="background: #100081; color: white; padding: 8px 16px; border-radius: 20px; font-size: 0.9rem; font-weight: bold;">
+            📋 {len(historial)} controles
+        </div>
+        <div style="background: #8b5cf6; color: white; padding: 8px 16px; border-radius: 20px; font-size: 0.9rem; font-weight: bold;">
+            🩺 {paciente.get('hemoglobina_dl1', 'N/A')} g/dL
+        </div>
+        {f'<div style="background: #ef4444; color: white; padding: 8px 16px; border-radius: 20px; font-size: 0.9rem; font-weight: bold;">📅 Próxima cita: {proxima_cita_fecha}</div>' if proxima_cita_fecha else ''}
+        {f'<div style="background: #f59e0b; color: white; padding: 8px 16px; border-radius: 20px; font-size: 0.9rem; font-weight: bold;">⏰ Último: {ultima_fecha_str}</div>' if ultima_fecha_str else ''}
+    </div>
+</div>
+""", unsafe_allow_html=True)
         
         # ============================================
         # MOSTRAR HISTORIAL
