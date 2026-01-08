@@ -3806,49 +3806,50 @@ with st.expander("📌 **INFORMACIÓN TÉCNICA DEL DASHBOARD**", expanded=False)
     - Criterios OMS para diagnóstico de anemia
     - Coordenadas aproximadas de regiones del Perú
     """)
-        # ============================================
-        # SIN DATOS CARGADOS
-        # ============================================
-        
-        col_empty1, col_empty2, col_empty3 = st.columns([1, 2, 1])
-        
-        with col_empty2:
-            st.markdown("""
-            <div style="text-align: center; padding: 3rem; background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); 
-                        border-radius: 15px; border: 2px dashed #cbd5e1; margin: 2rem 0;">
-                <div style="font-size: 4rem; margin-bottom: 1rem;">🗺️</div>
-                <h3 style="color: #1e3a8a; margin-bottom: 1rem;">DASHBOARD NACIONAL DE ANEMIA</h3>
-                <p style="color: #64748b; margin-bottom: 2rem;">
-                Visualiza la prevalencia de anemia en todo el Perú con mapas interactivos, 
-                indicadores regionales y análisis comparativos.
-                </p>
-                
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 2rem;">
-                    <div style="background: white; padding: 1rem; border-radius: 10px; border: 1px solid #e2e8f0;">
-                        <div style="font-size: 1.5rem;">🗺️</div>
-                        <div style="font-weight: 600; color: #1e40af;">Mapa Interactivo</div>
-                        <div style="font-size: 0.9rem; color: #64748b;">Visual por regiones</div>
-                    </div>
-                    <div style="background: white; padding: 1rem; border-radius: 10px; border: 1px solid #e2e8f0;">
-                        <div style="font-size: 1.5rem;">📊</div>
-                        <div style="font-weight: 600; color: #059669;">Indicadores</div>
-                        <div style="font-size: 0.9rem; color: #64748b;">Prevalencia y seguimiento</div>
-                    </div>
-                    <div style="background: white; padding: 1rem; border-radius: 10px; border: 1px solid #e2e8f0;">
-                        <div style="font-size: 1.5rem;">📈</div>
-                        <div style="font-weight: 600; color: #d97706;">Ranking Regional</div>
-                        <div style="font-size: 0.9rem; color: #64748b;">Comparativa por región</div>
-                    </div>
-                    <div style="background: white; padding: 1rem; border-radius: 10px; border: 1px solid #e2e8f0;">
-                        <div style="font-size: 1.5rem;">📥</div>
-                        <div style="font-weight: 600; color: #7c3aed;">Reportes</div>
-                        <div style="font-size: 0.9rem; color: #64748b;">Exportación de datos</div>
-                    </div>
+  else:
+    # ============================================
+    # SIN DATOS CARGADOS
+    # ============================================
+    
+    col_empty1, col_empty2, col_empty3 = st.columns([1, 2, 1])
+    
+    with col_empty2:
+        st.markdown("""
+        <div style="text-align: center; padding: 3rem; background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); 
+                    border-radius: 15px; border: 2px dashed #cbd5e1; margin: 2rem 0;">
+            <div style="font-size: 4rem; margin-bottom: 1rem;">🗺️</div>
+            <h3 style="color: #1e3a8a; margin-bottom: 1rem;">DASHBOARD NACIONAL DE ANEMIA</h3>
+            <p style="color: #64748b; margin-bottom: 2rem;">
+            Visualiza la prevalencia de anemia en todo el Perú con mapas interactivos, 
+            indicadores regionales y análisis comparativos.
+            </p>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 2rem;">
+                <div style="background: white; padding: 1rem; border-radius: 10px; border: 1px solid #e2e8f0;">
+                    <div style="font-size: 1.5rem;">🗺️</div>
+                    <div style="font-weight: 600; color: #1e40af;">Mapa Interactivo</div>
+                    <div style="font-size: 0.9rem; color: #64748b;">Visual por regiones</div>
+                </div>
+                <div style="background: white; padding: 1rem; border-radius: 10px; border: 1px solid #e2e8f0;">
+                    <div style="font-size: 1.5rem;">📊</div>
+                    <div style="font-weight: 600; color: #059669;">Indicadores</div>
+                    <div style="font-size: 0.9rem; color: #64748b;">Prevalencia y seguimiento</div>
+                </div>
+                <div style="background: white; padding: 1rem; border-radius: 10px; border: 1px solid #e2e8f0;">
+                    <div style="font-size: 1.5rem;">📈</div>
+                    <div style="font-weight: 600; color: #d97706;">Ranking Regional</div>
+                    <div style="font-size: 0.9rem; color: #64748b;">Comparativa por región</div>
+                </div>
+                <div style="background: white; padding: 1rem; border-radius: 10px; border: 1px solid #e2e8f0;">
+                    <div style="font-size: 1.5rem;">📥</div>
+                    <div style="font-weight: 600; color: #7c3aed;">Reportes</div>
+                    <div style="font-size: 0.9rem; color: #64748b;">Exportación de datos</div>
                 </div>
             </div>
-            """, unsafe_allow_html=True)
-            
-            st.info("👆 **Presiona 'CARGAR DATOS NACIONALES' para visualizar el dashboard completo**")
+        </div>
+        """, unsafe_allow_html=True)
+        
+        st.info("👆 **Presiona 'CARGAR DATOS NACIONALES' para visualizar el dashboard completo**")
 # ==================================================
 # PESTAÑA 4: SISTEMA DE CITAS MEJORADO Y CORREGIDO
 # ==================================================
