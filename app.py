@@ -3451,12 +3451,12 @@ with tab3:
                 )
 
         # ============================================
-        # 📊 ESTADÍSTICAS NACIONALES
+        # 📊 ESTADÍSTICAS NACIONALES ADICIONALES
         # ============================================
         
         st.markdown("""
         <div class="section-title-blue" style="font-size: 1.3rem;">
-            📊 ESTADÍSTICAS NACIONALES
+            📊 ESTADÍSTICAS NACIONALES ADICIONALES
         </div>
         """, unsafe_allow_html=True)
 
@@ -3509,111 +3509,114 @@ with tab3:
         # Línea separadora
         st.markdown("---")
 
-# ============================================
-# 📥 EXPORTAR REPORTES
-# ============================================
-
-st.markdown("""
-<div class="section-title-blue" style="font-size: 1.3rem;">
-    📥 EXPORTAR REPORTES
-</div>
-""", unsafe_allow_html=True)
-
-# Contenedor para exportación
-col_exp1, col_exp2, col_exp3, col_exp4 = st.columns(4)
-
-# COLUMNA 1: Datos completos
-with col_exp1:
-    csv_full = datos.to_csv(index=False).encode('utf-8')
-    st.download_button(
-        label="📊 Datos Completos (CSV)",
-        data=csv_full,
-        file_name=f"datos_anemia_nacional_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
-        mime="text/csv",
-        use_container_width=True,
-        type="primary",
-        key="btn_download_full_tab3"
-    )
-
-# COLUMNA 2: Indicadores por región
-with col_exp2:
-    if 'por_region' in indicadores and indicadores['por_region']:
-        reporte_data = []
-        for region, stats in indicadores['por_region'].items():
-            reporte_data.append({
-                'Región': region,
-                'Prevalencia (%)': stats['prevalencia'],
-                'Total Pacientes': stats['total'],
-                'Con Anemia': stats['con_anemia'],
-                'Hb Promedio': stats['hb_promedio'],
-                'Anemia Severa': stats['severa'],
-                'Anemia Moderada': stats['moderada'],
-                'Anemia Leve': stats['leve'],
-                'En Seguimiento': stats['en_seguimiento']
-            })
+        # ============================================
+        # 📥 EXPORTAR REPORTES CON PDF
+        # ============================================
         
-        if reporte_data:
-            reporte_df = pd.DataFrame(reporte_data)
-            csv_indicadores = reporte_df.to_csv(index=False).encode('utf-8')
-            
+        st.markdown("""
+        <div class="section-title-blue" style="font-size: 1.3rem;">
+            📥 EXPORTAR REPORTES
+        </div>
+        """, unsafe_allow_html=True)
+
+        # Contenedor para exportación
+        col_exp1, col_exp2, col_exp3, col_exp4 = st.columns(4)
+
+        # COLUMNA 1: Datos completos
+        with col_exp1:
+            csv_full = datos.to_csv(index=False).encode('utf-8')
             st.download_button(
-                label="📈 Indicadores (CSV)",
-                data=csv_indicadores,
-                file_name=f"indicadores_anemia_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
+                label="📊 Datos Completos (CSV)",
+                data=csv_full,
+                file_name=f"datos_anemia_nacional_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
                 mime="text/csv",
                 use_container_width=True,
-                type="secondary",
-                key="btn_download_indicadores_tab3"
+                type="primary",
+                key="btn_download_full_tab3"
             )
-    else:
-        st.download_button(
-            label="📈 Indicadores (CSV)",
-            data="No hay datos regionales".encode('utf-8'),
-            file_name="sin_datos.csv",
-            mime="text/csv",
-            use_container_width=True,
-            disabled=True,
-            key="btn_no_data_tab3"
-        )
 
-# COLUMNA 3: Informe ejecutivo (PDF + CSV)
-with col_exp3:
-    col_pdf, col_csv = st.columns(2)
-    
-    with col_pdf:
-        # Botón para generar PDF
-        if st.button("📄 Generar PDF",
-                    use_container_width=True,
-                    type="primary",
-                    key="btn_generar_pdf_nacional_tab3"):
-            
-            with st.spinner("Generando informe PDF..."):
-                try:
-                    # Verificar que la función existe
-                    pdf_bytes = generar_pdf_dashboard_nacional(
-                        indicadores=indicadores,
-                        datos=datos,
-                        mapa_df=st.session_state.get('mapa_peru', None)
-                    )
+        # COLUMNA 2: Indicadores por región
+        with col_exp2:
+            try:
+                if 'por_region' in indicadores and indicadores['por_region']:
+                    reporte_data = []
+                    for region, stats in indicadores['por_region'].items():
+                        reporte_data.append({
+                            'Región': region,
+                            'Prevalencia (%)': stats['prevalencia'],
+                            'Total Pacientes': stats['total'],
+                            'Con Anemia': stats['con_anemia'],
+                            'Hb Promedio': stats['hb_promedio'],
+                            'Anemia Severa': stats['severa'],
+                            'Anemia Moderada': stats['moderada'],
+                            'Anemia Leve': stats['leve'],
+                            'En Seguimiento': stats['en_seguimiento']
+                        })
                     
-                    # Mostrar botón de descarga
+                    if reporte_data:
+                        reporte_df = pd.DataFrame(reporte_data)
+                        csv_indicadores = reporte_df.to_csv(index=False).encode('utf-8')
+                        
+                        st.download_button(
+                            label="📈 Indicadores (CSV)",
+                            data=csv_indicadores,
+                            file_name=f"indicadores_anemia_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
+                            mime="text/csv",
+                            use_container_width=True,
+                            type="secondary",
+                            key="btn_download_indicadores_tab3"
+                        )
+                else:
                     st.download_button(
-                        label="📥 Descargar PDF",
-                        data=pdf_bytes,
-                        file_name=f"dashboard_anemia_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf",
-                        mime="application/pdf",
+                        label="📈 Indicadores (CSV)",
+                        data="No hay datos regionales".encode('utf-8'),
+                        file_name="sin_datos.csv",
+                        mime="text/csv",
                         use_container_width=True,
-                        key="btn_download_pdf_nacional_tab3"
+                        disabled=True,
+                        key="btn_no_data_tab3"
                     )
+            except Exception as e:
+                st.error(f"Error en datos: {str(e)[:50]}")
+
+        # COLUMNA 3: Informe ejecutivo (PDF + CSV)
+        with col_exp3:
+            col_pdf, col_csv = st.columns(2)
+            
+            with col_pdf:
+                # Botón para generar PDF
+                if st.button("📄 Generar PDF",
+                            use_container_width=True,
+                            type="primary",
+                            key="btn_generar_pdf_nacional_tab3"):
                     
-                except NameError:
-                    st.error("❌ La función 'generar_pdf_dashboard_nacional' no está definida")
-                except Exception as e:
-                    st.error(f"❌ Error: {str(e)[:100]}")
-    
-    with col_csv:
-        # Crear CSV simple
-        informe_csv = f"""INFORME NACIONAL DE ANEMIA
+                    with st.spinner("Generando informe PDF..."):
+                        try:
+                            # Verificar que la función existe
+                            pdf_bytes = generar_pdf_dashboard_nacional(
+                                indicadores=indicadores,
+                                datos=datos,
+                                mapa_df=st.session_state.get('mapa_peru', None)
+                            )
+                            
+                            # Mostrar botón de descarga
+                            st.download_button(
+                                label="📥 Descargar PDF",
+                                data=pdf_bytes,
+                                file_name=f"dashboard_anemia_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf",
+                                mime="application/pdf",
+                                use_container_width=True,
+                                key="btn_download_pdf_nacional_tab3"
+                            )
+                            
+                        except NameError:
+                            st.error("❌ La función 'generar_pdf_dashboard_nacional' no está definida")
+                        except Exception as e:
+                            st.error(f"❌ Error: {str(e)[:100]}")
+            
+            with col_csv:
+                # Crear CSV simple
+                informe_csv = f"""INFORME NACIONAL DE ANEMIA
 Fecha: {datetime.now().strftime('%d/%m/%Y %H:%M')}
 
 RESUMEN NACIONAL
@@ -3629,27 +3632,27 @@ Anemia Moderada,{indicadores['moderada']}
 Anemia Leve,{indicadores['leve']}
 Normal,{indicadores['normal']}
 """
-        
-        # Agregar regiones si existen
-        if 'por_region' in indicadores:
-            informe_csv += "\nDATOS POR REGIÓN\nRegion,Prevalencia(%),Total,Con_Anemia,Hb_Promedio\n"
-            for region, stats in indicadores['por_region'].items():
-                informe_csv += f"{region},{stats['prevalencia']}%,{stats['total']},{stats['con_anemia']},{stats['hb_promedio']:.1f}\n"
-        
-        st.download_button(
-            label="📊 Descargar CSV",
-            data=informe_csv.encode('utf-8'),
-            file_name=f"informe_anemia_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
-            mime="text/csv",
-            use_container_width=True,
-            type="secondary",
-            key="btn_download_csv_informe_tab3"
-        )
+                
+                # Agregar regiones si existen
+                if 'por_region' in indicadores:
+                    informe_csv += "\nDATOS POR REGIÓN\nRegion,Prevalencia(%),Total,Con_Anemia,Hb_Promedio\n"
+                    for region, stats in indicadores['por_region'].items():
+                        informe_csv += f"{region},{stats['prevalencia']}%,{stats['total']},{stats['con_anemia']},{stats['hb_promedio']:.1f}\n"
+                
+                st.download_button(
+                    label="📊 Descargar CSV",
+                    data=informe_csv.encode('utf-8'),
+                    file_name=f"informe_anemia_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
+                    mime="text/csv",
+                    use_container_width=True,
+                    type="secondary",
+                    key="btn_download_csv_informe_tab3"
+                )
 
-# COLUMNA 4: Resumen para portapapeles
-with col_exp4:
-    # Crear texto para portapapeles
-    resumen_texto = f"""📊 RESUMEN ANEMIA NACIONAL
+        # COLUMNA 4: Resumen para portapapeles
+        with col_exp4:
+            # Crear texto para portapapeles
+            resumen_texto = f"""📊 RESUMEN ANEMIA NACIONAL
 Fecha: {datetime.now().strftime('%d/%m/%Y %H:%M')}
 
 📈 INDICADORES:
@@ -3667,126 +3670,92 @@ Fecha: {datetime.now().strftime('%d/%m/%Y %H:%M')}
 
 ---
 Sistema Nacional de Monitoreo de Anemia"""
-    
-    # Mostrar código para copiar manualmente
-    if st.button("📋 Copiar Resumen",
-                use_container_width=True,
-                type="secondary",
-                key="btn_copiar_resumen_tab3"):
-        st.code(resumen_texto, language="text")
-        st.success("✅ Copia el texto de arriba manualmente")
-
-# ============================================
-# 📌 INFORMACIÓN ADICIONAL
-# ============================================
-
-with st.expander("📌 **INFORMACIÓN TÉCNICA DEL DASHBOARD**", expanded=False):
-    st.markdown("""
-    **Definiciones utilizadas:**
-    
-    **Prevalencia de anemia:** Porcentaje de pacientes con hemoglobina < 11 g/dL (OMS)
-    
-    **Clasificación por niveles:**
-    - **Anemia severa:** Hb < 7 g/dL
-    - **Anemia moderada:** Hb 7-9.9 g/dL  
-    - **Anemia leve:** Hb 10-10.9 g/dL
-    - **Normal:** Hb ≥ 11 g/dL
-    
-    **Indicadores de seguimiento:**
-    - **Tasa de seguimiento:** % de pacientes con anemia que están en control activo
-    - **Meta OMS:** Prevalencia < 20% en población infantil
-    
-    **Interpretación de colores en el mapa:**
-    - 🔴 **Rojo:** Prevalencia > 40% (Alta prioridad)
-    - 🟡 **Amarillo:** Prevalencia 20-40% (Atención requerida)
-    - 🟢 **Verde:** Prevalencia < 20% (Dentro de meta OMS)
-    
-    **Fuentes de datos:**
-    - Sistema Nixon v2.0
-    - Base de datos nacional consolidada
-    - Criterios OMS para diagnóstico de anemia
-    - Coordenadas aproximadas de regiones del Perú
-    """)
-
-# ============================================
-# FIN DE LA PESTAÑA 3
-# ============================================
-
-# ============================================
-# 📌 INFORMACIÓN ADICIONAL
-# ============================================
-
-with st.expander("📌 **INFORMACIÓN TÉCNICA DEL DASHBOARD**", expanded=False):
-    st.markdown("""
-    **Definiciones utilizadas:**
-    
-    **Prevalencia de anemia:** Porcentaje de pacientes con hemoglobina < 11 g/dL (OMS)
-    
-    **Clasificación por niveles:**
-    - **Anemia severa:** Hb < 7 g/dL
-    - **Anemia moderada:** Hb 7-9.9 g/dL  
-    - **Anemia leve:** Hb 10-10.9 g/dL
-    - **Normal:** Hb ≥ 11 g/dL
-    
-    **Indicadores de seguimiento:**
-    - **Tasa de seguimiento:** % de pacientes con anemia que están en control activo
-    - **Meta OMS:** Prevalencia < 20% en población infantil
-    
-    **Interpretación de colores en el mapa:**
-    - 🔴 **Rojo:** Prevalencia > 40% (Alta prioridad)
-    - 🟡 **Amarillo:** Prevalencia 20-40% (Atención requerida)
-    - 🟢 **Verde:** Prevalencia < 20% (Dentro de meta OMS)
-    
-    **Fuentes de datos:**
-    - Sistema Nixon v2.0
-    - Base de datos nacional consolidada
-    - Criterios OMS para diagnóstico de anemia
-    - Coordenadas aproximadas de regiones del Perú
-    """)
-  else:
-    # ============================================
-    # SIN DATOS CARGADOS
-    # ============================================
-    
-    col_empty1, col_empty2, col_empty3 = st.columns([1, 2, 1])
-    
-    with col_empty2:
-        st.markdown("""
-        <div style="text-align: center; padding: 3rem; background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); 
-                    border-radius: 15px; border: 2px dashed #cbd5e1; margin: 2rem 0;">
-            <div style="font-size: 4rem; margin-bottom: 1rem;">🗺️</div>
-            <h3 style="color: #1e3a8a; margin-bottom: 1rem;">DASHBOARD NACIONAL DE ANEMIA</h3>
-            <p style="color: #64748b; margin-bottom: 2rem;">
-            Visualiza la prevalencia de anemia en todo el Perú con mapas interactivos, 
-            indicadores regionales y análisis comparativos.
-            </p>
             
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 2rem;">
-                <div style="background: white; padding: 1rem; border-radius: 10px; border: 1px solid #e2e8f0;">
-                    <div style="font-size: 1.5rem;">🗺️</div>
-                    <div style="font-weight: 600; color: #1e40af;">Mapa Interactivo</div>
-                    <div style="font-size: 0.9rem; color: #64748b;">Visual por regiones</div>
-                </div>
-                <div style="background: white; padding: 1rem; border-radius: 10px; border: 1px solid #e2e8f0;">
-                    <div style="font-size: 1.5rem;">📊</div>
-                    <div style="font-weight: 600; color: #059669;">Indicadores</div>
-                    <div style="font-size: 0.9rem; color: #64748b;">Prevalencia y seguimiento</div>
-                </div>
-                <div style="background: white; padding: 1rem; border-radius: 10px; border: 1px solid #e2e8f0;">
-                    <div style="font-size: 1.5rem;">📈</div>
-                    <div style="font-weight: 600; color: #d97706;">Ranking Regional</div>
-                    <div style="font-size: 0.9rem; color: #64748b;">Comparativa por región</div>
-                </div>
-                <div style="background: white; padding: 1rem; border-radius: 10px; border: 1px solid #e2e8f0;">
-                    <div style="font-size: 1.5rem;">📥</div>
-                    <div style="font-weight: 600; color: #7c3aed;">Reportes</div>
-                    <div style="font-size: 0.9rem; color: #64748b;">Exportación de datos</div>
+            # Mostrar código para copiar manualmente
+            if st.button("📋 Copiar Resumen",
+                        use_container_width=True,
+                        type="secondary",
+                        key="btn_copiar_resumen_tab3"):
+                st.code(resumen_texto, language="text")
+                st.success("✅ Copia el texto de arriba manualmente")
+
+        # ============================================
+        # 📌 INFORMACIÓN ADICIONAL
+        # ============================================
+        
+        with st.expander("📌 **INFORMACIÓN TÉCNICA DEL DASHBOARD**", expanded=False):
+            st.markdown("""
+            **Definiciones utilizadas:**
+            
+            **Prevalencia de anemia:** Porcentaje de pacientes con hemoglobina < 11 g/dL (OMS)
+            
+            **Clasificación por niveles:**
+            - **Anemia severa:** Hb < 7 g/dL
+            - **Anemia moderada:** Hb 7-9.9 g/dL  
+            - **Anemia leve:** Hb 10-10.9 g/dL
+            - **Normal:** Hb ≥ 11 g/dL
+            
+            **Indicadores de seguimiento:**
+            - **Tasa de seguimiento:** % de pacientes con anemia que están en control activo
+            - **Meta OMS:** Prevalencia < 20% en población infantil
+            
+            **Interpretación de colores en el mapa:**
+            - 🔴 **Rojo:** Prevalencia > 40% (Alta prioridad)
+            - 🟡 **Amarillo:** Prevalencia 20-40% (Atención requerida)
+            - 🟢 **Verde:** Prevalencia < 20% (Dentro de meta OMS)
+            
+            **Fuentes de datos:**
+            - Sistema Nixon v2.0
+            - Base de datos nacional consolidada
+            - Criterios OMS para diagnóstico de anemia
+            - Coordenadas aproximadas de regiones del Perú
+            """)
+    
+    else:
+        # ============================================
+        # SIN DATOS CARGADOS
+        # ============================================
+        
+        col_empty1, col_empty2, col_empty3 = st.columns([1, 2, 1])
+        
+        with col_empty2:
+            st.markdown("""
+            <div style="text-align: center; padding: 3rem; background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); 
+                        border-radius: 15px; border: 2px dashed #cbd5e1; margin: 2rem 0;">
+                <div style="font-size: 4rem; margin-bottom: 1rem;">🗺️</div>
+                <h3 style="color: #1e3a8a; margin-bottom: 1rem;">DASHBOARD NACIONAL DE ANEMIA</h3>
+                <p style="color: #64748b; margin-bottom: 2rem;">
+                Visualiza la prevalencia de anemia en todo el Perú con mapas interactivos, 
+                indicadores regionales y análisis comparativos.
+                </p>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 2rem;">
+                    <div style="background: white; padding: 1rem; border-radius: 10px; border: 1px solid #e2e8f0;">
+                        <div style="font-size: 1.5rem;">🗺️</div>
+                        <div style="font-weight: 600; color: #1e40af;">Mapa Interactivo</div>
+                        <div style="font-size: 0.9rem; color: #64748b;">Visual por regiones</div>
+                    </div>
+                    <div style="background: white; padding: 1rem; border-radius: 10px; border: 1px solid #e2e8f0;">
+                        <div style="font-size: 1.5rem;">📊</div>
+                        <div style="font-weight: 600; color: #059669;">Indicadores</div>
+                        <div style="font-size: 0.9rem; color: #64748b;">Prevalencia y seguimiento</div>
+                    </div>
+                    <div style="background: white; padding: 1rem; border-radius: 10px; border: 1px solid #e2e8f0;">
+                        <div style="font-size: 1.5rem;">📈</div>
+                        <div style="font-weight: 600; color: #d97706;">Ranking Regional</div>
+                        <div style="font-size: 0.9rem; color: #64748b;">Comparativa por región</div>
+                    </div>
+                    <div style="background: white; padding: 1rem; border-radius: 10px; border: 1px solid #e2e8f0;">
+                        <div style="font-size: 1.5rem;">📥</div>
+                        <div style="font-weight: 600; color: #7c3aed;">Reportes</div>
+                        <div style="font-size: 0.9rem; color: #64748b;">Exportación de datos</div>
+                    </div>
                 </div>
             </div>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        st.info("👆 **Presiona 'CARGAR DATOS NACIONALES' para visualizar el dashboard completo**")
+            """, unsafe_allow_html=True)
+            
+            st.info("👆 **Presiona 'CARGAR DATOS NACIONALES' para visualizar el dashboard completo**")
+            
 # ==================================================
 # PESTAÑA 4: SISTEMA DE CITAS MEJORADO Y CORREGIDO
 # ==================================================
