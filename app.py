@@ -2870,7 +2870,7 @@ with tab_seg3:
                     padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem;">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
                 <div>
-                    <h3 style="margin: 0 0 10px 0; color: #5b21b6;">📊 HISTORIAL DE: {paciente.get('nombre_apellido', 'N/A')}</h3>
+                    <h3 style="margin: 0 0 10px 0; color: #5b21b6;">📊 HISTORIAL DE: {paciente.get('nombre_apellido', 'N/A').upper()}</h3>
                     <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
                         <span style="font-size: 1.5rem;">{icono}</span>
                         <span style="font-weight: 600; color: {color}; background: {color}20; padding: 4px 12px; border-radius: 20px;">
@@ -2891,14 +2891,14 @@ with tab_seg3:
             </div>
             
             <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;">
-                <div style="background: {color}; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.9rem;">
+                <div style="background: {color}; color: white; padding: 8px 16px; border-radius: 20px; font-size: 0.9rem; font-weight: bold;">
                     📋 {len(historial)} controles
                 </div>
-                <div style="background: #8b5cf6; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.9rem;">
+                <div style="background: #8b5cf6; color: white; padding: 8px 16px; border-radius: 20px; font-size: 0.9rem; font-weight: bold;">
                     🩺 {paciente.get('hemoglobina_dl1', 'N/A')} g/dL
                 </div>
-                {f'<div style="background: #ef4444; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.9rem;">📅 Próxima cita: {proxima_cita_fecha}</div>' if proxima_cita_fecha else ''}
-                {f'<div style="background: #f59e0b; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.9rem;">⏰ Último: {ultima_fecha_str}</div>' if ultima_fecha_str else ''}
+                {f'<div style="background: #ef4444; color: white; padding: 8px 16px; border-radius: 20px; font-size: 0.9rem; font-weight: bold;">📅 Próxima cita: {proxima_cita_fecha}</div>' if proxima_cita_fecha else ''}
+                {f'<div style="background: #f59e0b; color: white; padding: 8px 16px; border-radius: 20px; font-size: 0.9rem; font-weight: bold;">⏰ Último: {ultima_fecha_str}</div>' if ultima_fecha_str else ''}
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -3119,7 +3119,18 @@ with tab_seg3:
                                 paciente_con_estado['descripcion_estado'] = descripcion
                                 paciente_con_estado['ultimo_control'] = ultima_fecha_str
                                 
-                                pdf_bytes = generar_pdf_fpdf(paciente_con_estado, historial)
+                                # IMPORTANTE: Asegúrate de tener esta función definida
+                                if 'generar_pdf_fpdf' in globals() or 'generar_pdf_fpdf' in locals():
+                                    pdf_bytes = generar_pdf_fpdf(paciente_con_estado, historial)
+                                else:
+                                    # Si no existe la función, crear un PDF simple
+                                    from fpdf import FPDF
+                                    pdf = FPDF()
+                                    pdf.add_page()
+                                    pdf.set_font("Arial", size=12)
+                                    pdf.cell(200, 10, txt=f"Historial de: {paciente.get('nombre_apellido', 'N/A')}", ln=1)
+                                    pdf.cell(200, 10, txt=f"Estado: {estado}", ln=1)
+                                    pdf_bytes = pdf.output(dest='S').encode('latin1')
                                 
                                 if pdf_bytes and len(pdf_bytes) > 100:
                                     # Nombre del archivo
