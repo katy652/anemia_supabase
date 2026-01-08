@@ -192,6 +192,221 @@ def generar_pdf_fpdf(paciente, historial):
                 return pdf.output(dest='S').encode('latin-1', errors='ignore')
             except:
                 return b"PDF_ERROR"
+
+def generar_pdf_dashboard_nacional(indicadores, datos, mapa_df=None):
+    """
+    Genera PDF para el dashboard nacional usando FPDF
+    (Misma estructura que tu función existente)
+    """
+    try:
+        pdf = FPDF()
+        pdf.add_page()
+        
+        # Configurar fuentes estándar
+        pdf.set_font("Arial", "B", 16)
+        
+        # Título
+        pdf.cell(0, 10, "DASHBOARD NACIONAL DE ANEMIA", 0, 1, "C")
+        pdf.ln(5)
+        
+        # Fecha
+        pdf.set_font("Arial", "", 10)
+        pdf.cell(0, 10, f"Generado: {datetime.now().strftime('%d/%m/%Y %H:%M')}", 0, 1, "C")
+        pdf.ln(10)
+        
+        # Función para limpiar texto (igual a la tuya)
+        def limpiar_texto(texto):
+            if not texto:
+                return "N/A"
+            texto = str(texto)
+            reemplazos = {
+                '•': '-', '–': '-', '—': '-', '‘': "'", '’': "'", 
+                '“': '"', '”': '"', '…': '...',
+                'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ú': 'u',
+                'Á': 'A', 'É': 'E', 'Í': 'I', 'Ó': 'O', 'Ú': 'U',
+                'ñ': 'n', 'Ñ': 'N', 'ü': 'u', 'Ü': 'U'
+            }
+            for char_orig, char_reemplazo in reemplazos.items():
+                texto = texto.replace(char_orig, char_reemplazo)
+            return texto
+        
+        # ============================================
+        # 1. RESUMEN NACIONAL
+        # ============================================
+        pdf.set_font("Arial", "B", 12)
+        pdf.cell(0, 10, "RESUMEN NACIONAL", 0, 1)
+        pdf.set_font("Arial", "", 10)
+        
+        datos_resumen = [
+            f"Total de Pacientes: {indicadores.get('total_pacientes', 0)}",
+            f"Prevalencia Nacional: {indicadores.get('prevalencia_nacional', 0)}%",
+            f"Pacientes con Anemia: {indicadores.get('con_anemia', 0)}",
+            f"Hemoglobina Promedio: {indicadores.get('hb_promedio_nacional', 0):.1f} g/dL",
+            f"Tasa de Seguimiento: {indicadores.get('tasa_seguimiento', 0)}%",
+            f"Pacientes en Control: {indicadores.get('en_seguimiento', 0)}"
+        ]
+        
+        for dato in datos_resumen:
+            pdf.cell(0, 8, limpiar_texto(dato), 0, 1)
+        
+        pdf.ln(5)
+        
+        # ============================================
+        # 2. DISTRIBUCIÓN POR GRAVEDAD
+        # ============================================
+        pdf.set_font("Arial", "B", 12)
+        pdf.cell(0, 10, "DISTRIBUCION POR GRAVEDAD", 0, 1)
+        pdf.set_font("Arial", "", 10)
+        
+        distribucion = [
+            f"Anemia Severa: {indicadores.get('severa', 0)} pacientes",
+            f"Anemia Moderada: {indicadores.get('moderada', 0)} pacientes", 
+            f"Anemia Leve: {indicadores.get('leve', 0)} pacientes",
+            f"Normal: {indicadores.get('normal', 0)} pacientes"
+        ]
+        
+        for item in distribucion:
+            pdf.cell(0, 8, limpiar_texto(item), 0, 1)
+        
+        pdf.ln(10)
+        
+        # ============================================
+        # 3. TOP 5 REGIONES CON MAYOR PREVALENCIA
+        # ============================================
+        if 'por_region' in indicadores and indicadores['por_region']:
+            pdf.set_font("Arial", "B", 12)
+            pdf.cell(0, 10, "TOP 5 REGIONES CON MAYOR PREVALENCIA", 0, 1)
+            pdf.ln(5)
+            
+            # Crear tabla
+            pdf.set_font("Arial", "B", 10)
+            col_widths = [60, 35, 30, 35, 30]
+            headers = ["Region", "Prevalencia", "Total", "Con Anemia", "Hb Promedio"]
+            
+            # Encabezados
+            for i, header in enumerate(headers):
+                pdf.cell(col_widths[i], 8, header, 1, 0, "C")
+            pdf.ln()
+            
+            # Ordenar regiones por prevalencia (mayor a menor)
+            regiones_ordenadas = sorted(
+                indicadores['por_region'].items(),
+                key=lambda x: x[1]['prevalencia'],
+                reverse=True
+            )[:5]  # Top 5
+            
+            # Datos
+            pdf.set_font("Arial", "", 9)
+            for idx, (region, stats) in enumerate(regiones_ordenadas):
+                # Color alternado
+                if idx % 2 == 0:
+                    pdf.set_fill_color(240, 240, 240)
+                else:
+                    pdf.set_fill_color(255, 255, 255)
+                
+                # Preparar datos
+                region_limpia = limpiar_texto(region)[:25]
+                prevalencia = f"{stats['prevalencia']}%"
+                total = str(stats['total'])
+                con_anemia = str(stats['con_anemia'])
+                hb_prom = f"{stats['hb_promedio']:.1f}" if isinstance(stats['hb_promedio'], (int, float)) else "N/A"
+                
+                # Agregar fila
+                datos_fila = [region_limpia, prevalencia, total, con_anemia, hb_prom]
+                for i, dato in enumerate(datos_fila):
+                    pdf.cell(col_widths[i], 8, limpiar_texto(dato), 1, 0, "C", 1)
+                pdf.ln()
+            
+            pdf.ln(10)
+            
+            # ============================================
+            # 4. ESTADÍSTICAS ADICIONALES
+            # ============================================
+            if len(regiones_ordenadas) >= 2:
+                pdf.set_font("Arial", "B", 11)
+                pdf.cell(0, 10, "ESTADISTICAS COMPARATIVAS", 0, 1)
+                pdf.set_font("Arial", "", 10)
+                
+                # Región con mayor y menor prevalencia
+                region_max = regiones_ordenadas[0]
+                region_min = regiones_ordenadas[-1] if len(regiones_ordenadas) > 1 else regiones_ordenadas[0]
+                
+                pdf.cell(0, 8, limpiar_texto(f"- Mayor prevalencia: {region_max[0]} ({region_max[1]['prevalencia']}%)"), 0, 1)
+                pdf.cell(0, 8, limpiar_texto(f"- Menor prevalencia: {region_min[0]} ({region_min[1]['prevalencia']}%)"), 0, 1)
+                
+                # Diferencia
+                diferencia = region_max[1]['prevalencia'] - region_min[1]['prevalencia']
+                pdf.cell(0, 8, limpiar_texto(f"- Diferencia: {diferencia:.1f} puntos porcentuales"), 0, 1)
+        
+        # ============================================
+        # 5. RECOMENDACIONES
+        # ============================================
+        pdf.ln(10)
+        pdf.set_font("Arial", "B", 12)
+        pdf.cell(0, 10, "RECOMENDACIONES", 0, 1)
+        pdf.set_font("Arial", "", 10)
+        
+        prevalencia = indicadores.get('prevalencia_nacional', 0)
+        recomendaciones = []
+        
+        if prevalencia >= 40:
+            recomendaciones = [
+                "- PRIORIDAD ALTA: Intervencion inmediata requerida",
+                "- Fortalecer programas de suplementacion en regiones criticas",
+                -"Aumentar capacidad de diagnostico y seguimiento",
+                "- Coordinar con autoridades regionales"
+            ]
+        elif prevalencia >= 20:
+            recomendaciones = [
+                "- PRIORIDAD MEDIA: Acciones preventivas requeridas",
+                "- Mantener programas de suplementacion",
+                "- Fortalecer seguimiento de casos",
+                "- Educacion nutricional a familias"
+            ]
+        else:
+            recomendaciones = [
+                "- Situacion controlada (meta OMS alcanzada)",
+                "- Mantener programas preventivos",
+                "- Monitoreo continuo de indicadores",
+                "- Reforzar buenas practicas"
+            ]
+        
+        for rec in recomendaciones:
+            pdf.cell(0, 8, limpiar_texto(rec), 0, 1)
+        
+        # ============================================
+        # PIE DE PÁGINA
+        # ============================================
+        pdf.set_y(-40)
+        pdf.set_font("Arial", "I", 8)
+        pdf.cell(0, 5, "Sistema Nacional de Monitoreo de Anemia - Ministerio de Salud", 0, 1, "C")
+        pdf.cell(0, 5, f"Informe generado: {datetime.now().strftime('%d/%m/%Y %H:%M')}", 0, 1, "C")
+        pdf.cell(0, 5, "Documento confidencial - Uso institucional", 0, 1, "C")
+        
+        # Devuelve el PDF en bytes (igual que tu función)
+        return pdf.output(dest='S').encode('latin-1', errors='ignore')
+        
+    except Exception as e:
+        # Manejo de errores (igual que tu función)
+        try:
+            pdf = FPDF()
+            pdf.add_page()
+            pdf.set_font("Arial", "B", 16)
+            pdf.cell(0, 10, "ERROR AL GENERAR INFORME NACIONAL", 0, 1, "C")
+            pdf.set_font("Arial", "", 12)
+            error_msg = str(e)[:100].replace('•', '-').replace('–', '-').replace('—', '-')
+            pdf.multi_cell(0, 10, f"Error: {error_msg}")
+            return pdf.output(dest='S').encode('latin-1', errors='ignore')
+        except:
+            try:
+                pdf = FPDF()
+                pdf.add_page()
+                pdf.set_font("Arial", "B", 16)
+                pdf.cell(0, 10, "INFORME NACIONAL DE ANEMIA", 0, 1, "C")
+                return pdf.output(dest='S').encode('latin-1', errors='ignore')
+            except:
+                return b"PDF_ERROR"
+
 # ==================================================
 # SISTEMA DE LOGIN PARA 5 USUARIOS DE SALUD
 # ==================================================
@@ -3361,38 +3576,120 @@ with tab3:
                     key="btn_no_data_tab3"
                 )
 
-        # COLUMNA 3: Informe ejecutivo
-        with col_exp3:
-            # Crear informe ejecutivo en formato CSV simple
-            informe_csv = "INFORME NACIONAL DE ANEMIA\n"
-            informe_csv += f"Fecha: {datetime.now().strftime('%d/%m/%Y %H:%M')}\n\n"
-            informe_csv += "RESUMEN NACIONAL\n"
-            informe_csv += f"Total Pacientes,{indicadores['total_pacientes']}\n"
-            informe_csv += f"Prevalencia Nacional,{indicadores['prevalencia_nacional']}%\n"
-            informe_csv += f"Con Anemia,{indicadores['con_anemia']}\n"
-            informe_csv += f"Hb Promedio,{indicadores['hb_promedio_nacional']:.1f} g/dL\n"
-            informe_csv += f"Tasa Seguimiento,{indicadores['tasa_seguimiento']}%\n\n"
+       # COLUMNA 3: Informe ejecutivo (PDF + CSV)
+with col_exp3:
+    col_pdf, col_csv = st.columns(2)
+    
+    with col_pdf:
+        # Botón para generar PDF del dashboard nacional
+        if st.button("📄 Generar PDF Nacional",
+                    use_container_width=True,
+                    type="primary",
+                    key="btn_generar_pdf_nacional_tab3"):
             
-            informe_csv += "DISTRIBUCIÓN POR GRAVEDAD\n"
-            informe_csv += f"Anemia Severa,{indicadores['severa']}\n"
-            informe_csv += f"Anemia Moderada,{indicadores['moderada']}\n"
-            informe_csv += f"Anemia Leve,{indicadores['leve']}\n"
-            informe_csv += f"Normal,{indicadores['normal']}\n\n"
-            
-            if 'por_region' in indicadores:
-                informe_csv += "DATOS POR REGIÓN\n"
-                for region, stats in indicadores['por_region'].items():
-                    informe_csv += f"{region},{stats['prevalencia']}%,{stats['total']},{stats['con_anemia']},{stats['hb_promedio']:.1f}\n"
-            
-            st.download_button(
-                label="📄 Informe Ejecutivo (CSV)",
-                data=informe_csv.encode('utf-8'),
-                file_name=f"informe_anemia_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
-                mime="text/csv",
-                use_container_width=True,
-                type="secondary",
-                key="btn_download_informe_tab3"
+            with st.spinner("Generando informe PDF nacional..."):
+                try:
+                    # Generar PDF usando tu misma estructura
+                    pdf_bytes = generar_pdf_dashboard_nacional(
+                        indicadores=indicadores,
+                        datos=datos,
+                        mapa_df=st.session_state.get('mapa_peru')
+                    )
+                    
+                    # Botón de descarga del PDF
+                    st.download_button(
+                        label="📥 Descargar PDF Nacional",
+                        data=pdf_bytes,
+                        file_name=f"dashboard_anemia_nacional_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf",
+                        mime="application/pdf",
+                        use_container_width=True,
+                        key="btn_download_pdf_nacional_tab3"
+                    )
+                    
+                    st.success("✅ PDF nacional generado exitosamente")
+                    
+                except Exception as e:
+                    st.error(f"❌ Error al generar PDF: {str(e)}")
+                    st.info("💡 Asegúrate de tener FPDF instalado: `pip install fpdf2`")
+    
+    with col_csv:
+        # Crear informe ejecutivo en formato CSV simple
+        informe_csv = "INFORME NACIONAL DE ANEMIA\n"
+        informe_csv += f"Fecha: {datetime.now().strftime('%d/%m/%Y %H:%M')}\n\n"
+        informe_csv += "RESUMEN NACIONAL\n"
+        informe_csv += f"Total Pacientes,{indicadores['total_pacientes']}\n"
+        informe_csv += f"Prevalencia Nacional,{indicadores['prevalencia_nacional']}%\n"
+        informe_csv += f"Con Anemia,{indicadores['con_anemia']}\n"
+        informe_csv += f"Hb Promedio,{indicadores['hb_promedio_nacional']:.1f} g/dL\n"
+        informe_csv += f"Tasa Seguimiento,{indicadores['tasa_seguimiento']}%\n\n"
+        
+        informe_csv += "DISTRIBUCIÓN POR GRAVEDAD\n"
+        informe_csv += f"Anemia Severa,{indicadores['severa']}\n"
+        informe_csv += f"Anemia Moderada,{indicadores['moderada']}\n"
+        informe_csv += f"Anemia Leve,{indicadores['leve']}\n"
+        informe_csv += f"Normal,{indicadores['normal']}\n\n"
+        
+        if 'por_region' in indicadores:
+            informe_csv += "DATOS POR REGIÓN\n"
+            informe_csv += "Region,Prevalencia(%),Total_Pacientes,Con_Anemia,Hb_Promedio\n"
+            for region, stats in indicadores['por_region'].items():
+                informe_csv += f"{region},{stats['prevalencia']}%,{stats['total']},{stats['con_anemia']},{stats['hb_promedio']:.1f}\n"
+        
+        # Agregar estadísticas adicionales
+        informe_csv += "\nESTADÍSTICAS ADICIONALES\n"
+        
+        # Edad promedio si existe
+        if 'edad_meses' in datos.columns:
+            edad_prom = datos['edad_meses'].mean()
+            informe_csv += f"Edad Promedio,{edad_prom:.1f} meses\n"
+        
+        # Top regiones si existen
+        if 'por_region' in indicadores and indicadores['por_region']:
+            # Encontrar región con mayor prevalencia
+            regiones_ordenadas = sorted(
+                indicadores['por_region'].items(),
+                key=lambda x: x[1]['prevalencia'],
+                reverse=True
             )
+            
+            if regiones_ordenadas:
+                top_region = regiones_ordenadas[0]
+                informe_csv += f"Region_Mas_Afectada,{top_region[0]}\n"
+                informe_csv += f"Prevalencia_Maxima,{top_region[1]['prevalencia']}%\n"
+        
+        # Meta OMS comparación
+        meta_oms = 20
+        diferencia_oms = indicadores['prevalencia_nacional'] - meta_oms
+        informe_csv += f"Meta_OMS,{meta_oms}%\n"
+        informe_csv += f"Diferencia_OMS,{diferencia_oms:+.1f}%\n"
+        
+        # Tasa de casos severos
+        if indicadores['con_anemia'] > 0:
+            tasa_severa = (indicadores['severa'] / indicadores['con_anemia']) * 100
+            informe_csv += f"Tasa_Casos_Severos,{tasa_severa:.1f}%\n"
+        
+        # Interpretación
+        prevalencia = indicadores['prevalencia_nacional']
+        if prevalencia >= 40:
+            situacion = "ALTA_PRIORIDAD_Intervencion_Inmediata"
+        elif prevalencia >= 20:
+            situacion = "ATENCION_REQUERIDA_Acciones_Preventivas"
+        else:
+            situacion = "SITUACION_CONTROLADA_Meta_OMS_Alcanzada"
+        
+        informe_csv += f"Situacion_General,{situacion}\n"
+        informe_csv += f"Fecha_Generacion,{datetime.now().strftime('%d/%m/%Y %H:%M')}\n"
+        informe_csv += f"Sistema,Sistema_Nacional_Monitoreo_Anemia\n"
+        
+        st.download_button(
+            label="📊 Descargar CSV Completo",
+            data=informe_csv.encode('utf-8'),
+            file_name=f"informe_anemia_completo_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
+            mime="text/csv",
+            use_container_width=True,
+            type="secondary",
+            key="btn_download_csv_informe_tab3"
+        )
 
         # COLUMNA 4: Resumen para portapapeles
         with col_exp4:
