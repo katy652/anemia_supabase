@@ -2661,8 +2661,82 @@ DATOS ADICIONALES:
                         st.rerun()
 
 # ==================================================
-# PESTAÑA 3: HISTORIAL COMPLETO - VERSIÓN FPDF
+# PESTAÑA 3: HISTORIAL COMPLETO - VERSIÓN FPDF CON FILTRO DE ESTADO
 # ==================================================
+
+# Función para determinar el estado del paciente
+def obtener_estado_paciente_para_historial(dni_paciente, historial_existente=None):
+    """
+    Determina el estado del paciente para mostrar en el historial
+    Retorna: (estado, color, icono, descripcion, ultima_fecha_str, dias_desde_ultimo)
+    """
+    try:
+        # Si no se pasa historial, obtenerlo de la base de datos
+        if historial_existente is None:
+            response = supabase.table("seguimientos")\
+                .select("fecha_seguimiento")\
+                .eq("dni_paciente", dni_paciente)\
+                .order("fecha_seguimiento", desc=True)\
+                .limit(1)\
+                .execute()
+            historial = response.data if response.data else []
+        else:
+            historial = historial_existente
+        
+        if not historial:
+            return "NUEVO SEGUIMIENTO", "#3b82f6", "🆕", "Paciente sin controles previos", None, None
+        
+        # Obtener último control
+        ultimo_control = None
+        for control in historial:
+            if 'fecha_seguimiento' in control:
+                ultimo_control = control
+                break
+        
+        if not ultimo_control:
+            return "SIN DATOS", "#6b7280", "❓", "Información incompleta", None, None
+        
+        fecha_ultimo_str = ultimo_control.get('fecha_seguimiento')
+        
+        if not fecha_ultimo_str:
+            return "SIN DATOS", "#6b7280", "❓", "Información incompleta", None, None
+        
+        # Calcular días desde último control
+        try:
+            fecha_ultimo = datetime.strptime(fecha_ultimo_str, '%Y-%m-%d')
+            dias_desde_ultimo = (datetime.now() - fecha_ultimo).days
+            
+            # Determinar estado
+            if dias_desde_ultimo <= 30:
+                return "CONTROL ACTIVO", "#10b981", "🔵", f"Control hace {dias_desde_ultimo} días", fecha_ultimo_str, dias_desde_ultimo
+            elif dias_desde_ultimo <= 90:
+                return "CONTROL VENCIDO", "#f59e0b", "🟡", f"Último control hace {dias_desde_ultimo} días", fecha_ultimo_str, dias_desde_ultimo
+            else:
+                return "CONTROL PENDIENTE", "#ef4444", "🔴", f"Control vencido hace {dias_desde_ultimo} días", fecha_ultimo_str, dias_desde_ultimo
+                
+        except Exception as e:
+            return "ERROR", "#6b7280", "⚠️", f"Error en fecha: {str(e)[:30]}", fecha_ultimo_str, None
+            
+    except Exception as e:
+        return "ERROR", "#6b7280", "⚠️", f"Error: {str(e)[:50]}", None, None
+
+def mostrar_indicador_estado(estado, color, icono, descripcion):
+    """
+    Muestra un indicador visual del estado del paciente
+    """
+    st.markdown(f"""
+    <div style="background: linear-gradient(135deg, {color}20 0%, {color}10 100%); 
+                padding: 1rem; border-radius: 10px; border-left: 5px solid {color};
+                margin-bottom: 1rem;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="font-size: 1.5rem;">{icono}</div>
+            <div>
+                <div style="font-weight: 600; color: {color}; font-size: 1.1rem;">{estado}</div>
+                <div style="color: #6b7280; font-size: 0.9rem;">{descripcion}</div>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
 with tab_seg3:
     st.header("📋 HISTORIAL CLÍNICO COMPLETO")
@@ -2687,32 +2761,52 @@ with tab_seg3:
             st.rerun()
     else:
         paciente = st.session_state.seguimiento_paciente
+        dni_paciente = str(paciente.get('dni', ''))
+        historial = st.session_state.get('seguimiento_historial', [])
         
-        # Mostrar información del paciente
-        st.markdown(f"""
-        <div style="background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%); 
-                    padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem;">
-            <h3 style="margin: 0 0 10px 0; color: #5b21b6;">📊 HISTORIAL DE: {paciente.get('nombre_apellido', 'N/A')}</h3>
-            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
-                <div><strong>DNI:</strong> {paciente.get('dni', 'N/A')}</div>
-                <div><strong>Edad:</strong> {paciente.get('edad_meses', 'N/A')} meses</div>
-                <div><strong>Región:</strong> {paciente.get('region', 'N/A')}</div>
-                <div><strong>Hb actual:</strong> {paciente.get('hemoglobina_dl1', 'N/A')} g/dL</div>
-                <div><strong>Estado:</strong> {paciente.get('estado_paciente', 'N/A')}</div>
-                <div><strong>Riesgo:</strong> {paciente.get('riesgo', 'N/A')}</div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+        # ============================================
+        # DETERMINAR ESTADO DEL PACIENTE
+        # ============================================
         
-        # Botones de acción
-        col_act1, col_act2, col_act3 = st.columns(3)
+        estado, color, icono, descripcion, ultima_fecha_str, dias_desde_ultimo = obtener_estado_paciente_para_historial(dni_paciente, historial)
         
-        with col_act1:
+        # Verificar próxima cita programada
+        proxima_cita_proxima = False
+        proxima_cita_fecha = None
+        try:
+            response_citas = supabase.table("citas")\
+                .select("proxima_cita")\
+                .eq("dni_paciente", dni_paciente)\
+                .gte("proxima_cita", datetime.now().strftime('%Y-%m-%d'))\
+                .order("proxima_cita", asc=True)\
+                .limit(1)\
+                .execute()
+            
+            if response_citas.data:
+                proxima_cita = response_citas.data[0].get('proxima_cita')
+                if proxima_cita:
+                    fecha_proxima = datetime.strptime(proxima_cita, '%Y-%m-%d')
+                    proxima_cita_fecha = fecha_proxima.strftime('%d/%m/%Y')
+                    dias_hasta_proxima = (fecha_proxima - datetime.now()).days
+                    proxima_cita_proxima = dias_hasta_proxima <= 15
+        except:
+            pass
+        
+        # ============================================
+        # MOSTRAR INDICADOR DE ESTADO Y BOTONES
+        # ============================================
+        
+        # Columna para el indicador de estado
+        mostrar_indicador_estado(estado, color, icono, descripcion)
+        
+        # Botones de acción al lado del indicador
+        col_btn_estado1, col_btn_estado2, col_btn_estado3 = st.columns(3)
+        
+        with col_btn_estado1:
             if st.button("🔄 Actualizar Historial", 
                        type="primary", 
                        use_container_width=True,
                        key="btn_actualizar_historial"):
-                dni_paciente = str(paciente.get('dni', ''))
                 if dni_paciente:
                     try:
                         response = supabase.table("seguimientos")\
@@ -2733,7 +2827,7 @@ with tab_seg3:
                     time.sleep(1)
                     st.rerun()
         
-        with col_act2:
+        with col_btn_estado2:
             if st.button("📝 Nuevo Seguimiento", 
                        type="secondary", 
                        use_container_width=True,
@@ -2750,7 +2844,7 @@ with tab_seg3:
                 """, unsafe_allow_html=True)
                 st.rerun()
         
-        with col_act3:
+        with col_btn_estado3:
             if st.button("🔍 Cambiar Paciente", 
                        type="secondary", 
                        use_container_width=True,
@@ -2767,8 +2861,51 @@ with tab_seg3:
                 """, unsafe_allow_html=True)
                 st.rerun()
         
-        # Mostrar historial
-        historial = st.session_state.get('seguimiento_historial', [])
+        # ============================================
+        # INFORMACIÓN PRINCIPAL DEL PACIENTE
+        # ============================================
+        
+        st.markdown(f"""
+        <div style="background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%); 
+                    padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
+                <div>
+                    <h3 style="margin: 0 0 10px 0; color: #5b21b6;">📊 HISTORIAL DE: {paciente.get('nombre_apellido', 'N/A')}</h3>
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                        <span style="font-size: 1.5rem;">{icono}</span>
+                        <span style="font-weight: 600; color: {color}; background: {color}20; padding: 4px 12px; border-radius: 20px;">
+                            {estado}
+                        </span>
+                        {f'<span style="font-size: 0.9rem; color: #ef4444; background: #fee2e2; padding: 4px 12px; border-radius: 20px;">📅 Cita: {proxima_cita_fecha}</span>' if proxima_cita_proxima and proxima_cita_fecha else ''}
+                    </div>
+                </div>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 15px;">
+                <div><strong>DNI:</strong> {paciente.get('dni', 'N/A')}</div>
+                <div><strong>Edad:</strong> {paciente.get('edad_meses', 'N/A')} meses</div>
+                <div><strong>Región:</strong> {paciente.get('region', 'N/A')}</div>
+                <div><strong>Hb actual:</strong> {paciente.get('hemoglobina_dl1', 'N/A')} g/dL</div>
+                <div><strong>Estado:</strong> {paciente.get('estado_paciente', 'N/A')}</div>
+                <div><strong>Riesgo:</strong> {paciente.get('riesgo', 'N/A')}</div>
+            </div>
+            
+            <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;">
+                <div style="background: {color}; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.9rem;">
+                    📋 {len(historial)} controles
+                </div>
+                <div style="background: #8b5cf6; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.9rem;">
+                    🩺 {paciente.get('hemoglobina_dl1', 'N/A')} g/dL
+                </div>
+                {f'<div style="background: #ef4444; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.9rem;">📅 Próxima cita: {proxima_cita_fecha}</div>' if proxima_cita_fecha else ''}
+                {f'<div style="background: #f59e0b; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.9rem;">⏰ Último: {ultima_fecha_str}</div>' if ultima_fecha_str else ''}
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # ============================================
+        # MOSTRAR HISTORIAL
+        # ============================================
         
         if historial:
             # Crear DataFrame del historial
@@ -2779,7 +2916,7 @@ with tab_seg3:
                 df_historial['fecha_seguimiento'] = pd.to_datetime(df_historial['fecha_seguimiento'])
                 df_historial = df_historial.sort_values('fecha_seguimiento', ascending=False)
             
-            # Métricas
+            # Métricas mejoradas con estado
             col_met1, col_met2, col_met3, col_met4 = st.columns(4)
             
             with col_met1:
@@ -2791,29 +2928,51 @@ with tab_seg3:
                     st.metric("Hb promedio", f"{hb_prom:.1f} g/dL")
             
             with col_met3:
-                if 'fecha_seguimiento' in df_historial.columns:
+                if ultima_fecha_str:
+                    try:
+                        fecha_bonita = datetime.strptime(ultima_fecha_str, '%Y-%m-%d').strftime('%d/%m/%Y')
+                        st.metric("Último control", fecha_bonita)
+                    except:
+                        st.metric("Último control", ultima_fecha_str)
+                elif 'fecha_seguimiento' in df_historial.columns and not df_historial.empty:
                     ultima = df_historial['fecha_seguimiento'].max().strftime('%d/%m/%Y')
                     st.metric("Último control", ultima)
+                else:
+                    st.metric("Último control", "N/A")
             
             with col_met4:
-                if 'clasificacion_actual' in df_historial.columns:
-                    clasificacion_actual = df_historial['clasificacion_actual'].iloc[0] if not df_historial.empty else "N/A"
-                    st.metric("Clasificación actual", clasificacion_actual)
+                st.metric("Estado actual", icono + " " + estado.split()[0])
             
-            # Gráfico de evolución de hemoglobina
+            # ============================================
+            # GRÁFICO DE EVOLUCIÓN CON COLOR SEGÚN ESTADO
+            # ============================================
+            
             if 'hemoglobina_actual' in df_historial.columns and 'fecha_seguimiento' in df_historial.columns:
                 st.markdown("#### 📈 Evolución de Hemoglobina")
                 
-                # Crear gráfico
+                # Crear gráfico con colores según estado
                 fig = go.Figure()
                 
+                # Ordenar por fecha para la línea
+                df_ordenado = df_historial.sort_values('fecha_seguimiento')
+                
+                # Determinar color de la línea según el estado actual
+                color_linea = {
+                    "CONTROL ACTIVO": "#10b981",
+                    "CONTROL VENCIDO": "#f59e0b",
+                    "CONTROL PENDIENTE": "#ef4444",
+                    "NUEVO SEGUIMIENTO": "#3b82f6",
+                    "SIN DATOS": "#6b7280",
+                    "ERROR": "#6b7280"
+                }.get(estado, "#1f77b4")
+                
                 fig.add_trace(go.Scatter(
-                    x=df_historial['fecha_seguimiento'],
-                    y=df_historial['hemoglobina_actual'],
+                    x=df_ordenado['fecha_seguimiento'],
+                    y=df_ordenado['hemoglobina_actual'],
                     mode='lines+markers',
                     name='Hb (g/dL)',
-                    line=dict(color='#1f77b4', width=3),
-                    marker=dict(size=8, color='#1f77b4')
+                    line=dict(color=color_linea, width=3),
+                    marker=dict(size=8, color=color_linea)
                 ))
                 
                 # Línea de referencia para anemia (11 g/dL)
@@ -2825,8 +2984,28 @@ with tab_seg3:
                     annotation_position="bottom right"
                 )
                 
+                # Agregar anotación del estado actual
+                if not df_ordenado.empty:
+                    ultimo_valor = df_ordenado['hemoglobina_actual'].iloc[-1]
+                    fig.add_annotation(
+                        x=df_ordenado['fecha_seguimiento'].iloc[-1],
+                        y=ultimo_valor,
+                        text=f"{estado}<br>{ultimo_valor:.1f} g/dL",
+                        showarrow=True,
+                        arrowhead=2,
+                        arrowsize=1,
+                        arrowwidth=2,
+                        arrowcolor=color_linea,
+                        font=dict(size=12, color=color_linea),
+                        bordercolor=color_linea,
+                        borderwidth=2,
+                        borderpad=4,
+                        bgcolor="white",
+                        opacity=0.8
+                    )
+                
                 fig.update_layout(
-                    title="Evolución de Hemoglobina",
+                    title=f"Evolución de Hemoglobina - Estado: {estado}",
                     xaxis_title="Fecha",
                     yaxis_title="Hemoglobina (g/dL)",
                     template="plotly_white",
@@ -2835,7 +3014,10 @@ with tab_seg3:
                 
                 st.plotly_chart(fig, use_container_width=True)
             
-            # Tabla de controles
+            # ============================================
+            # TABLA DE CONTROLES
+            # ============================================
+            
             st.markdown("#### 📋 Controles Registrados")
             
             columnas_posibles = ['fecha_seguimiento', 'tipo_seguimiento', 
@@ -2872,16 +3054,31 @@ with tab_seg3:
                 
                 df_mostrar = df_mostrar.rename(columns={k: v for k, v in nombres_columnas.items() if k in df_mostrar.columns})
                 
-                # Mostrar tabla con estilo
+                # Formatear fechas
+                if 'Fecha' in df_mostrar.columns:
+                    df_mostrar['Fecha'] = pd.to_datetime(df_mostrar['Fecha']).dt.strftime('%d/%m/%Y')
+                
+                # Mostrar tabla con estilo y resaltar según estado
+                def color_fila_por_estado(row):
+                    """Resalta filas según la antigüedad del control"""
+                    try:
+                        if row.name == 0:  # Última fila (control más reciente)
+                            return ['background-color: ' + color + '20' for _ in row]
+                    except:
+                        pass
+                    return ['background-color: white' for _ in row]
+                
+                styled_df = df_mostrar.style.apply(color_fila_por_estado, axis=1)
+                
                 st.dataframe(
-                    df_mostrar,
+                    styled_df,
                     use_container_width=True,
                     height=min(400, len(df_mostrar) * 35 + 38),
                     hide_index=True
                 )
                 
                 # ============================================
-                # SECCIÓN DE EXPORTACIÓN - VERSIÓN FPDF SIMPLE
+                # SECCIÓN DE EXPORTACIÓN
                 # ============================================
                 
                 st.markdown("---")
@@ -2916,12 +3113,18 @@ with tab_seg3:
                         
                         with st.spinner("🔄 Generando PDF con FPDF..."):
                             try:
-                                pdf_bytes = generar_pdf_fpdf(paciente, historial)
+                                # Incluir estado en los datos para el PDF
+                                paciente_con_estado = paciente.copy()
+                                paciente_con_estado['estado_control'] = estado
+                                paciente_con_estado['descripcion_estado'] = descripcion
+                                paciente_con_estado['ultimo_control'] = ultima_fecha_str
+                                
+                                pdf_bytes = generar_pdf_fpdf(paciente_con_estado, historial)
                                 
                                 if pdf_bytes and len(pdf_bytes) > 100:
                                     # Nombre del archivo
                                     nombre_paciente = paciente.get('nombre_apellido', 'paciente').replace(' ', '_')
-                                    nombre_archivo = f"Historial_{nombre_paciente}_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
+                                    nombre_archivo = f"Historial_{nombre_paciente}_{estado.replace(' ', '_')}_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
                                     
                                     # Botón de descarga
                                     st.download_button(
@@ -2935,7 +3138,7 @@ with tab_seg3:
                                     )
                                     
                                     st.success(f"✅ PDF generado correctamente ({len(pdf_bytes)} bytes)")
-                                    st.info("El PDF debería abrirse sin problemas en Adobe Reader")
+                                    st.info("El PDF incluye información del estado actual del paciente")
                                     
                                 else:
                                     st.error("❌ El PDF generado está vacío o es muy pequeño")
@@ -2953,23 +3156,46 @@ with tab_seg3:
                 st.markdown("---")
                 
                 # Instrucciones
-                st.info("""
-                **📝 Notas:**
-                - **CSV**: Ideal para análisis en Excel
-                - **PDF con FPDF**: Documento listo para imprimir o archivar
-                - Ambos formatos conservan todos los datos del historial
+                st.info(f"""
+                **📝 Información del estado actual:**
+                
+                **Estado:** {icono} **{estado}**
+                **Descripción:** {descripcion}
+                **Último control:** {ultima_fecha_str if ultima_fecha_str else 'N/A'}
+                **Controles totales:** {len(historial)}
+                
+                **Acciones recomendadas:**
+                - Si es **NUEVO SEGUIMIENTO**: Crear primer control
+                - Si es **CONTROL ACTIVO**: Continuar seguimiento según programación
+                - Si es **CONTROL VENCIDO**: Programar nuevo control pronto
+                - Si es **CONTROL PENDIENTE**: Agendar cita urgente
                 """)
             
             else:
                 st.info("No hay datos suficientes para mostrar en la tabla")
         
         else:
-            st.info("""
-            📭 **No hay controles registrados para este paciente**
-            
-            Para agregar el primer control:
-            👉 Vaya a la pestaña **📝 Nuevo Seguimiento**
-            """)
+            # Si no hay historial, mostrar mensaje específico según estado
+            if estado == "NUEVO SEGUIMIENTO":
+                st.info(f"""
+                📭 **{estado} - Sin controles registrados**
+                
+                **Estado:** {icono} {estado}
+                **Descripción:** {descripcion}
+                
+                **Acción requerida:**
+                👉 Vaya a la pestaña **📝 Nuevo Seguimiento** para crear el primer control
+                """)
+            else:
+                st.info(f"""
+                📭 **No hay controles registrados para este paciente**
+                
+                **Estado actual:** {icono} {estado}
+                **Descripción:** {descripcion}
+                
+                Para agregar el primer control:
+                👉 Vaya a la pestaña **📝 Nuevo Seguimiento**
+                """)
             
             # Botón para crear primer seguimiento
             if st.button("📝 Crear primer seguimiento", 
