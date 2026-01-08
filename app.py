@@ -9,29 +9,51 @@ import time
 from datetime import datetime, timedelta
 from fpdf import FPDF
 
-# ==================================================
-# FUNCIONES PARA GENERAR PDFs
-# ==================================================
-
 def generar_pdf_fpdf(paciente, historial):
+    """
+    Genera PDF usando FPDF (sin caracteres especiales problemáticos)
+    """
     try:
         pdf = FPDF()
         pdf.add_page()
+        
+        # Configurar fuentes estándar
         pdf.set_font("Arial", "B", 16)
+        
+        # Título
         pdf.cell(0, 10, "SISTEMA NIXON - HISTORIAL CLINICO", 0, 1, "C")
         pdf.ln(5)
+        
+        # Fecha
         pdf.set_font("Arial", "", 10)
         pdf.cell(0, 10, f"Generado: {datetime.now().strftime('%d/%m/%Y %H:%M')}", 0, 1, "C")
         pdf.ln(10)
         
+        # Información del paciente
         pdf.set_font("Arial", "B", 12)
         pdf.cell(0, 10, "INFORMACION DEL PACIENTE", 0, 1)
         pdf.set_font("Arial", "", 10)
         
+        # Limpiar caracteres especiales
         def limpiar_texto(texto):
-            if not texto: return "N/A"
+            if not texto:
+                return "N/A"
+            # Reemplazar caracteres problemáticos
             texto = str(texto)
-            reemplazos = {'•': '-', '–': '-', '—': '-', '‘': "'", '’': "'", '“': '"', '”': '"'}
+            reemplazos = {
+                '•': '-',
+                '–': '-',
+                '—': '-',
+                '‘': "'",
+                '’': "'",
+                '“': '"',
+                '”': '"',
+                '…': '...',
+                'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ú': 'u',
+                'Á': 'A', 'É': 'E', 'Í': 'I', 'Ó': 'O', 'Ú': 'U',
+                'ñ': 'n', 'Ñ': 'N',
+                'ü': 'u', 'Ü': 'U'
+            }
             for char_orig, char_reemplazo in reemplazos.items():
                 texto = texto.replace(char_orig, char_reemplazo)
             return texto
@@ -50,14 +72,18 @@ def generar_pdf_fpdf(paciente, historial):
         
         for dato in datos:
             pdf.cell(0, 8, limpiar_texto(dato), 0, 1)
+        
         pdf.ln(10)
         
+        # Historial de controles
         if historial and len(historial) > 0:
             pdf.set_font("Arial", "B", 12)
             pdf.cell(0, 10, f"HISTORIAL DE CONTROLES ({len(historial)} registros)", 0, 1)
             pdf.ln(5)
             
+            # Tabla
             pdf.set_font("Arial", "B", 10)
+            # Encabezados
             col_widths = [30, 25, 20, 35, 30, 30]
             headers = ["Fecha", "Tipo", "Hb", "Clasificacion", "Responsable", "Proximo"]
             
@@ -65,27 +91,34 @@ def generar_pdf_fpdf(paciente, historial):
                 pdf.cell(col_widths[i], 8, header, 1, 0, "C")
             pdf.ln()
             
+            # Datos
             pdf.set_font("Arial", "", 9)
             for idx, control in enumerate(historial[:25]):
+                # Alternar color de fondo
                 if idx % 2 == 0:
                     pdf.set_fill_color(240, 240, 240)
                 else:
                     pdf.set_fill_color(255, 255, 255)
                 
+                # Obtener y limpiar datos
                 fecha = control.get('fecha_seguimiento', 'N/A')[:10] if control.get('fecha_seguimiento') else 'N/A'
                 tipo = limpiar_texto(control.get('tipo_seguimiento', 'N/A'))[:10]
                 hb = control.get('hemoglobina_actual', 'N/A')
-                if isinstance(hb, (int, float)): hb = f"{hb:.1f}"
+                if isinstance(hb, (int, float)):
+                    hb = f"{hb:.1f}"
                 clasif = limpiar_texto(control.get('clasificacion_actual', 'N/A'))[:10]
                 responsable = limpiar_texto(control.get('usuario_responsable', 'N/A'))[:10]
                 proximo = control.get('proximo_control', 'N/A')[:10] if control.get('proximo_control') else 'N/A'
                 
+                # Agregar fila
                 datos_fila = [fecha, tipo, hb, clasif, responsable, proximo]
                 for i, dato in enumerate(datos_fila):
                     pdf.cell(col_widths[i], 8, limpiar_texto(dato), 1, 0, "C", 1)
                 pdf.ln()
             
             pdf.ln(10)
+            
+            # Estadísticas
             pdf.set_font("Arial", "B", 11)
             pdf.cell(0, 10, "ESTADISTICAS", 0, 1)
             pdf.set_font("Arial", "", 10)
@@ -93,7 +126,8 @@ def generar_pdf_fpdf(paciente, historial):
             valores_hb = []
             for control in historial:
                 hb = control.get('hemoglobina_actual')
-                if isinstance(hb, (int, float)): valores_hb.append(hb)
+                if isinstance(hb, (int, float)):
+                    valores_hb.append(hb)
             
             if valores_hb:
                 promedio = sum(valores_hb) / len(valores_hb)
@@ -102,6 +136,7 @@ def generar_pdf_fpdf(paciente, historial):
                 minimo = min(valores_hb)
                 maximo = max(valores_hb)
                 
+                # Usar guión en lugar de bullet point
                 pdf.cell(0, 8, f"- Promedio de hemoglobina: {promedio:.1f} g/dL", 0, 1)
                 pdf.cell(0, 8, f"- Primera medicion: {primera:.1f} g/dL", 0, 1)
                 pdf.cell(0, 8, f"- Ultima medicion: {ultima:.1f} g/dL", 0, 1)
@@ -109,26 +144,35 @@ def generar_pdf_fpdf(paciente, historial):
                 
                 if len(valores_hb) >= 2:
                     cambio = ultima - primera
-                    if cambio > 0.5: tendencia = f'Mejoria significativa (+{cambio:.1f} g/dL)'
-                    elif cambio > 0: tendencia = f'Ligera mejoria (+{cambio:.1f} g/dL)'
-                    elif cambio < -0.5: tendencia = f'Empeoramiento significativo ({cambio:+.1f} g/dL)'
-                    elif cambio < 0: tendencia = f'Ligero empeoramiento ({cambio:+.1f} g/dL)'
-                    else: tendencia = 'Estable'
+                    if cambio > 0.5:
+                        tendencia = f'Mejoria significativa (+{cambio:.1f} g/dL)'
+                    elif cambio > 0:
+                        tendencia = f'Ligera mejoria (+{cambio:.1f} g/dL)'
+                    elif cambio < -0.5:
+                        tendencia = f'Empeoramiento significativo ({cambio:+.1f} g/dL)'
+                    elif cambio < 0:
+                        tendencia = f'Ligero empeoramiento ({cambio:+.1f} g/dL)'
+                    else:
+                        tendencia = 'Estable'
+                    
                     pdf.cell(0, 8, f"- Tendencia: {tendencia}", 0, 1)
         
         else:
             pdf.set_font("Arial", "I", 10)
             pdf.cell(0, 10, "No hay controles registrados para este paciente.", 0, 1)
         
+        # Pie de página
         pdf.set_y(-30)
         pdf.set_font("Arial", "I", 8)
         pdf.cell(0, 5, "Sistema Nixon v2.0 - Control de Anemia Infantil", 0, 1, "C")
         pdf.cell(0, 5, f"Generado el: {datetime.now().strftime('%d/%m/%Y %H:%M')}", 0, 1, "C")
         pdf.cell(0, 5, "(c) 2024 - Uso medico profesional", 0, 1, "C")
         
+        # OPCIÓN 1: Usar latin-1 con texto limpio
         return pdf.output(dest='S').encode('latin-1', errors='ignore')
         
     except Exception as e:
+        # Si falla, crear un PDF de error simple SIN caracteres especiales
         try:
             pdf = FPDF()
             pdf.add_page()
@@ -139,6 +183,7 @@ def generar_pdf_fpdf(paciente, historial):
             pdf.multi_cell(0, 10, f"Error: {error_msg}")
             return pdf.output(dest='S').encode('latin-1', errors='ignore')
         except:
+            # Si todo falla, devolver PDF mínimo
             try:
                 pdf = FPDF()
                 pdf.add_page()
@@ -149,16 +194,35 @@ def generar_pdf_fpdf(paciente, historial):
                 return b"PDF_ERROR"
 
 def generar_pdf_dashboard_nacional(indicadores, datos, mapa_df=None):
+    """Genera un PDF con el dashboard nacional de anemia usando FPDF"""
+    
     try:
         from fpdf import FPDF
+        from io import BytesIO
+        import pandas as pd
         
-        try: prevalencia_num = float(indicadores.get('prevalencia_nacional', 0))
-        except (ValueError, TypeError): prevalencia_num = 0.0
-        try: hb_promedio = float(indicadores.get('hb_promedio_nacional', 0))
-        except (ValueError, TypeError): hb_promedio = 0.0
-        try: tasa_seguimiento = float(indicadores.get('tasa_seguimiento', 0))
-        except (ValueError, TypeError): tasa_seguimiento = 0.0
+        # ============================================
+        # PASO CRÍTICO: Convertir TODOS los valores a números
+        # ============================================
         
+        # Asegurar que prevalencia_nacional sea número
+        try:
+            prevalencia_num = float(indicadores.get('prevalencia_nacional', 0))
+        except (ValueError, TypeError):
+            prevalencia_num = 0.0
+        
+        # Convertir otros valores importantes
+        try:
+            hb_promedio = float(indicadores.get('hb_promedio_nacional', 0))
+        except (ValueError, TypeError):
+            hb_promedio = 0.0
+        
+        try:
+            tasa_seguimiento = float(indicadores.get('tasa_seguimiento', 0))
+        except (ValueError, TypeError):
+            tasa_seguimiento = 0.0
+        
+        # Convertir valores enteros
         total_pacientes = int(indicadores.get('total_pacientes', 0))
         con_anemia = int(indicadores.get('con_anemia', 0))
         casos_severa = int(indicadores.get('severa', 0))
@@ -166,63 +230,96 @@ def generar_pdf_dashboard_nacional(indicadores, datos, mapa_df=None):
         casos_leve = int(indicadores.get('leve', 0))
         casos_normal = int(indicadores.get('normal', 0))
         
+        # Calcular diferencia con meta OMS (AHORA CON NÚMEROS, NO STRINGS)
         meta_oms = 20.0
         diferencia_oms = prevalencia_num - meta_oms
         
+        # ============================================
+        # CREAR PDF CON FPDF
+        # ============================================
+        
         pdf = FPDF()
         pdf.add_page()
+        
+        # Configurar fuentes
         pdf.set_font("Arial", 'B', 16)
+        
+        # Título principal
         pdf.cell(0, 10, "DASHBOARD NACIONAL DE ANEMIA", ln=True, align='C')
         pdf.set_font("Arial", '', 10)
         pdf.cell(0, 10, f"Fecha: {datetime.now().strftime('%d/%m/%Y %H:%M')}", ln=True, align='C')
         pdf.ln(10)
         
+        # ============================================
+        # SECCIÓN 1: INDICADORES PRINCIPALES
+        # ============================================
+        
         pdf.set_font("Arial", 'B', 14)
         pdf.set_fill_color(200, 220, 255)
         pdf.cell(0, 10, "1. INDICADORES NACIONALES", ln=True, fill=True)
         pdf.ln(5)
+        
         pdf.set_font("Arial", '', 12)
         
+        # Indicador 1: Prevalencia
         pdf.set_font("Arial", 'B', 12)
         pdf.cell(80, 10, "Prevalencia Nacional:")
         pdf.set_font("Arial", '', 12)
         pdf.cell(0, 10, f"{prevalencia_num:.1f}%", ln=True)
         
+        # Indicador 2: Total pacientes
         pdf.set_font("Arial", 'B', 12)
         pdf.cell(80, 10, "Total Pacientes:")
         pdf.set_font("Arial", '', 12)
         pdf.cell(0, 10, f"{total_pacientes:,}", ln=True)
         
+        # Indicador 3: Con anemia
         pdf.set_font("Arial", 'B', 12)
         pdf.cell(80, 10, "Pacientes con Anemia:")
         pdf.set_font("Arial", '', 12)
         pdf.cell(0, 10, f"{con_anemia:,} ({prevalencia_num:.1f}%)", ln=True)
         
+        # Indicador 4: Hemoglobina promedio
         pdf.set_font("Arial", 'B', 12)
         pdf.cell(80, 10, "Hemoglobina Promedio:")
         pdf.set_font("Arial", '', 12)
         pdf.cell(0, 10, f"{hb_promedio:.1f} g/dL", ln=True)
         
+        # Indicador 5: Tasa seguimiento
         pdf.set_font("Arial", 'B', 12)
         pdf.cell(80, 10, "Tasa de Seguimiento:")
         pdf.set_font("Arial", '', 12)
         pdf.cell(0, 10, f"{tasa_seguimiento:.1f}%", ln=True)
         
+        # Indicador 6: Diferencia meta OMS (EVITAR FORMATO +/- CON STRINGS)
         pdf.set_font("Arial", 'B', 12)
         pdf.cell(80, 10, "Diferencia Meta OMS:")
         pdf.set_font("Arial", '', 12)
-        if diferencia_oms > 0: pdf.cell(0, 10, f"+{diferencia_oms:.1f}% (sobre meta)", ln=True)
-        elif diferencia_oms < 0: pdf.cell(0, 10, f"{diferencia_oms:.1f}% (bajo meta)", ln=True)
-        else: pdf.cell(0, 10, f"{diferencia_oms:.1f}% (en meta)", ln=True)
+        
+        # Mostrar diferencia sin formato +/- problemático
+        if diferencia_oms > 0:
+            pdf.cell(0, 10, f"+{diferencia_oms:.1f}% (sobre meta)", ln=True)
+        elif diferencia_oms < 0:
+            pdf.cell(0, 10, f"{diferencia_oms:.1f}% (bajo meta)", ln=True)
+        else:
+            pdf.cell(0, 10, f"{diferencia_oms:.1f}% (en meta)", ln=True)
         
         pdf.ln(10)
+        
+        # ============================================
+        # SECCIÓN 2: DISTRIBUCIÓN POR GRAVEDAD
+        # ============================================
+        
         pdf.set_font("Arial", 'B', 14)
         pdf.set_fill_color(220, 255, 220)
         pdf.cell(0, 10, "2. DISTRIBUCIÓN POR GRAVEDAD", ln=True, fill=True)
         pdf.ln(5)
+        
         pdf.set_font("Arial", '', 12)
         
-        total = max(total_pacientes, 1)
+        # Calcular porcentajes
+        total = max(total_pacientes, 1)  # Evitar división por cero
+        
         pdf.set_font("Arial", 'B', 12)
         pdf.cell(80, 10, "Anemia Severa:")
         pdf.set_font("Arial", '', 12)
@@ -244,25 +341,41 @@ def generar_pdf_dashboard_nacional(indicadores, datos, mapa_df=None):
         pdf.cell(0, 10, f"{casos_normal:,} ({(casos_normal/total*100):.1f}%)", ln=True)
         
         pdf.ln(10)
+        
+        # ============================================
+        # SECCIÓN 3: DATOS POR REGIÓN (si existen)
+        # ============================================
+        
         if 'por_region' in indicadores and indicadores['por_region']:
             pdf.set_font("Arial", 'B', 14)
             pdf.set_fill_color(255, 240, 200)
             pdf.cell(0, 10, "3. DATOS POR REGIÓN", ln=True, fill=True)
             pdf.ln(5)
+            
+            # Crear tabla de regiones
             pdf.set_font("Arial", 'B', 10)
+            
+            # Encabezados de tabla
             headers = ["Región", "Prevalencia", "Total", "Anemia", "Hb Prom"]
             col_widths = [50, 30, 25, 25, 30]
             
+            # Dibujar encabezados
             for i, header in enumerate(headers):
                 pdf.cell(col_widths[i], 10, header, border=1, align='C')
             pdf.ln()
             
+            # Dibujar datos
             pdf.set_font("Arial", '', 9)
+            
             for region, stats in indicadores['por_region'].items():
-                try: prevalencia_reg = float(stats.get('prevalencia', 0))
-                except (ValueError, TypeError): prevalencia_reg = 0.0
-                try: hb_prom_reg = float(stats.get('hb_promedio', 0))
-                except (ValueError, TypeError): hb_prom_reg = 0.0
+                # Asegurar que los valores de región sean números
+                try:
+                    prevalencia_reg = float(stats.get('prevalencia', 0))
+                    hb_prom_reg = float(stats.get('hb_promedio', 0))
+                except (ValueError, TypeError):
+                    prevalencia_reg = 0.0
+                    hb_prom_reg = 0.0
+                
                 total_reg = int(stats.get('total', 0))
                 con_anemia_reg = int(stats.get('con_anemia', 0))
                 
@@ -272,14 +385,21 @@ def generar_pdf_dashboard_nacional(indicadores, datos, mapa_df=None):
                 pdf.cell(col_widths[3], 8, str(con_anemia_reg), border=1, align='C')
                 pdf.cell(col_widths[4], 8, f"{hb_prom_reg:.1f}", border=1, align='C')
                 pdf.ln()
+            
             pdf.ln(10)
+        
+        # ============================================
+        # SECCIÓN 4: ANÁLISIS Y RECOMENDACIONES
+        # ============================================
         
         pdf.set_font("Arial", 'B', 14)
         pdf.set_fill_color(255, 220, 220)
         pdf.cell(0, 10, "4. ANÁLISIS Y RECOMENDACIONES", ln=True, fill=True)
         pdf.ln(5)
+        
         pdf.set_font("Arial", '', 11)
         
+        # Análisis basado en prevalencia
         if prevalencia_num > 40:
             situacion = "CRÍTICA - Prevalencia muy alta (>40%)"
             recomendacion = "Se requiere intervención urgente e inmediata"
@@ -293,6 +413,7 @@ def generar_pdf_dashboard_nacional(indicadores, datos, mapa_df=None):
         pdf.multi_cell(0, 8, f"Situación Nacional: {situacion}")
         pdf.multi_cell(0, 8, f"Recomendación Principal: {recomendacion}")
         pdf.ln(5)
+        
         pdf.multi_cell(0, 8, "Recomendaciones específicas:")
         pdf.set_font("Arial", '', 10)
         pdf.multi_cell(0, 6, "1. Priorizar atención en casos severos y moderados")
@@ -300,17 +421,29 @@ def generar_pdf_dashboard_nacional(indicadores, datos, mapa_df=None):
         pdf.multi_cell(0, 6, "3. Implementar estrategias regionales diferenciadas")
         pdf.multi_cell(0, 6, "4. Monitoreo continuo de indicadores clave")
         pdf.multi_cell(0, 6, "5. Capacitación en diagnóstico y manejo temprano")
+        
         pdf.ln(10)
+        
+        # ============================================
+        # PIE DE PÁGINA
+        # ============================================
         
         pdf.set_font("Arial", 'I', 10)
         pdf.cell(0, 10, "Sistema Nacional de Monitoreo de Anemia", ln=True, align='C')
         pdf.cell(0, 10, "Ministerio de Salud - Perú", ln=True, align='C')
         pdf.cell(0, 10, f"Documento generado automáticamente", ln=True, align='C')
         
+        # ============================================
+        # OBTENER BYTES DEL PDF
+        # ============================================
+        
+        # Guardar en buffer de memoria
         pdf_output = pdf.output(dest='S').encode('latin-1')
+        
         return pdf_output
         
     except Exception as e:
+        # Si hay error, crear un PDF simple de error
         try:
             pdf_error = FPDF()
             pdf_error.add_page()
@@ -321,60 +454,206 @@ def generar_pdf_dashboard_nacional(indicadores, datos, mapa_df=None):
             pdf_error.multi_cell(0, 10, f"Error: {str(e)[:100]}")
             pdf_error.ln(10)
             pdf_error.multi_cell(0, 10, "Por favor, verifique los datos y vuelva a intentar.")
+            
             return pdf_error.output(dest='S').encode('latin-1')
+            
         except:
+            # Si incluso el PDF de error falla, retornar bytes vacíos
             return b"Error generando PDF"
 
 # ==================================================
-# SISTEMA DE LOGIN
+# SISTEMA DE LOGIN PARA 5 USUARIOS DE SALUD
 # ==================================================
 
+# Configurar estado de sesión
 if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
     st.session_state.user_info = None
     st.session_state.current_username = None
 
+# Diccionario de usuarios (5 profesionales de salud)
 USUARIOS_SALUD = {
-    "admin": {"password": "Admin123", "nombre": "Dr. Carlos Martínez", "rol": "Administrador", "especialidad": "Pediatría", "email": "admin@hospital.com", "acceso_total": True},
-    "pediatra1": {"password": "Pediatra123", "nombre": "Dra. Ana López", "rol": "Pediatra", "especialidad": "Pediatría General", "email": "pediatra1@hospital.com", "acceso_total": True},
-    "pediatra2": {"password": "Pediatra456", "nombre": "Dr. Juan Pérez", "rol": "Pediatra", "especialidad": "Nutrición Infantil", "email": "pediatra2@hospital.com", "acceso_total": True},
-    "enfermero": {"password": "Enfermero123", "nombre": "Lic. María Gómez", "rol": "Enfermero/a", "especialidad": "Salud Pública", "email": "enfermero@hospital.com", "acceso_total": False},
-    "tecnico": {"password": "Tecnico123", "nombre": "Téc. Luis Rodríguez", "rol": "Técnico de Laboratorio", "especialidad": "Hematología", "email": "tecnico@hospital.com", "acceso_total": False}
+    "admin": {
+        "password": "Admin123",
+        "nombre": "Dr. Carlos Martínez",
+        "rol": "Administrador",
+        "especialidad": "Pediatría",
+        "email": "admin@hospital.com",
+        "acceso_total": True
+    },
+    "pediatra1": {
+        "password": "Pediatra123",
+        "nombre": "Dra. Ana López",
+        "rol": "Pediatra",
+        "especialidad": "Pediatría General",
+        "email": "pediatra1@hospital.com",
+        "acceso_total": True
+    },
+    "pediatra2": {
+        "password": "Pediatra456",
+        "nombre": "Dr. Juan Pérez",
+        "rol": "Pediatra",
+        "especialidad": "Nutrición Infantil",
+        "email": "pediatra2@hospital.com",
+        "acceso_total": True
+    },
+    "enfermero": {
+        "password": "Enfermero123",
+        "nombre": "Lic. María Gómez",
+        "rol": "Enfermero/a",
+        "especialidad": "Salud Pública",
+        "email": "enfermero@hospital.com",
+        "acceso_total": False
+    },
+    "tecnico": {
+        "password": "Tecnico123",
+        "nombre": "Téc. Luis Rodríguez",
+        "rol": "Técnico de Laboratorio",
+        "especialidad": "Hematología",
+        "email": "tecnico@hospital.com",
+        "acceso_total": False
+    }
 }
 
 def verificar_login(username, password):
+    """Verifica si el usuario y contraseña son correctos"""
     if username in USUARIOS_SALUD and USUARIOS_SALUD[username]["password"] == password:
         return USUARIOS_SALUD[username]
     return None
 
 def logout():
+    """Cierra sesión del usuario"""
     st.session_state.logged_in = False
     st.session_state.user_info = None
     st.session_state.current_username = None
     st.rerun()
 
+
 def show_login_page():
+    """Muestra la página de login"""
+    
+    # Estilos CSS para el login
     st.markdown("""
     <style>
-    .login-container {max-width: 500px; margin: 80px auto; padding: 40px; background: white; border-radius: 20px; box-shadow: 0 15px 35px rgba(30, 64, 175, 0.1); border: 2px solid #e0f2fe;}
-    .login-header {text-align: center; margin-bottom: 40px;}
-    .hospital-icon {font-size: 60px; margin-bottom: 20px; color: #1e40af;}
-    .login-title {color: #1e3a8a; font-size: 2.2rem; font-weight: 800; margin: 0; background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;}
-    .login-subtitle {color: #6b7280; font-size: 1rem; margin-top: 10px; font-weight: 500;}
-    .stButton > button {width: 100%; background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); color: white; border: none; padding: 16px 24px; border-radius: 12px; font-weight: 600; font-size: 16px; margin-top: 25px; transition: all 0.3s ease;}
-    .stButton > button:hover {transform: translateY(-3px); box-shadow: 0 8px 20px rgba(30, 64, 175, 0.3);}
-    .user-card {background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); padding: 15px; border-radius: 12px; margin: 12px 0; border-left: 5px solid #3b82f6; transition: all 0.3s ease; border: 1px solid #e2e8f0;}
-    .user-card:hover {transform: translateX(5px); background: #f0f9ff; border-color: #dbeafe;}
-    .test-users {margin-top: 30px; padding: 20px; background: #f0f9ff; border-radius: 12px; border: 2px solid #dbeafe;}
-    .role-badge {background: #3b82f6; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; margin-left: 10px; display: inline-block;}
-    .form-label {color: #374151; font-weight: 600; font-size: 0.95rem; margin-bottom: 8px; display: block;}
-    .stTextInput > div > div > input {border-radius: 10px; border: 2px solid #e5e7eb; padding: 12px 16px; font-size: 16px;}
-    .stTextInput > div > div > input:focus {border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);}
+    .login-container {
+        max-width: 500px;
+        margin: 80px auto;
+        padding: 40px;
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 15px 35px rgba(30, 64, 175, 0.1);
+        border: 2px solid #e0f2fe;
+    }
+    
+    .login-header {
+        text-align: center;
+        margin-bottom: 40px;
+    }
+    
+    .hospital-icon {
+        font-size: 60px;
+        margin-bottom: 20px;
+        color: #1e40af;
+    }
+    
+    .login-title {
+        color: #1e3a8a;
+        font-size: 2.2rem;
+        font-weight: 800;
+        margin: 0;
+        background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    
+    .login-subtitle {
+        color: #6b7280;
+        font-size: 1rem;
+        margin-top: 10px;
+        font-weight: 500;
+    }
+    
+    .stButton > button {
+        width: 100%;
+        background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+        color: white;
+        border: none;
+        padding: 16px 24px;
+        border-radius: 12px;
+        font-weight: 600;
+        font-size: 16px;
+        margin-top: 25px;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    
+    .stButton > button:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 20px rgba(30, 64, 175, 0.3);
+    }
+    
+    .user-card {
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        padding: 15px;
+        border-radius: 12px;
+        margin: 12px 0;
+        border-left: 5px solid #3b82f6;
+        transition: all 0.3s ease;
+        border: 1px solid #e2e8f0;
+    }
+    
+    .user-card:hover {
+        transform: translateX(5px);
+        background: #f0f9ff;
+        border-color: #dbeafe;
+    }
+    
+    .test-users {
+        margin-top: 30px;
+        padding: 20px;
+        background: #f0f9ff;
+        border-radius: 12px;
+        border: 2px solid #dbeafe;
+    }
+    
+    .role-badge {
+        background: #3b82f6;
+        color: white;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        margin-left: 10px;
+        display: inline-block;
+    }
+    
+    .form-label {
+        color: #374151;
+        font-weight: 600;
+        font-size: 0.95rem;
+        margin-bottom: 8px;
+        display: block;
+    }
+    
+    .stTextInput > div > div > input {
+        border-radius: 10px;
+        border: 2px solid #e5e7eb;
+        padding: 12px 16px;
+        font-size: 16px;
+    }
+    
+    .stTextInput > div > div > input:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
     </style>
     """, unsafe_allow_html=True)
     
+    # Contenedor principal del login
     st.markdown('<div class="login-container">', unsafe_allow_html=True)
     
+       
+    # Formulario de login
     with st.form("login_form"):
         st.markdown('<div class="form-label">👤 Nombre de Usuario</div>', unsafe_allow_html=True)
         username = st.text_input("", placeholder="Ingresa tu usuario", label_visibility="collapsed")
@@ -383,7 +662,8 @@ def show_login_page():
         password = st.text_input("", type="password", placeholder="Ingresa tu contraseña", label_visibility="collapsed")
         
         col1, col2 = st.columns([3, 1])
-        with col1: remember_me = st.checkbox("Recordar sesión", value=True)
+        with col1:
+            remember_me = st.checkbox("Recordar sesión", value=True)
         
         submit = st.form_submit_button("🚀 INICIAR SESIÓN", use_container_width=True)
         
@@ -402,10 +682,13 @@ def show_login_page():
                 else:
                     st.error("❌ Usuario o contraseña incorrectos")
     
+    # Información de usuarios de prueba
     with st.expander("👥 USUARIOS AUTORIZADOS DEL SISTEMA", expanded=True):
         st.markdown('<div class="test-users">', unsafe_allow_html=True)
         st.markdown("**Personal de Salud Autorizado:**")
+        
         for username, info in USUARIOS_SALUD.items():
+            role_class = info['rol'].lower().replace("á", "a").replace("é", "e")
             st.markdown(f"""
             <div class="user-card">
                 <div style="display: flex; align-items: center; margin-bottom: 8px;">
@@ -421,6 +704,7 @@ def show_login_page():
             """, unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
     
+    # Footer del login
     st.markdown("""
     <div style="text-align: center; margin-top: 40px; color: #6b7280; font-size: 14px;">
         <p>© 2024 Sistema Nixon - Control de Anemia Infantil</p>
@@ -435,61 +719,277 @@ def show_login_page():
     
     st.markdown('</div>', unsafe_allow_html=True)
 
+# ==================================================
+# VERIFICAR SI EL USUARIO ESTÁ LOGUEADO
+# ==================================================
+
 if not st.session_state.logged_in:
     show_login_page()
-    st.stop()
+    st.stop()  # Detener la ejecución del resto del código
 
 # ==================================================
-# CONFIGURACIÓN E INICIALIZACIÓN
+# CONFIGURACIÓN E INICIALIZACIÓN (solo se ejecuta si está logueado)
 # ==================================================
 
-st.set_page_config(page_title="Sistema Nixon - Control de Anemia", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(
+    page_title="Sistema Nixon - Control de Anemia",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
+# ==================================================
+# ESTILOS CSS MEJORADOS (se agregan estilos para mostrar info del usuario)
+# ==================================================
 st.markdown("""
 <style>
-.main-title {background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%); padding: 2.5rem; border-radius: 15px; color: white; margin-bottom: 2rem; text-align: center; box-shadow: 0 10px 30px rgba(30, 58, 138, 0.2);}
-.user-sidebar-info {background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%); color: white; padding: 1.5rem; border-radius: 10px; margin-bottom: 1.5rem; text-align: center; border: 2px solid rgba(255,255,255,0.1);}
-.user-name {font-size: 1.3rem; font-weight: 700; margin-bottom: 5px;}
-.user-role {font-size: 0.9rem; opacity: 0.9; margin-bottom: 15px; background: rgba(255,255,255,0.15); padding: 4px 12px; border-radius: 15px; display: inline-block;}
-.user-email {font-size: 0.8rem; opacity: 0.8; margin-top: 5px;}
-.logout-btn {background: rgba(255,255,255,0.2) !important; border: 1px solid rgba(255,255,255,0.3) !important; color: white !important; margin-top: 10px !important;}
-.logout-btn:hover {background: rgba(255,255,255,0.3) !important; transform: translateY(-2px) !important;}
-.section-title-blue {color: #1e3a8a; font-size: 1.8rem; font-weight: 700; margin-top: 2rem; margin-bottom: 1rem; padding-bottom: 10px; border-bottom: 3px solid #3b82f6;}
-.section-title-green {color: #065f46; font-size: 1.8rem; font-weight: 700; margin-top: 2rem; margin-bottom: 1rem; padding-bottom: 10px; border-bottom: 3px solid #10b981;}
-.section-title-red {color: #7f1d1d; font-size: 1.8rem; font-weight: 700; margin-top: 2rem; margin-bottom: 1rem; padding-bottom: 10px; border-bottom: 3px solid #ef4444;}
-.section-title-purple {color: #5b21b6; font-size: 1.8rem; font-weight: 700; margin-top: 2rem; margin-bottom: 1rem; padding-bottom: 10px; border-bottom: 3px solid #8b5cf6;}
-.metric-card-blue {background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); padding: 1.5rem; border-radius: 12px; border-left: 5px solid #3b82f6; margin: 0.5rem 0; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);}
-.metric-card-green {background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); padding: 1.5rem; border-radius: 12px; border-left: 5px solid #10b981; margin: 0.5rem 0; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.1);}
-.metric-card-red {background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%); padding: 1.5rem; border-radius: 12px; border-left: 5px solid #ef4444; margin: 0.5rem 0; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.1);}
-.metric-card-yellow {background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); padding: 1.5rem; border-radius: 12px; border-left: 5px solid #f59e0b; margin: 0.5rem 0; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.1);}
-.metric-card-purple {background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%); padding: 1.5rem; border-radius: 12px; border-left: 5px solid #8b5cf6; margin: 0.5rem 0; box-shadow: 0 4px 12px rgba(139, 92, 246, 0.1);}
-.highlight-number {font-size: 2.5rem; font-weight: 800; margin-bottom: 0.5rem;}
-.highlight-blue { color: #1e40af; }
-.highlight-green { color: #065f46; }
-.highlight-red { color: #7f1d1d; }
-.highlight-yellow { color: #92400e; }
-.highlight-purple { color: #5b21b6; }
-.metric-label {font-size: 0.9rem; color: #6b7280; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px;}
-.severity-critical {background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); padding: 1.5rem; border-radius: 10px; border-left: 5px solid #dc2626; margin: 1rem 0;}
-.severity-moderate {background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); padding: 1.5rem; border-radius: 10px; border-left: 5px solid #d97706; margin: 1rem 0;}
-.severity-mild {background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); padding: 1.5rem; border-radius: 10px; border-left: 5px solid #2563eb; margin: 1rem 0;}
-.severity-normal {background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); padding: 1.5rem; border-radius: 10px; border-left: 5px solid #16a34a; margin: 1rem 0;}
-.stButton > button {border-radius: 8px; font-weight: 600; transition: all 0.3s ease;}
-.stButton > button:hover {transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0,0,0,0.15);}
-.stTextInput > div > div > input, .stNumberInput > div > div > input, .stSelectbox > div > div > select {border-radius: 8px; border: 2px solid #e5e7eb; transition: border-color 0.3s;}
-.stTextInput > div > div > input:focus, .stNumberInput > div > div > input:focus, .stSelectbox > div > div > select:focus {border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);}
-.dataframe {border-radius: 10px; overflow: hidden;}
+    /* TÍTULOS CON MEJOR VISUALIZACIÓN */
+    .main-title {
+        background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+        padding: 2.5rem;
+        border-radius: 15px;
+        color: white;
+        margin-bottom: 2rem;
+        text-align: center;
+        box-shadow: 0 10px 30px rgba(30, 58, 138, 0.2);
+    }
+    
+    /* INFO USUARIO EN SIDEBAR */
+    .user-sidebar-info {
+        background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+        color: white;
+        padding: 1.5rem;
+        border-radius: 10px;
+        margin-bottom: 1.5rem;
+        text-align: center;
+        border: 2px solid rgba(255,255,255,0.1);
+    }
+    
+    .user-name {
+        font-size: 1.3rem;
+        font-weight: 700;
+        margin-bottom: 5px;
+    }
+    
+    .user-role {
+        font-size: 0.9rem;
+        opacity: 0.9;
+        margin-bottom: 15px;
+        background: rgba(255,255,255,0.15);
+        padding: 4px 12px;
+        border-radius: 15px;
+        display: inline-block;
+    }
+    
+    .user-email {
+        font-size: 0.8rem;
+        opacity: 0.8;
+        margin-top: 5px;
+    }
+    
+    .logout-btn {
+        background: rgba(255,255,255,0.2) !important;
+        border: 1px solid rgba(255,255,255,0.3) !important;
+        color: white !important;
+        margin-top: 10px !important;
+    }
+    
+    .logout-btn:hover {
+        background: rgba(255,255,255,0.3) !important;
+        transform: translateY(-2px) !important;
+    }
+    
+    /* Resto de estilos... (mantener todos los estilos existentes) */
+    
+    .section-title-blue {
+        color: #1e3a8a;
+        font-size: 1.8rem;
+        font-weight: 700;
+        margin-top: 2rem;
+        margin-bottom: 1rem;
+        padding-bottom: 10px;
+        border-bottom: 3px solid #3b82f6;
+    }
+    
+    .section-title-green {
+        color: #065f46;
+        font-size: 1.8rem;
+        font-weight: 700;
+        margin-top: 2rem;
+        margin-bottom: 1rem;
+        padding-bottom: 10px;
+        border-bottom: 3px solid #10b981;
+    }
+    
+    .section-title-red {
+        color: #7f1d1d;
+        font-size: 1.8rem;
+        font-weight: 700;
+        margin-top: 2rem;
+        margin-bottom: 1rem;
+        padding-bottom: 10px;
+        border-bottom: 3px solid #ef4444;
+    }
+    
+    .section-title-purple {
+        color: #5b21b6;
+        font-size: 1.8rem;
+        font-weight: 700;
+        margin-top: 2rem;
+        margin-bottom: 1rem;
+        padding-bottom: 10px;
+        border-bottom: 3px solid #8b5cf6;
+    }
+    
+    /* TARJETAS DE COLORES */
+    .metric-card-blue {
+        background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+        padding: 1.5rem;
+        border-radius: 12px;
+        border-left: 5px solid #3b82f6;
+        margin: 0.5rem 0;
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
+    }
+    
+    .metric-card-green {
+        background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+        padding: 1.5rem;
+        border-radius: 12px;
+        border-left: 5px solid #10b981;
+        margin: 0.5rem 0;
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.1);
+    }
+    
+    .metric-card-red {
+        background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+        padding: 1.5rem;
+        border-radius: 12px;
+        border-left: 5px solid #ef4444;
+        margin: 0.5rem 0;
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.1);
+    }
+    
+    .metric-card-yellow {
+        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        padding: 1.5rem;
+        border-radius: 12px;
+        border-left: 5px solid #f59e0b;
+        margin: 0.5rem 0;
+        box-shadow: 0 4px 12px rgba(245, 158, 11, 0.1);
+    }
+    
+    .metric-card-purple {
+        background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
+        padding: 1.5rem;
+        border-radius: 12px;
+        border-left: 5px solid #8b5cf6;
+        margin: 0.5rem 0;
+        box-shadow: 0 4px 12px rgba(139, 92, 246, 0.1);
+    }
+    
+    /* NÚMEROS DESTACADOS */
+    .highlight-number {
+        font-size: 2.5rem;
+        font-weight: 800;
+        margin-bottom: 0.5rem;
+    }
+    
+    .highlight-blue { color: #1e40af; }
+    .highlight-green { color: #065f46; }
+    .highlight-red { color: #7f1d1d; }
+    .highlight-yellow { color: #92400e; }
+    .highlight-purple { color: #5b21b6; }
+    
+    /* ETIQUETAS */
+    .metric-label {
+        font-size: 0.9rem;
+        color: #6b7280;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    /* ESTADOS DE ANEMIA */
+    .severity-critical {
+        background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+        padding: 1.5rem;
+        border-radius: 10px;
+        border-left: 5px solid #dc2626;
+        margin: 1rem 0;
+    }
+    
+    .severity-moderate {
+        background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+        padding: 1.5rem;
+        border-radius: 10px;
+        border-left: 5px solid #d97706;
+        margin: 1rem 0;
+    }
+    
+    .severity-mild {
+        background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+        padding: 1.5rem;
+        border-radius: 10px;
+        border-left: 5px solid #2563eb;
+        margin: 1rem 0;
+    }
+    
+    .severity-normal {
+        background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+        padding: 1.5rem;
+        border-radius: 10px;
+        border-left: 5px solid #16a34a;
+        margin: 1rem 0;
+    }
+    
+    /* BOTONES MEJORADOS */
+    .stButton > button {
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .stButton > button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+    }
+    
+    /* MEJORAS EN FORMULARIOS */
+    .stTextInput > div > div > input,
+    .stNumberInput > div > div > input,
+    .stSelectbox > div > div > select {
+        border-radius: 8px;
+        border: 2px solid #e5e7eb;
+        transition: border-color 0.3s;
+    }
+    
+    .stTextInput > div > div > input:focus,
+    .stNumberInput > div > div > input:focus,
+    .stSelectbox > div > div > select:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    
+    /* TABLAS MEJORADAS */
+    .dataframe {
+        border-radius: 10px;
+        overflow: hidden;
+    }
 </style>
 """, unsafe_allow_html=True)
+
+# ==================================================
+# OBTENER INFORMACIÓN DEL USUARIO LOGUEADO
+# ==================================================
 
 user_info = st.session_state.user_info
 current_user = st.session_state.current_username
 
 # ==================================================
-# SIDEBAR
+# SIDEBAR CON INFORMACIÓN DEL USUARIO
 # ==================================================
 
 with st.sidebar:
+    # Información del usuario
     st.markdown(f"""
     <div class="user-sidebar-info">
         <div class="user-name">👤 {user_info['nombre']}</div>
@@ -501,16 +1001,22 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
     
-    if st.button("🚪 Cerrar Sesión", use_container_width=True, key="logout_btn", type="secondary", help="Cierra la sesión actual"):
+    # Botón de logout
+    if st.button("🚪 Cerrar Sesión", use_container_width=True, key="logout_btn", 
+                type="secondary", help="Cierra la sesión actual"):
         logout()
     
     st.markdown("---")
+    
+    # Resto del sidebar original
     st.markdown('<div class="section-title-blue" style="font-size: 1.4rem;">📋 Sistema de Referencia</div>', unsafe_allow_html=True)
     
     tab_sidebar1, tab_sidebar2, tab_sidebar3 = st.tabs(["🎯 Ajustes Altitud", "📊 Crecimiento", "🔬 Hematología"])
     
     with tab_sidebar1:
         st.markdown('<div style="color: #1e40af; font-weight: 600; margin-bottom: 10px;">Tabla de Ajustes por Altitud</div>', unsafe_allow_html=True)
+        
+        # Tabla de ajustes por altitud
         AJUSTE_HEMOGLOBINA = [
             {"altitud_min": 0, "altitud_max": 999, "ajuste": 0.0},
             {"altitud_min": 1000, "altitud_max": 1499, "ajuste": -0.2},
@@ -522,11 +1028,22 @@ with st.sidebar:
             {"altitud_min": 4000, "altitud_max": 4499, "ajuste": -3.5},
             {"altitud_min": 4500, "altitud_max": 10000, "ajuste": -4.5}
         ]
+        
         ajustes_df = pd.DataFrame(AJUSTE_HEMOGLOBINA)
-        st.dataframe(ajustes_df.style.format({'altitud_min': '{:.0f}', 'altitud_max': '{:.0f}', 'ajuste': '{:+.1f}'}), use_container_width=True, height=300)
+        st.dataframe(
+            ajustes_df.style.format({
+                'altitud_min': '{:.0f}',
+                'altitud_max': '{:.0f}', 
+                'ajuste': '{:+.1f}'
+            }),
+            use_container_width=True,
+            height=300
+        )
     
     with tab_sidebar2:
         st.markdown('<div style="color: #1e40af; font-weight: 600; margin-bottom: 10px;">Tablas de Crecimiento OMS</div>', unsafe_allow_html=True)
+        
+        # Función para obtener referencia de crecimiento
         def obtener_referencia_crecimiento():
             return pd.DataFrame([
                 {'edad_meses': 0, 'peso_min_ninas': 2.8, 'peso_promedio_ninas': 3.4, 'peso_max_ninas': 4.2, 'peso_min_ninos': 2.9, 'peso_promedio_ninos': 3.4, 'peso_max_ninos': 4.4, 'talla_min_ninas': 47.0, 'talla_promedio_ninas': 50.3, 'talla_max_ninas': 53.6, 'talla_min_ninos': 47.5, 'talla_promedio_ninos': 50.3, 'talla_max_ninos': 53.8},
@@ -534,11 +1051,13 @@ with st.sidebar:
                 {'edad_meses': 6, 'peso_min_ninas': 6.0, 'peso_promedio_ninas': 7.3, 'peso_max_ninas': 9.0, 'peso_min_ninos': 6.5, 'peso_promedio_ninos': 8.0, 'peso_max_ninos': 9.8, 'talla_min_ninas': 61.0, 'talla_promedio_ninas': 65.0, 'talla_max_ninas': 69.5, 'talla_min_ninos': 63.0, 'talla_promedio_ninos': 67.0, 'talla_max_ninos': 71.5},
                 {'edad_meses': 24, 'peso_min_ninas': 10.5, 'peso_promedio_ninas': 12.4, 'peso_max_ninas': 15.0, 'peso_min_ninos': 11.0, 'peso_promedio_ninos': 12.9, 'peso_max_ninos': 16.0, 'talla_min_ninas': 81.0, 'talla_promedio_ninas': 86.0, 'talla_max_ninas': 92.5, 'talla_min_ninos': 83.0, 'talla_promedio_ninos': 88.0, 'talla_max_ninos': 94.5}
             ])
+        
         referencia_df = obtener_referencia_crecimiento()
         st.dataframe(referencia_df, use_container_width=True, height=300)
     
     with tab_sidebar3:
         st.markdown('<div style="color: #1e40af; font-weight: 600; margin-bottom: 10px;">Criterios de Interpretación</div>', unsafe_allow_html=True)
+        
         st.markdown("""
         ### 🩺 FERRITINA (Reservas)
         - **< 15 ng/mL**: 🚨 Deficit severo
@@ -558,7 +1077,7 @@ with st.sidebar:
         """)
 
 # ==================================================
-# TÍTULO PRINCIPAL
+# TÍTULO PRINCIPAL CON INFORMACIÓN DEL USUARIO
 # ==================================================
 
 st.markdown(f"""
@@ -577,6 +1096,7 @@ st.markdown(f"""
 TABLE_NAME = "alertas_hemoglobina"
 ALTITUD_TABLE = "altitud_regiones"
 CRECIMIENTO_TABLE = "referencia_crecimiento"
+
 SUPABASE_URL = st.secrets.get("SUPABASE_URL", "https://kwsuszkblbejvliniggd.supabase.co")
 SUPABASE_KEY = st.secrets.get("SUPABASE_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3c3VzemtibGJlanZsaW5pZ2dkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE2ODE0NTUsImV4cCI6MjA3NzI1NzQ1NX0.DQpt-rSNprcUrbOLTgUEEn_0jFIuSX5b0AVuVirk0vw")
 
@@ -591,25 +1111,135 @@ def init_supabase():
 
 supabase = init_supabase()
 
-if supabase:
-    st.markdown("""
-    <div style="background: #d1fae5; padding: 1rem; border-radius: 8px; border-left: 5px solid #10b981; margin-bottom: 2rem;">
-        <p style="margin: 0; color: #065f46; font-weight: 500;">
-        ✅ <strong>CONECTADO A SUPABASE</strong> - Sistema operativo
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
-else:
-    st.error("🔴 SIN CONEXIÓN A SUPABASE")
+# ==================================================
+# FUNCIONES PARA TABLA CITAS
+# ==================================================
+
+def crear_tabla_citas_simple():
+    """Crea la tabla citas de forma simple"""
+    try:
+        st.sidebar.info("🛠️ Configurando tabla 'citas'...")
+        
+        # Intentar crear una cita de prueba simple
+        test_cita = {
+            "dni_paciente": "99988877",
+            "fecha_cita": "2024-12-14",
+            "hora_cita": "10:00:00",
+            "tipo_consulta": "Prueba de sistema"
+        }
+        
+        response = supabase.table("citas").insert(test_cita).execute()
+        
+        if response.data:
+            st.sidebar.success("✅ Tabla 'citas' accesible")
+            # Limpiar la prueba
+            supabase.table("citas").delete().eq("dni_paciente", "99988877").execute()
+            return True
+        else:
+            st.sidebar.warning("⚠️ Puede que la tabla necesite configuración en Supabase")
+            
+            # Instrucciones para crear manualmente
+            st.sidebar.markdown("""
+            **📝 Si falla, crea la tabla manualmente en Supabase:**
+            
+            1. Ve a **Table Editor**
+            2. Crea nueva tabla llamada **"citas"**
+            3. Agrega estas columnas:
+               - `id` (bigint, autoincrement, primary key)
+               - `dni_paciente` (text)
+               - `fecha_cita` (date)
+               - `hora_cita` (time)
+               - `tipo_consulta` (text)
+               - `diagnostico` (text)
+               - `tratamiento` (text)
+               - `observaciones` (text)
+               - `investigador_responsable` (text)
+               - `proxima_cita` (date)
+               - `created_at` (timestamptz, default: now())
+            4. En **Authentication → Policies**, crea política:
+               - `allow_all` (para todas las operaciones)
+            """)
+            return False
+            
+    except Exception as e:
+        st.sidebar.error(f"❌ Error: {str(e)[:100]}")
+        return False
+
+def probar_guardado_directo():
+    """Prueba directa de guardado"""
+    with st.sidebar:
+        st.markdown("### 🧪 Prueba Directa")
+        
+        try:
+            pacientes = supabase.table("alertas_hemoglobina").select("dni").limit(5).execute()
+            
+            if pacientes.data and len(pacientes.data) > 0:
+                dni_real = pacientes.data[0]["dni"]
+                st.info(f"📋 Usando DNI real: {dni_real}")
+            else:
+                dni_real = "12345678"
+                st.warning("⚠️ No hay pacientes, usando DNI de prueba")
+                
+        except:
+            dni_real = "12345678"
+        
+        test_cita = {
+            "dni_paciente": dni_real,
+            "fecha_cita": "2024-12-14",
+            "hora_cita": "09:00:00",
+            "tipo_consulta": "Consulta de prueba",
+            "diagnostico": "Paciente de prueba para verificar sistema",
+            "tratamiento": "Observación",
+            "observaciones": "Esta es una prueba del sistema de citas",
+            "investigador_responsable": "Dr. Prueba"
+        }
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            if st.button("📤 Enviar prueba", type="primary", key="enviar_prueba"):
+                try:
+                    with st.spinner("Enviando a Supabase..."):
+                        result = supabase.table("citas").insert(test_cita).execute()
+                    
+                    if result.data:
+                        st.success(f"✅ ¡ÉXITO! Guardado correctamente")
+                        st.info(f"ID generado: {result.data[0].get('id', 'N/A')}")
+                    else:
+                        st.warning("⚠️ Respuesta inesperada del servidor")
+                        
+                except Exception as e:
+                    st.error(f"🔥 Error: {str(e)[:200]}")
+        
+        with col2:
+            if st.button("🗑️ Limpiar pruebas", key="limpiar_pruebas"):
+                try:
+                    supabase.table("citas").delete().eq("dni_paciente", dni_real).execute()
+                    st.success("✅ Pruebas limpiadas")
+                except Exception as e:
+                    st.info(f"ℹ️ {str(e)[:100]}")
 
 # ==================================================
-# FUNCIONES SUPABASE
+# FUNCIONES DE BASE DE DATOS
 # ==================================================
 
 def obtener_datos_supabase(tabla=TABLE_NAME):
     try:
         if supabase:
             response = supabase.table(tabla).select("*").execute()
+            if hasattr(response, 'error') and response.error:
+                st.error(f"Error obteniendo datos: {response.error}")
+                return pd.DataFrame()
+            return pd.DataFrame(response.data) if response.data else pd.DataFrame()
+        return pd.DataFrame()
+    except Exception as e:
+        st.error(f"Error obteniendo datos: {e}")
+        return pd.DataFrame()
+
+def obtener_casos_seguimiento():
+    try:
+        if supabase:
+            response = supabase.table(TABLE_NAME).select("*").eq("en_seguimiento", True).execute()
             if hasattr(response, 'error') and response.error:
                 return pd.DataFrame()
             return pd.DataFrame(response.data) if response.data else pd.DataFrame()
@@ -618,25 +1248,35 @@ def obtener_datos_supabase(tabla=TABLE_NAME):
         return pd.DataFrame()
 
 def verificar_duplicado(dni):
+    """Verifica si un DNI ya existe en la base de datos"""
     try:
         if supabase:
-            response = supabase.table(TABLE_NAME).select("dni").eq("dni", dni).execute()
+            response = supabase.table(TABLE_NAME)\
+                .select("dni")\
+                .eq("dni", dni)\
+                .execute()
+            
             if response.data and len(response.data) > 0:
                 return True
             return False
         return False
     except Exception as e:
+        st.error(f"Error verificando duplicado: {e}")
         return False
 
 def insertar_datos_supabase(datos, tabla=TABLE_NAME):
+    """Inserta datos en Supabase verificando duplicados"""
     try:
         dni = datos.get("dni")
+        
         if not dni:
             st.error("❌ El registro no tiene DNI")
             return None
+        
         if verificar_duplicado(dni):
             st.error(f"❌ El DNI {dni} ya existe en la base de datos")
             return {"status": "duplicado", "dni": dni}
+        
         if supabase:
             response = supabase.table(tabla).insert(datos).execute()
             if hasattr(response, 'error') and response.error:
@@ -648,35 +1288,77 @@ def insertar_datos_supabase(datos, tabla=TABLE_NAME):
         st.error(f"Error insertando datos: {e}")
         return None
 
+def upsert_datos_supabase(datos, tabla=TABLE_NAME):
+    """Inserta o actualiza datos si ya existen"""
+    try:
+        if supabase:
+            response = supabase.table(tabla)\
+                .upsert(datos, on_conflict='dni')\
+                .execute()
+            
+            if hasattr(response, 'error') and response.error:
+                st.error(f"❌ Error Supabase al hacer upsert: {response.error}")
+                return None
+            return response.data[0] if response.data else None
+        return None
+    except Exception as e:
+        st.error(f"Error haciendo upsert: {e}")
+        return None
+
 # ==================================================
-# FUNCIONES DE CÁLCULO
+# TABLAS DE REFERENCIA Y FUNCIONES DE CÁLCULO
 # ==================================================
 
 def obtener_altitud_regiones():
+    """Obtiene datos de altitud de regiones desde Supabase"""
     try:
         if supabase:
             response = supabase.table(ALTITUD_TABLE).select("*").execute()
             if response.data:
                 return {row['region']: row for row in response.data}
         return {
-            "AMAZONAS": {"altitud_promedio": 1800}, "ANCASH": {"altitud_promedio": 3000},
-            "APURIMAC": {"altitud_promedio": 3200}, "AREQUIPA": {"altitud_promedio": 2500},
-            "AYACUCHO": {"altitud_promedio": 2800}, "CAJAMARCA": {"altitud_promedio": 2700},
-            "CALLAO": {"altitud_promedio": 5}, "CUSCO": {"altitud_promedio": 3400},
-            "HUANCAVELICA": {"altitud_promedio": 3600}, "HUANUCO": {"altitud_promedio": 1900},
-            "ICA": {"altitud_promedio": 500}, "JUNIN": {"altitud_promedio": 3500},
-            "LA LIBERTAD": {"altitud_promedio": 1800}, "LAMBAYEQUE": {"altitud_promedio": 100},
-            "LIMA": {"altitud_promedio": 150}, "LORETO": {"altitud_promedio": 120},
-            "MADRE DE DIOS": {"altitud_promedio": 250}, "MOQUEGUA": {"altitud_promedio": 1400},
-            "PASCO": {"altitud_promedio": 3200}, "PIURA": {"altitud_promedio": 100},
-            "PUNO": {"altitud_promedio": 4100}, "SAN MARTIN": {"altitud_promedio": 600},
-            "TACNA": {"altitud_promedio": 600}, "TUMBES": {"altitud_promedio": 20},
-            "UCAYALI": {"altitud_promedio": 180}
+            "AMAZONAS": {"altitud_min": 500, "altitud_max": 3500, "altitud_promedio": 1800},
+            "ANCASH": {"altitud_min": 0, "altitud_max": 6768, "altitud_promedio": 3000},
+            "APURIMAC": {"altitud_min": 2000, "altitud_max": 4500, "altitud_promedio": 3200},
+            "AREQUIPA": {"altitud_min": 0, "altitud_max": 5825, "altitud_promedio": 2500},
+            "AYACUCHO": {"altitud_min": 1800, "altitud_max": 4500, "altitud_promedio": 2800},
+            "CAJAMARCA": {"altitud_min": 500, "altitud_max": 3500, "altitud_promedio": 2700},
+            "CALLAO": {"altitud_min": 0, "altitud_max": 50, "altitud_promedio": 5},
+            "CUSCO": {"altitud_min": 500, "altitud_max": 4800, "altitud_promedio": 3400},
+            "HUANCAVELICA": {"altitud_min": 2000, "altitud_max": 4500, "altitud_promedio": 3600},
+            "HUANUCO": {"altitud_min": 200, "altitud_max": 3800, "altitud_promedio": 1900},
+            "ICA": {"altitud_min": 0, "altitud_max": 3800, "altitud_promedio": 500},
+            "JUNIN": {"altitud_min": 500, "altitud_max": 4800, "altitud_promedio": 3500},
+            "LA LIBERTAD": {"altitud_min": 0, "altitud_max": 4200, "altitud_promedio": 1800},
+            "LAMBAYEQUE": {"altitud_min": 0, "altitud_max": 3000, "altitud_promedio": 100},
+            "LIMA": {"altitud_min": 0, "altitud_max": 4800, "altitud_promedio": 150},
+            "LORETO": {"altitud_min": 70, "altitud_max": 220, "altitud_promedio": 120},
+            "MADRE DE DIOS": {"altitud_min": 200, "altitud_max": 500, "altitud_promedio": 250},
+            "MOQUEGUA": {"altitud_min": 0, "altitud_max": 4500, "altitud_promedio": 1400},
+            "PASCO": {"altitud_min": 1000, "altitud_max": 4400, "altitud_promedio": 3200},
+            "PIURA": {"altitud_min": 0, "altitud_max": 3500, "altitud_promedio": 100},
+            "PUNO": {"altitud_min": 3800, "altitud_max": 4800, "altitud_promedio": 4100},
+            "SAN MARTIN": {"altitud_min": 200, "altitud_max": 3000, "altitud_promedio": 600},
+            "TACNA": {"altitud_min": 0, "altitud_max": 3500, "altitud_promedio": 600},
+            "TUMBES": {"altitud_min": 0, "altitud_max": 500, "altitud_promedio": 20},
+            "UCAYALI": {"altitud_min": 100, "altitud_max": 350, "altitud_promedio": 180}
         }
     except:
         return {}
 
 ALTITUD_REGIONES = obtener_altitud_regiones()
+
+AJUSTE_HEMOGLOBINA = [
+    {"altitud_min": 0, "altitud_max": 999, "ajuste": 0.0},
+    {"altitud_min": 1000, "altitud_max": 1499, "ajuste": -0.2},
+    {"altitud_min": 1500, "altitud_max": 1999, "ajuste": -0.5},
+    {"altitud_min": 2000, "altitud_max": 2499, "ajuste": -0.8},
+    {"altitud_min": 2500, "altitud_max": 2999, "ajuste": -1.3},
+    {"altitud_min": 3000, "altitud_max": 3499, "ajuste": -1.9},
+    {"altitud_min": 3500, "altitud_max": 3999, "ajuste": -2.7},
+    {"altitud_min": 4000, "altitud_max": 4499, "ajuste": -3.5},
+    {"altitud_min": 4500, "altitud_max": 10000, "ajuste": -4.5}
+]
 
 def obtener_ajuste_hemoglobina(altitud):
     for ajuste in AJUSTE_HEMOGLOBINA:
@@ -688,12 +1370,19 @@ def calcular_hemoglobina_ajustada(hemoglobina_medida, altitud):
     ajuste = obtener_ajuste_hemoglobina(altitud)
     return hemoglobina_medida + ajuste
 
+# ==================================================
+# SISTEMA DE INTERPRETACIÓN AUTOMÁTICA
+# ==================================================
+
 def interpretar_analisis_hematologico(ferritina, chcm, reticulocitos, transferrina, hemoglobina_ajustada, edad_meses):
+    """Sistema de interpretación automática de parámetros hematológicos"""
+    
     interpretacion = ""
     severidad = ""
     recomendacion = ""
     codigo_color = ""
     
+    # EVALUAR FERRITINA
     if ferritina < 15:
         interpretacion += "🚨 **DEFICIT SEVERO DE HIERRO**. "
         severidad = "CRITICO"
@@ -707,6 +1396,7 @@ def interpretar_analisis_hematologico(ferritina, chcm, reticulocitos, transferri
         interpretacion += "✅ **RESERVAS DE HIERRO ADECUADAS**. "
         severidad = "NORMAL"
     
+    # EVALUAR CHCM
     if chcm < 32:
         interpretacion += "🚨 **HIPOCROMÍA SEVERA** - Deficiencia avanzada de hierro. "
         severidad = "CRITICO" if severidad != "CRITICO" else severidad
@@ -715,6 +1405,7 @@ def interpretar_analisis_hematologico(ferritina, chcm, reticulocitos, transferri
     else:
         interpretacion += "🔄 **HIPERCROMÍA** - Posible esferocitosis. "
     
+    # EVALUAR RETICULOCITOS
     if reticulocitos < 0.5:
         interpretacion += "⚠️ **HIPOPROLIFERACIÓN MEDULAR** - Respuesta insuficiente. "
     elif reticulocitos > 1.5:
@@ -722,6 +1413,7 @@ def interpretar_analisis_hematologico(ferritina, chcm, reticulocitos, transferri
     else:
         interpretacion += "✅ **PRODUCCIÓN MEDULAR NORMAL**. "
     
+    # EVALUAR TRANSFERRINA
     if transferrina < 200:
         interpretacion += "⚠️ **SATURACIÓN BAJA** - Transporte disminuido. "
     elif transferrina > 400:
@@ -729,9 +1421,11 @@ def interpretar_analisis_hematologico(ferritina, chcm, reticulocitos, transferri
     else:
         interpretacion += "✅ **TRANSPORTE ADECUADO**. "
     
+    # CLASIFICACIÓN DE ANEMIA
     clasificacion_hb, _, _ = clasificar_anemia(hemoglobina_ajustada, edad_meses)
     interpretacion += f"📊 **CLASIFICACIÓN HEMOGLOBINA: {clasificacion_hb}**"
     
+    # GENERAR RECOMENDACIÓN
     if severidad == "CRITICO":
         recomendacion = "🚨 **INTERVENCIÓN INMEDIATA**: Suplementación con hierro elemental 3-6 mg/kg/día + Control en 15 días + Evaluación médica urgente"
         codigo_color = "#DC2626"
@@ -753,7 +1447,44 @@ def interpretar_analisis_hematologico(ferritina, chcm, reticulocitos, transferri
         "clasificacion_hemoglobina": clasificacion_hb
     }
 
+def generar_parametros_hematologicos(hemoglobina_ajustada, edad_meses):
+    """Genera parámetros hematológicos simulados"""
+    
+    if hemoglobina_ajustada < 9.0:
+        ferritina = np.random.uniform(5, 15)
+        chcm = np.random.uniform(28, 31)
+        reticulocitos = np.random.uniform(0.5, 1.0)
+        transferrina = np.random.uniform(350, 450)
+    elif hemoglobina_ajustada < 11.0:
+        ferritina = np.random.uniform(15, 50)
+        chcm = np.random.uniform(31, 33)
+        reticulocitos = np.random.uniform(1.0, 1.8)
+        transferrina = np.random.uniform(300, 400)
+    else:
+        ferritina = np.random.uniform(80, 150)
+        chcm = np.random.uniform(33, 36)
+        reticulocitos = np.random.uniform(0.8, 1.5)
+        transferrina = np.random.uniform(200, 350)
+    
+    vcm = (chcm / 33) * np.random.uniform(75, 95)
+    hcm = (chcm / 33) * np.random.uniform(27, 32)
+    
+    return {
+        'vcm': round(vcm, 1),
+        'hcm': round(hcm, 1),
+        'chcm': round(chcm, 1),
+        'ferritina': round(ferritina, 1),
+        'transferrina': round(transferrina, 0),
+        'reticulocitos': round(reticulocitos, 1)
+    }
+
+# ==================================================
+# CLASIFICACIÓN DE ANEMIA
+# ==================================================
+
 def clasificar_anemia(hemoglobina_ajustada, edad_meses):
+    """Clasifica la anemia según estándares OMS"""
+    
     if edad_meses < 24:
         if hemoglobina_ajustada >= 11.0:
             return "SIN ANEMIA", "NO requiere seguimiento", "success"
@@ -763,6 +1494,7 @@ def clasificar_anemia(hemoglobina_ajustada, edad_meses):
             return "ANEMIA MODERADA", "Seguimiento mensual", "error"
         else:
             return "ANEMIA SEVERA", "Seguimiento urgente semanal", "error"
+    
     elif 24 <= edad_meses < 60:
         if hemoglobina_ajustada >= 11.5:
             return "SIN ANEMIA", "NO requiere seguimiento", "success"
@@ -772,6 +1504,7 @@ def clasificar_anemia(hemoglobina_ajustada, edad_meses):
             return "ANEMIA MODERADA", "Seguimiento mensual", "error"
         else:
             return "ANEMIA SEVERA", "Seguimiento urgente semanal", "error"
+    
     else:
         if hemoglobina_ajustada >= 12.0:
             return "SIN ANEMIA", "NO requiere seguimiento", "success"
@@ -782,7 +1515,32 @@ def clasificar_anemia(hemoglobina_ajustada, edad_meses):
         else:
             return "ANEMIA SEVERA", "Seguimiento urgente semanal", "error"
 
+def necesita_seguimiento_automatico(hemoglobina_ajustada, edad_meses):
+    clasificacion, _, _ = clasificar_anemia(hemoglobina_ajustada, edad_meses)
+    return clasificacion in ["ANEMIA MODERADA", "ANEMIA SEVERA"]
+
+# ==================================================
+# FUNCIONES DE EVALUACIÓN NUTRICIONAL
+# ==================================================
+
+def obtener_referencia_crecimiento():
+    """Obtiene la tabla de referencia de crecimiento desde Supabase"""
+    try:
+        if supabase:
+            response = supabase.table(CRECIMIENTO_TABLE).select("*").execute()
+            if response.data:
+                return pd.DataFrame(response.data)
+        return pd.DataFrame([
+            {'edad_meses': 0, 'peso_min_ninas': 2.8, 'peso_promedio_ninas': 3.4, 'peso_max_ninas': 4.2, 'peso_min_ninos': 2.9, 'peso_promedio_ninos': 3.4, 'peso_max_ninos': 4.4, 'talla_min_ninas': 47.0, 'talla_promedio_ninas': 50.3, 'talla_max_ninas': 53.6, 'talla_min_ninos': 47.5, 'talla_promedio_ninos': 50.3, 'talla_max_ninos': 53.8},
+            {'edad_meses': 3, 'peso_min_ninas': 4.5, 'peso_promedio_ninas': 5.6, 'peso_max_ninas': 7.0, 'peso_min_ninos': 5.0, 'peso_promedio_ninos': 6.2, 'peso_max_ninos': 7.8, 'talla_min_ninas': 55.0, 'talla_promedio_ninas': 59.0, 'talla_max_ninas': 63.5, 'talla_min_ninos': 57.0, 'talla_promedio_ninos': 60.0, 'talla_max_ninos': 64.5},
+            {'edad_meses': 6, 'peso_min_ninas': 6.0, 'peso_promedio_ninas': 7.3, 'peso_max_ninas': 9.0, 'peso_min_ninos': 6.5, 'peso_promedio_ninos': 8.0, 'peso_max_ninos': 9.8, 'talla_min_ninas': 61.0, 'talla_promedio_ninas': 65.0, 'talla_max_ninas': 69.5, 'talla_min_ninos': 63.0, 'talla_promedio_ninos': 67.0, 'talla_max_ninos': 71.5},
+            {'edad_meses': 24, 'peso_min_ninas': 10.5, 'peso_promedio_ninas': 12.4, 'peso_max_ninas': 15.0, 'peso_min_ninos': 11.0, 'peso_promedio_ninos': 12.9, 'peso_max_ninos': 16.0, 'talla_min_ninas': 81.0, 'talla_promedio_ninas': 86.0, 'talla_max_ninas': 92.5, 'talla_min_ninos': 83.0, 'talla_promedio_ninos': 88.0, 'talla_max_ninos': 94.5}
+        ])
+    except:
+        return pd.DataFrame()
+
 def evaluar_estado_nutricional(edad_meses, peso_kg, talla_cm, genero):
+    """Evalúa el estado nutricional basado en tablas de referencia OMS"""
     referencia_df = obtener_referencia_crecimiento()
     
     if referencia_df.empty:
@@ -835,6 +1593,46 @@ def evaluar_estado_nutricional(edad_meses, peso_kg, talla_cm, genero):
     
     return estado_peso, estado_talla, estado_nutricional
 
+# ==================================================
+# LISTAS DE OPCIONES
+# ==================================================
+
+PERU_REGIONS = [
+    "AMAZONAS", "ANCASH", "APURIMAC", "AREQUIPA", "AYACUCHO", 
+    "CAJAMARCA", "CALLAO", "CUSCO", "HUANCAVELICA", "HUANUCO",
+    "ICA", "JUNIN", "LA LIBERTAD", "LAMBAYEQUE", "LIMA", 
+    "LORETO", "MADRE DE DIOS", "MOQUEGUA", "PASCO", "PIURA",
+    "PUNO", "SAN MARTIN", "TACNA", "TUMBES", "UCAYALI"
+]
+
+GENEROS = ["F", "M"]
+NIVELES_EDUCATIVOS = ["Sin educación", "Primaria", "Secundaria", "Superior"]
+FRECUENCIAS_SUPLEMENTO = ["Diario", "3 veces por semana", "Semanal", "Otra"]
+ESTADOS_PACIENTE = ["Activo", "En seguimiento", "Dado de alta", "Inactivo"]
+
+FACTORES_CLINICOS = [
+    "Historial familiar de anemia",
+    "Bajo peso al nacer (<2500g)",
+    "Prematurez (<37 semanas)",
+    "Infecciones recurrentes",
+    "Parasitosis intestinal",
+    "Enfermedades crónicas",
+    "Problemas gastrointestinales"
+]
+
+FACTORES_SOCIOECONOMICOS = [
+    "Bajo nivel educativo de padres",
+    "Ingresos familiares reducidos",
+    "Hacinamiento en vivienda",
+    "Acceso limitado a agua potable",
+    "Zona rural o alejada",
+    "Trabajo informal o precario"
+]
+
+# ==================================================
+# FUNCIONES DE CÁLCULO DE RIESGO
+# ==================================================
+
 def calcular_riesgo_anemia(hb_ajustada, edad_meses, factores_clinicos, factores_sociales):
     puntaje = 0
     
@@ -875,46 +1673,21 @@ def generar_sugerencias(riesgo, hemoglobina_ajustada, edad_meses):
     else:
         return "✅ PREVENCIÓN: Mantener alimentación balanceada, control preventivo cada 6 meses."
 
-# ==================================================
-# VARIABLES GLOBALES
-# ==================================================
 
-PERU_REGIONS = [
-    "AMAZONAS", "ANCASH", "APURIMAC", "AREQUIPA", "AYACUCHO", 
-    "CAJAMARCA", "CALLAO", "CUSCO", "HUANCAVELICA", "HUANUCO",
-    "ICA", "JUNIN", "LA LIBERTAD", "LAMBAYEQUE", "LIMA", 
-    "LORETO", "MADRE DE DIOS", "MOQUEGUA", "PASCO", "PIURA",
-    "PUNO", "SAN MARTIN", "TACNA", "TUMBES", "UCAYALI"
-]
 
-GENEROS = ["F", "M"]
-NIVELES_EDUCATIVOS = ["Sin educación", "Primaria", "Secundaria", "Superior"]
-FRECUENCIAS_SUPLEMENTO = ["Diario", "3 veces por semana", "Semanal", "Otra"]
-ESTADOS_PACIENTE = ["Activo", "En seguimiento", "Dado de alta", "Inactivo"]
+# ESTADO DE CONEXIÓN
+if supabase:
+    st.markdown("""
+    <div style="background: #d1fae5; padding: 1rem; border-radius: 8px; border-left: 5px solid #10b981; margin-bottom: 2rem;">
+        <p style="margin: 0; color: #065f46; font-weight: 500;">
+        ✅ <strong>CONECTADO A SUPABASE</strong> - Sistema operativo
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+else:
+    st.error("🔴 SIN CONEXIÓN A SUPABASE")
 
-FACTORES_CLINICOS = [
-    "Historial familiar de anemia",
-    "Bajo peso al nacer (<2500g)",
-    "Prematurez (<37 semanas)",
-    "Infecciones recurrentes",
-    "Parasitosis intestinal",
-    "Enfermedades crónicas",
-    "Problemas gastrointestinales"
-]
-
-FACTORES_SOCIOECONOMICOS = [
-    "Bajo nivel educativo de padres",
-    "Ingresos familiares reducidos",
-    "Hacinamiento en vivienda",
-    "Acceso limitado a agua potable",
-    "Zona rural o alejada",
-    "Trabajo informal o precario"
-]
-
-# ==================================================
 # PESTAÑAS PRINCIPALES
-# ==================================================
-
 tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "📝 Registro Completo", 
     "🔍 Seguimiento Clínico", 
@@ -924,21 +1697,31 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
 ])
 
 # ==================================================
-# PESTAÑA 1: REGISTRO COMPLETO
+# PESTAÑA 1: REGISTRO COMPLETO (VERSIÓN ORGANIZADA)
 # ==================================================
 
 with tab1:
     st.markdown('<div class="section-title-blue">📝 Registro Completo de Paciente</div>', unsafe_allow_html=True)
     
+    # Crear pestañas dentro del registro
     tab_registro1, tab_registro2, tab_registro3 = st.tabs([
         "👤 Datos Personales",
         "🧪 Biomarcadores Hematológicos", 
         "📊 Evaluación Completa"
     ])
     
+    # ============================================
+    # PESTAÑA 1: DATOS PERSONALES
+    # ============================================
     with tab_registro1:
         st.markdown('<div class="section-title-blue" style="font-size: 1.3rem;">👤 DATOS PERSONALES Y CLÍNICOS</div>', unsafe_allow_html=True)
         
+        # Variables para validación
+        error_dni = None
+        error_nombre = None
+        error_telefono = None
+        
+        # Inicializar session state para esta pestaña
         if 'datos_personales' not in st.session_state:
             st.session_state.datos_personales = {}
         
@@ -946,18 +1729,39 @@ with tab1:
             col1, col2 = st.columns(2)
             
             with col1:
+                # DATOS BÁSICOS
                 st.markdown('<div style="color: #1e40af; font-weight: 600; margin: 15px 0 10px 0;">📋 DATOS BÁSICOS</div>', unsafe_allow_html=True)
-                dni_input = st.text_input("DNI*", placeholder="Ej: 87654321 (8 dígitos)", key="dni_basico")
-                nombre_input = st.text_input("Nombre Completo*", placeholder="Ej: Ana García Pérez", key="nombre_basico")
+                
+                dni_input = st.text_input(
+                    "DNI*", 
+                    placeholder="Ej: 87654321 (8 dígitos)", 
+                    key="dni_basico",
+                    help="8 dígitos numéricos"
+                )
+                
+                nombre_input = st.text_input(
+                    "Nombre Completo*", 
+                    placeholder="Ej: Ana García Pérez", 
+                    key="nombre_basico"
+                )
+                
                 edad_meses = st.number_input("Edad (meses)*", 1, 240, 24, key="edad_basico")
                 peso_kg = st.number_input("Peso (kg)*", 0.0, 50.0, 12.5, 0.1, key="peso_basico")
                 talla_cm = st.number_input("Talla (cm)*", 0.0, 150.0, 85.0, 0.1, key="talla_basico")
                 genero = st.selectbox("Género*", ["F", "M"], key="genero_basico")
-                telefono_input = st.text_input("Teléfono*", placeholder="Ej: 987654321 (9 dígitos)", key="telefono_basico")
+                
+                telefono_input = st.text_input(
+                    "Teléfono*", 
+                    placeholder="Ej: 987654321 (9 dígitos)", 
+                    key="telefono_basico"
+                )
+                
                 estado_paciente = st.selectbox("Estado", ESTADOS_PACIENTE, key="estado_basico")
             
             with col2:
+                # DATOS GEOGRÁFICOS Y SOCIALES
                 st.markdown('<div style="color: #1e40af; font-weight: 600; margin: 15px 0 10px 0;">🌍 DATOS GEOGRÁFICOS</div>', unsafe_allow_html=True)
+                
                 region = st.selectbox("Región*", PERU_REGIONS, key="region_basico")
                 departamento = st.text_input("Departamento/Distrito", placeholder="Ej: Lima Metropolitana", key="departamento_basico")
                 
@@ -969,31 +1773,47 @@ with tab1:
                     altitud_msnm = st.number_input("Altitud (msnm)*", 0, 5000, 500, key="altitud_basico")
                 
                 st.markdown('<div style="color: #1e40af; font-weight: 600; margin: 15px 0 10px 0;">💰 DATOS SOCIOECONÓMICOS</div>', unsafe_allow_html=True)
+                
                 nivel_educativo = st.selectbox("Nivel Educativo Apoderado", NIVELES_EDUCATIVOS, key="nivel_basico")
                 acceso_agua_potable = st.checkbox("Acceso a agua potable", key="agua_basico")
                 tiene_servicio_salud = st.checkbox("Tiene servicio de salud", key="salud_basico")
                 
+                # Factores de riesgo
                 st.markdown('<div style="color: #1e40af; font-weight: 600; margin: 15px 0 10px 0;">📋 FACTORES DE RIESGO</div>', unsafe_allow_html=True)
+                
                 factores_clinicos = st.multiselect("Factores Clínicos:", FACTORES_CLINICOS, key="factores_clinicos_basico")
                 factores_sociales = st.multiselect("Factores Socioeconómicos:", FACTORES_SOCIOECONOMICOS, key="factores_sociales_basico")
-                programas_nacionales = st.multiselect("Programas Nacionales:", ["CUNA MÁS", "JUNTOS", "QALI WARMA", "NO PARTICIPA"], key="programas_basico")
+                
+                programas_nacionales = st.multiselect(
+                    "Programas Nacionales:", 
+                    ["CUNA MÁS", "JUNTOS", "QALI WARMA", "NO PARTICIPA"],
+                    key="programas_basico"
+                )
             
+            # HEMOGLOBINA BÁSICA
             st.markdown('<div style="color: #1e40af; font-weight: 600; margin: 20px 0 10px 0;">🩺 HEMOGLOBINA BÁSICA</div>', unsafe_allow_html=True)
+            
             col_hb1, col_hb2 = st.columns([2, 1])
             with col_hb1:
                 hemoglobina_medida = st.number_input("Hemoglobina medida (g/dL)*", 5.0, 20.0, 11.0, 0.1, key="hemoglobina_basico")
+            
             with col_hb2:
                 ajuste_hb = obtener_ajuste_hemoglobina(altitud_msnm)
                 hemoglobina_ajustada = calcular_hemoglobina_ajustada(hemoglobina_medida, altitud_msnm)
-                st.metric("Hemoglobina ajustada", f"{hemoglobina_ajustada:.1f} g/dL", delta=f"Ajuste: {ajuste_hb:+.1f}")
+                
+                st.metric("Hemoglobina ajustada", f"{hemoglobina_ajustada:.1f} g/dL", 
+                         delta=f"Ajuste: {ajuste_hb:+.1f}")
             
+            # Botones
             col_btn1, col_btn2 = st.columns([1, 1])
             with col_btn1:
                 guardar_datos = st.form_submit_button("💾 GUARDAR DATOS PERSONALES", use_container_width=True, type="primary")
+            
             with col_btn2:
                 limpiar_datos = st.form_submit_button("🧹 LIMPIAR FORMULARIO", use_container_width=True, type="secondary")
             
             if guardar_datos:
+                # Validaciones básicas
                 errores = []
                 if not dni_input or len(dni_input) != 8 or not dni_input.isdigit():
                     errores.append("DNI inválido (8 dígitos)")
@@ -1006,68 +1826,174 @@ with tab1:
                     for error in errores:
                         st.error(error)
                 else:
+                    # Guardar en session state
                     st.session_state.datos_personales = {
-                        'dni': dni_input, 'nombre_apellido': nombre_input, 'edad_meses': edad_meses,
-                        'peso_kg': peso_kg, 'talla_cm': talla_cm, 'genero': genero, 'telefono': telefono_input,
-                        'estado_paciente': estado_paciente, 'region': region, 'departamento': departamento,
-                        'altitud_msnm': altitud_msnm, 'nivel_educativo': nivel_educativo,
-                        'acceso_agua_potable': acceso_agua_potable, 'tiene_servicio_salud': tiene_servicio_salud,
-                        'factores_clinicos': factores_clinicos, 'factores_sociales': factores_sociales,
-                        'programas_nacionales': programas_nacionales, 'hemoglobina_medida': hemoglobina_medida,
-                        'hemoglobina_ajustada': hemoglobina_ajustada, 'ajuste_hb': ajuste_hb
+                        'dni': dni_input,
+                        'nombre_apellido': nombre_input,
+                        'edad_meses': edad_meses,
+                        'peso_kg': peso_kg,
+                        'talla_cm': talla_cm,
+                        'genero': genero,
+                        'telefono': telefono_input,
+                        'estado_paciente': estado_paciente,
+                        'region': region,
+                        'departamento': departamento,
+                        'altitud_msnm': altitud_msnm,
+                        'nivel_educativo': nivel_educativo,
+                        'acceso_agua_potable': acceso_agua_potable,
+                        'tiene_servicio_salud': tiene_servicio_salud,
+                        'factores_clinicos': factores_clinicos,
+                        'factores_sociales': factores_sociales,
+                        'programas_nacionales': programas_nacionales,
+                        'hemoglobina_medida': hemoglobina_medida,
+                        'hemoglobina_ajustada': hemoglobina_ajustada,
+                        'ajuste_hb': ajuste_hb
                     }
+                    
                     st.success("✅ Datos personales guardados. Continúa con Biomarcadores.")
             
             if limpiar_datos:
                 st.session_state.datos_personales = {}
                 st.rerun()
     
+    # ============================================
+    # PESTAÑA 2: BIOMARCADORES HEMATOLÓGICOS
+    # ============================================
     with tab_registro2:
         st.markdown('<div class="section-title-red" style="font-size: 1.3rem;">🧪 BIOMARCADORES HEMATOLÓGICOS</div>', unsafe_allow_html=True)
         
+        # Verificar si hay datos personales primero
         if not st.session_state.datos_personales:
             st.warning("""
             ⚠️ **Primero complete los datos personales**
+            
             1. Vaya a la pestaña **👤 Datos Personales**
             2. Complete todos los campos obligatorios
             3. Presione "GUARDAR DATOS PERSONALES"
             4. Regrese aquí para completar los biomarcadores
             """)
+            
             if st.button("👤 Ir a Datos Personales", use_container_width=True):
+                st.markdown("""
+                <script>
+                setTimeout(() => {
+                    const tabs = document.querySelectorAll('button[role="tab"]');
+                    if (tabs.length >= 2) {
+                        tabs[0].click();
+                    }
+                }, 100);
+                </script>
+                """, unsafe_allow_html=True)
                 st.rerun()
         else:
             paciente_info = st.session_state.datos_personales
             st.info(f"📋 Paciente: **{paciente_info['nombre_apellido']}** | DNI: {paciente_info['dni']} | Hb: {paciente_info['hemoglobina_ajustada']:.1f} g/dL")
             
+            # Inicializar session state para biomarcadores
             if 'biomarcadores' not in st.session_state:
                 st.session_state.biomarcadores = {}
             
             with st.form("formulario_biomarcadores"):
                 st.markdown('<div style="color: #dc2626; font-weight: 600; margin: 15px 0 10px 0;">🩸 BIOMARCADORES DE HIERRO</div>', unsafe_allow_html=True)
+                
                 col_bio1, col_bio2 = st.columns(2)
                 
                 with col_bio1:
-                    ferritina = st.number_input("Ferritina (ng/mL)*", min_value=0.0, max_value=1000.0, value=50.0)
-                    transferrina = st.number_input("Transferrina (mg/dL)", min_value=0.0, max_value=500.0, value=300.0)
-                    hierro_serico = st.number_input("Hierro Sérico (μg/dL)", min_value=0.0, max_value=300.0, value=100.0)
+                    ferritina = st.number_input(
+                        "Ferritina (ng/mL)*", 
+                        min_value=0.0, 
+                        max_value=1000.0, 
+                        value=50.0,
+                        help="Normal: >30 ng/mL. Déficit: <15 ng/mL"
+                    )
+                    
+                    transferrina = st.number_input(
+                        "Transferrina (mg/dL)", 
+                        min_value=0.0, 
+                        max_value=500.0, 
+                        value=300.0,
+                        help="Normal: 200-400 mg/dL"
+                    )
+                    
+                    hierro_serico = st.number_input(
+                        "Hierro Sérico (μg/dL)", 
+                        min_value=0.0, 
+                        max_value=300.0, 
+                        value=100.0,
+                        help="Normal: 50-150 μg/dL"
+                    )
                 
                 with col_bio2:
                     st.markdown('<div style="color: #dc2626; font-weight: 600; margin: 15px 0 10px 0;">🔬 ÍNDICES HEMATIMÉTRICOS</div>', unsafe_allow_html=True)
-                    vcm = st.number_input("VCM (fL)*", min_value=50.0, max_value=150.0, value=85.0)
-                    hcm = st.number_input("HCM (pg)*", min_value=20.0, max_value=50.0, value=30.0)
-                    chcm = st.number_input("CHCM (g/dL)*", min_value=20.0, max_value=50.0, value=33.0)
-                    reticulocitos = st.number_input("Reticulocitos (%)", min_value=0.0, max_value=10.0, value=1.0)
+                    
+                    vcm = st.number_input(
+                        "VCM (fL)*", 
+                        min_value=50.0, 
+                        max_value=150.0, 
+                        value=85.0,
+                        help="Volumen Corpuscular Medio. Normal: 80-100 fL"
+                    )
+                    
+                    hcm = st.number_input(
+                        "HCM (pg)*", 
+                        min_value=20.0, 
+                        max_value=50.0, 
+                        value=30.0,
+                        help="Hemoglobina Corpuscular Media. Normal: 27-32 pg"
+                    )
+                    
+                    chcm = st.number_input(
+                        "CHCM (g/dL)*", 
+                        min_value=20.0, 
+                        max_value=50.0, 
+                        value=33.0,
+                        help="Normal: 32-36 g/dL"
+                    )
+                    
+                    reticulocitos = st.number_input(
+                        "Reticulocitos (%)", 
+                        min_value=0.0, 
+                        max_value=10.0, 
+                        value=1.0,
+                        help="Normal: 0.5-1.5%"
+                    )
                 
+                # Otros parámetros
                 st.markdown('<div style="color: #dc2626; font-weight: 600; margin: 15px 0 10px 0;">📊 OTROS PARÁMETROS</div>', unsafe_allow_html=True)
+                
                 col_bio3, col_bio4 = st.columns(2)
                 
                 with col_bio3:
-                    leucocitos = st.number_input("Leucocitos (x10³/μL)", min_value=0.0, max_value=50.0, value=8.0)
-                    plaquetas = st.number_input("Plaquetas (x10³/μL)", min_value=0.0, max_value=1000.0, value=250.0)
-                with col_bio4:
-                    hematocrito = st.number_input("Hematocrito (%)", min_value=0.0, max_value=70.0, value=35.0)
-                    proteina_c_reactiva = st.number_input("Proteína C Reactiva (mg/L)", min_value=0.0, max_value=100.0, value=1.0)
+                    leucocitos = st.number_input(
+                        "Leucocitos (x10³/μL)", 
+                        min_value=0.0, 
+                        max_value=50.0, 
+                        value=8.0
+                    )
+                    
+                    plaquetas = st.number_input(
+                        "Plaquetas (x10³/μL)", 
+                        min_value=0.0, 
+                        max_value=1000.0, 
+                        value=250.0
+                    )
                 
+                with col_bio4:
+                    hematocrito = st.number_input(
+                        "Hematocrito (%)", 
+                        min_value=0.0, 
+                        max_value=70.0, 
+                        value=35.0
+                    )
+                    
+                    proteina_c_reactiva = st.number_input(
+                        "Proteína C Reactiva (mg/L)", 
+                        min_value=0.0, 
+                        max_value=100.0, 
+                        value=1.0
+                    )
+                
+                # Interpretación automática
                 if ferritina > 0 and chcm > 0:
                     interpretacion_bio = interpretar_analisis_hematologico(
                         ferritina, chcm, reticulocitos, transferrina, 
@@ -1078,11 +2004,22 @@ with tab1:
                     st.markdown('<div style="color: #dc2626; font-weight: 600; margin: 15px 0 10px 0;">🧠 INTERPRETACIÓN AUTOMÁTICA</div>', unsafe_allow_html=True)
                     
                     col_interp1, col_interp2 = st.columns(2)
+                    
                     with col_interp1:
-                        if ferritina < 15: estado_hierro = "🚨 DÉFICIT SEVERO"; color_hierro = "#dc2626"
-                        elif ferritina < 30: estado_hierro = "⚠️ DÉFICIT MODERADO"; color_hierro = "#d97706"
-                        elif ferritina < 100: estado_hierro = "🔄 RESERVAS LÍMITE"; color_hierro = "#2563eb"
-                        else: estado_hierro = "✅ ADECUADO"; color_hierro = "#16a34a"
+                        # Estado de hierro
+                        if ferritina < 15:
+                            estado_hierro = "🚨 DÉFICIT SEVERO"
+                            color_hierro = "#dc2626"
+                        elif ferritina < 30:
+                            estado_hierro = "⚠️ DÉFICIT MODERADO"
+                            color_hierro = "#d97706"
+                        elif ferritina < 100:
+                            estado_hierro = "🔄 RESERVAS LÍMITE"
+                            color_hierro = "#2563eb"
+                        else:
+                            estado_hierro = "✅ ADECUADO"
+                            color_hierro = "#16a34a"
+                        
                         st.markdown(f"""
                         <div style="background: {color_hierro}15; padding: 10px; border-radius: 8px; border-left: 4px solid {color_hierro}; margin: 5px 0;">
                             <div style="font-weight: 600; color: {color_hierro}; font-size: 0.9rem;">RESERVAS DE HIERRO</div>
@@ -1092,9 +2029,17 @@ with tab1:
                         """, unsafe_allow_html=True)
                     
                     with col_interp2:
-                        if chcm < 32: estado_chcm = "🚨 HIPOCROMÍA"; color_chcm = "#dc2626"
-                        elif chcm <= 36: estado_chcm = "✅ NORMOCROMÍA"; color_chcm = "#16a34a"
-                        else: estado_chcm = "🔄 HIPERCROMÍA"; color_chcm = "#2563eb"
+                        # Estado de CHCM
+                        if chcm < 32:
+                            estado_chcm = "🚨 HIPOCROMÍA"
+                            color_chcm = "#dc2626"
+                        elif chcm <= 36:
+                            estado_chcm = "✅ NORMOCROMÍA"
+                            color_chcm = "#16a34a"
+                        else:
+                            estado_chcm = "🔄 HIPERCROMÍA"
+                            color_chcm = "#2563eb"
+                        
                         st.markdown(f"""
                         <div style="background: {color_chcm}15; padding: 10px; border-radius: 8px; border-left: 4px solid {color_chcm}; margin: 5px 0;">
                             <div style="font-weight: 600; color: {color_chcm}; font-size: 0.9rem;">CONCENTRACIÓN Hb</div>
@@ -1103,6 +2048,7 @@ with tab1:
                         </div>
                         """, unsafe_allow_html=True)
                     
+                    # Mostrar recomendación
                     st.markdown(f"""
                     <div style="background: #fef3c7; padding: 15px; border-radius: 8px; border-left: 4px solid #d97706; margin: 10px 0;">
                         <div style="font-weight: 600; color: #92400e; font-size: 0.9rem;">💡 RECOMENDACIÓN</div>
@@ -1110,36 +2056,61 @@ with tab1:
                     </div>
                     """, unsafe_allow_html=True)
                 
+                # Botones
                 col_btn_bio1, col_btn_bio2 = st.columns([1, 1])
+                
                 with col_btn_bio1:
-                    guardar_biomarcadores = st.form_submit_button("💾 GUARDAR BIOMARCADORES", use_container_width=True, type="primary")
+                    guardar_biomarcadores = st.form_submit_button(
+                        "💾 GUARDAR BIOMARCADORES", 
+                        use_container_width=True, 
+                        type="primary"
+                    )
+                
                 with col_btn_bio2:
-                    calcular_riesgo = st.form_submit_button("📊 CALCULAR RIESGO COMPLETO", use_container_width=True, type="secondary")
+                    calcular_riesgo = st.form_submit_button(
+                        "📊 CALCULAR RIESGO COMPLETO", 
+                        use_container_width=True,
+                        type="secondary"
+                    )
                 
                 if guardar_biomarcadores:
                     st.session_state.biomarcadores = {
-                        'ferritina': ferritina, 'transferrina': transferrina, 'hierro_serico': hierro_serico,
-                        'vcm': vcm, 'hcm': hcm, 'chcm': chcm, 'reticulocitos': reticulocitos,
-                        'leucocitos': leucocitos, 'plaquetas': plaquetas, 'hematocrito': hematocrito,
+                        'ferritina': ferritina,
+                        'transferrina': transferrina,
+                        'hierro_serico': hierro_serico,
+                        'vcm': vcm,
+                        'hcm': hcm,
+                        'chcm': chcm,
+                        'reticulocitos': reticulocitos,
+                        'leucocitos': leucocitos,
+                        'plaquetas': plaquetas,
+                        'hematocrito': hematocrito,
                         'proteina_c_reactiva': proteina_c_reactiva,
                         'interpretacion_bio': interpretacion_bio if 'interpretacion_bio' in locals() else None
                     }
+                    
                     st.success("✅ Biomarcadores guardados. Continúa con Evaluación Completa.")
                 
                 if calcular_riesgo:
                     if 'interpretacion_bio' in locals():
                         st.session_state.biomarcadores['interpretacion_bio'] = interpretacion_bio
+                    
                     st.success("✅ Riesgo calculado. Ve a la pestaña de Evaluación Completa.")
     
+    # ============================================
+    # PESTAÑA 3: EVALUACIÓN COMPLETA
+    # ============================================
     with tab_registro3:
         st.markdown('<div class="section-title-green" style="font-size: 1.3rem;">📊 EVALUACIÓN COMPLETA Y GUARDADO</div>', unsafe_allow_html=True)
         
+        # Verificar que tengamos todos los datos
         datos_personales = st.session_state.get('datos_personales', {})
         biomarcadores = st.session_state.get('biomarcadores', {})
         
         if not datos_personales:
             st.warning("""
             ⚠️ **Faltan datos personales**
+            
             1. Complete la pestaña **👤 Datos Personales**
             2. Guarde los datos
             3. Regrese aquí para ver la evaluación
@@ -1147,12 +2118,15 @@ with tab1:
         elif not biomarcadores:
             st.warning("""
             ⚠️ **Faltan biomarcadores**
+            
             1. Complete la pestaña **🧪 Biomarcadores Hematológicos**
             2. Guarde los biomarcadores  
             3. Regrese aquí para ver la evaluación
             """)
         else:
+            # Mostrar resumen
             st.markdown('<div style="color: #059669; font-weight: 600; margin: 15px 0 10px 0;">📋 RESUMEN DEL PACIENTE</div>', unsafe_allow_html=True)
+            
             col_res1, col_res2 = st.columns(2)
             
             with col_res1:
@@ -1178,9 +2152,11 @@ with tab1:
                 </div>
                 """, unsafe_allow_html=True)
             
+            # Calcular riesgo completo
             st.markdown("---")
             st.markdown('<div style="color: #059669; font-weight: 600; margin: 15px 0 10px 0;">🎯 EVALUACIÓN DE RIESGO COMPLETA</div>', unsafe_allow_html=True)
             
+            # Calcular nivel de riesgo
             nivel_riesgo, puntaje, estado = calcular_riesgo_anemia(
                 datos_personales['hemoglobina_ajustada'],
                 datos_personales['edad_meses'],
@@ -1188,6 +2164,7 @@ with tab1:
                 datos_personales.get('factores_sociales', [])
             )
             
+            # Evaluación nutricional
             estado_peso, estado_talla, estado_nutricional = evaluar_estado_nutricional(
                 datos_personales['edad_meses'],
                 datos_personales['peso_kg'],
@@ -1195,23 +2172,33 @@ with tab1:
                 datos_personales['genero']
             )
             
+            # Clasificar anemia
             clasificacion, recomendacion_hb, tipo_alerta = clasificar_anemia(
                 datos_personales['hemoglobina_ajustada'],
                 datos_personales['edad_meses']
             )
             
+            # Generar sugerencias
             sugerencias = generar_sugerencias(
                 nivel_riesgo, 
                 datos_personales['hemoglobina_ajustada'],
                 datos_personales['edad_meses']
             )
             
+            # Mostrar métricas
             col_met1, col_met2, col_met3 = st.columns(3)
             
             with col_met1:
-                if "ALTO" in nivel_riesgo: color = "#dc2626"; emoji = "🔴"
-                elif "MODERADO" in nivel_riesgo: color = "#d97706"; emoji = "🟠"
-                else: color = "#16a34a"; emoji = "🟢"
+                if "ALTO" in nivel_riesgo:
+                    color = "#dc2626"
+                    emoji = "🔴"
+                elif "MODERADO" in nivel_riesgo:
+                    color = "#d97706"
+                    emoji = "🟠"
+                else:
+                    color = "#16a34a"
+                    emoji = "🟢"
+                
                 st.markdown(f"""
                 <div style="background: {color}15; padding: 1rem; border-radius: 10px; text-align: center; border: 2px solid {color};">
                     <div style="font-size: 1.2rem; color: {color}; margin-bottom: 5px;">{emoji} RIESGO</div>
@@ -1221,10 +2208,19 @@ with tab1:
                 """, unsafe_allow_html=True)
             
             with col_met2:
-                if clasificacion == "ANEMIA SEVERA": color = "#dc2626"; emoji = "🔴"
-                elif clasificacion == "ANEMIA MODERADA": color = "#d97706"; emoji = "🟠"
-                elif clasificacion == "ANEMIA LEVE": color = "#3b82f6"; emoji = "🔵"
-                else: color = "#16a34a"; emoji = "🟢"
+                if clasificacion == "ANEMIA SEVERA":
+                    color = "#dc2626"
+                    emoji = "🔴"
+                elif clasificacion == "ANEMIA MODERADA":
+                    color = "#d97706"
+                    emoji = "🟠"
+                elif clasificacion == "ANEMIA LEVE":
+                    color = "#3b82f6"
+                    emoji = "🔵"
+                else:
+                    color = "#16a34a"
+                    emoji = "🟢"
+                
                 st.markdown(f"""
                 <div style="background: {color}15; padding: 1rem; border-radius: 10px; text-align: center; border: 2px solid {color};">
                     <div style="font-size: 1.2rem; color: {color}; margin-bottom: 5px;">{emoji} ANEMIA</div>
@@ -1234,9 +2230,16 @@ with tab1:
                 """, unsafe_allow_html=True)
             
             with col_met3:
-                if "DESNUTRICIÓN" in estado_nutricional: color = "#dc2626"; emoji = "🔴"
-                elif "SOBREPESO" in estado_nutricional: color = "#d97706"; emoji = "🟠"
-                else: color = "#16a34a"; emoji = "🟢"
+                if "DESNUTRICIÓN" in estado_nutricional:
+                    color = "#dc2626"
+                    emoji = "🔴"
+                elif "SOBREPESO" in estado_nutricional:
+                    color = "#d97706"
+                    emoji = "🟠"
+                else:
+                    color = "#16a34a"
+                    emoji = "🟢"
+                
                 st.markdown(f"""
                 <div style="background: {color}15; padding: 1rem; border-radius: 10px; text-align: center; border: 2px solid {color};">
                     <div style="font-size: 1.2rem; color: {color}; margin-bottom: 5px;">{emoji} NUTRICIÓN</div>
@@ -1245,6 +2248,7 @@ with tab1:
                 </div>
                 """, unsafe_allow_html=True)
             
+            # Mostrar recomendaciones
             st.markdown("---")
             st.markdown('<div style="color: #059669; font-weight: 600; margin: 15px 0 10px 0;">💡 PLAN DE ACCIÓN RECOMENDADO</div>', unsafe_allow_html=True)
             
@@ -1262,14 +2266,20 @@ with tab1:
             </div>
             """, unsafe_allow_html=True)
             
+            # Botón para guardar en Supabase
             st.markdown("---")
             st.markdown('<div style="color: #059669; font-weight: 600; margin: 15px 0 10px 0;">💾 GUARDAR EN BASE DE DATOS</div>', unsafe_allow_html=True)
             
             col_guardar1, col_guardar2 = st.columns([2, 1])
             
             with col_guardar1:
-                if st.button("💾 GUARDAR REGISTRO COMPLETO EN SUPABASE", use_container_width=True, type="primary"):
+                if st.button("💾 GUARDAR REGISTRO COMPLETO EN SUPABASE", 
+                           use_container_width=True, 
+                           type="primary"):
+                    
+                    # Preparar datos combinados
                     record = {
+                        # Datos personales
                         "dni": datos_personales['dni'],
                         "nombre_apellido": datos_personales['nombre_apellido'],
                         "edad_meses": datos_personales['edad_meses'],
@@ -1284,11 +2294,17 @@ with tab1:
                         "nivel_educativo": datos_personales['nivel_educativo'],
                         "acceso_agua_potable": datos_personales['acceso_agua_potable'],
                         "tiene_servicio_salud": datos_personales['tiene_servicio_salud'],
+                        
+                        # Factores de riesgo
                         "factores_clinicos": ", ".join(datos_personales.get('factores_clinicos', [])),
                         "factores_sociales": ", ".join(datos_personales.get('factores_sociales', [])),
                         "programas_nacionales": ", ".join(datos_personales.get('programas_nacionales', [])),
+                        
+                        # Hemoglobina
                         "hemoglobina_dl1": datos_personales['hemoglobina_medida'],
                         "hemoglobina_ajustada": datos_personales['hemoglobina_ajustada'],
+                        
+                        # Biomarcadores
                         "ferritina": biomarcadores.get('ferritina'),
                         "transferrina": biomarcadores.get('transferrina'),
                         "hierro_serico": biomarcadores.get('hierro_serico'),
@@ -1300,26 +2316,35 @@ with tab1:
                         "plaquetas": biomarcadores.get('plaquetas'),
                         "hematocrito": biomarcadores.get('hematocrito'),
                         "proteina_c_reactiva": biomarcadores.get('proteina_c_reactiva'),
+                        
+                        # Evaluaciones
                         "clasificacion_anemia": clasificacion,
                         "estado_nutricional": estado_nutricional,
                         "riesgo": nivel_riesgo,
                         "puntaje_riesgo": puntaje,
                         "sugerencias": sugerencias,
+                        
+                        # Sistema
                         "en_seguimiento": clasificacion in ["ANEMIA MODERADA", "ANEMIA SEVERA"],
                         "fecha_registro": datetime.now().strftime("%Y-%m-%d"),
                         "usuario_registro": st.session_state.user_info['nombre']
                     }
                     
+                    # Insertar en Supabase
                     if supabase:
                         resultado = insertar_datos_supabase(record)
+                        
                         if resultado:
                             if isinstance(resultado, dict) and resultado.get("status") == "duplicado":
                                 st.error(f"❌ El DNI {datos_personales['dni']} ya existe")
                             else:
                                 st.success("✅ Registro completo guardado en Supabase")
                                 st.balloons()
+                                
+                                # Limpiar session states
                                 st.session_state.datos_personales = {}
                                 st.session_state.biomarcadores = {}
+                                
                                 time.sleep(2)
                                 st.rerun()
                         else:
@@ -1328,7 +2353,9 @@ with tab1:
                         st.error("🔴 No hay conexión a Supabase")
             
             with col_guardar2:
-                if st.button("🔄 REINICIAR FORMULARIO", use_container_width=True, type="secondary"):
+                if st.button("🔄 REINICIAR FORMULARIO", 
+                           use_container_width=True, 
+                           type="secondary"):
                     st.session_state.datos_personales = {}
                     st.session_state.biomarcadores = {}
                     st.success("✅ Formulario reiniciado")
