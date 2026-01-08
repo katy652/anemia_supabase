@@ -3235,68 +3235,36 @@ with tab3:
                     }
                 )
         
-        # ============================================
-        # EXPORTACIÓN
-        # ============================================
+        with col_exp3:
+    # Botón para generar informe HTML (que se puede guardar como PDF)
+    if st.button("📄 Generar Informe", 
+                use_container_width=True,
+                type="secondary",
+                key="btn_generar_informe_tab3"):
         
-        st.markdown("""
-        <div class="section-title-blue" style="font-size: 1.3rem;">
-            📥 EXPORTAR REPORTES
-        </div>
-        """, unsafe_allow_html=True)
+        # Crear string con datos para CSV
+        informe_csv = "Región,Prevalencia(%),Total,Con_Anemia,Hb_Promedio,En_Seguimiento\n"
         
-        col_exp1, col_exp2 = st.columns(2)
+        if 'por_region' in indicadores:
+            for region, stats in indicadores['por_region'].items():
+                informe_csv += f"{region},{stats['prevalencia']},{stats['total']},{stats['con_anemia']},{stats['hb_promedio']:.1f},{stats['en_seguimiento']}\n"
         
-        with col_exp1:
-            if st.button("📊 Descargar Datos Completos", 
-                        use_container_width=True,
-                        type="primary",
-                        key="btn_descargar_datos_tab3"):
-                csv = datos.to_csv(index=False).encode('utf-8')
-                st.download_button(
-                    label="📥 CSV Completo",
-                    data=csv,
-                    file_name=f"datos_anemia_nacional_{datetime.now().strftime('%Y%m%d')}.csv",
-                    mime="text/csv",
-                    use_container_width=True,
-                    key="btn_download_csv_tab3"
-                )
+        # Agregar resumen nacional
+        informe_csv += f"\nRESUMEN NACIONAL\n"
+        informe_csv += f"Total Pacientes,{indicadores['total_pacientes']}\n"
+        informe_csv += f"Prevalencia Nacional,{indicadores['prevalencia_nacional']}%\n"
+        informe_csv += f"Hemoglobina Promedio,{indicadores['hb_promedio_nacional']:.1f} g/dL\n"
+        informe_csv += f"Tasa de Seguimiento,{indicadores['tasa_seguimiento']}%\n"
         
-        with col_exp2:
-            if st.button("📈 Descargar Indicadores", 
-                        use_container_width=True,
-                        type="secondary",
-                        key="btn_descargar_indicadores_tab3"):
-                reporte_data = []
-                if 'por_region' in indicadores:
-                    for region, stats in indicadores['por_region'].items():
-                        reporte_data.append({
-                            'Región': region,
-                            'Prevalencia (%)': stats['prevalencia'],
-                            'Total Pacientes': stats['total'],
-                            'Con Anemia': stats['con_anemia'],
-                            'Hb Promedio': stats['hb_promedio'],
-                            'Anemia Severa': stats['severa'],
-                            'Anemia Moderada': stats['moderada'],
-                            'Anemia Leve': stats['leve'],
-                            'En Seguimiento': stats['en_seguimiento']
-                        })
-                
-                if reporte_data:
-                    reporte_df = pd.DataFrame(reporte_data)
-                    csv = reporte_df.to_csv(index=False).encode('utf-8')
-                    
-                    st.download_button(
-                        label="📥 Indicadores Regionales",
-                        data=csv,
-                        file_name=f"indicadores_anemia_{datetime.now().strftime('%Y%m%d')}.csv",
-                        mime="text/csv",
-                        use_container_width=True,
-                        key="btn_download_indicadores_tab3"
-                    )
-                else:
-                    st.warning("No hay datos regionales para exportar")
-        
+        # Botón para descargar informe
+        st.download_button(
+            label="📥 Descargar Informe (CSV)",
+            data=informe_csv.encode('utf-8'),
+            file_name=f"informe_anemia_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
+            mime="text/csv",
+            use_container_width=True,
+            key="btn_download_informe_csv_tab3"
+        )
         # ============================================
         # INFORMACIÓN ADICIONAL
         # ============================================
