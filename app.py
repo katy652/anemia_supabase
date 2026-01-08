@@ -1416,16 +1416,6 @@ def generar_sugerencias(riesgo, hemoglobina_ajustada, edad_meses):
 # INTERFAZ PRINCIPAL CON INFORMACIÓN DEL USUARIO
 # ==================================================
 
-# TÍTULO PRINCIPAL CON INFORMACIÓN DEL USUARIO
-st.markdown(f"""
-<div class="main-title">
-    <h1 style="margin: 0; font-size: 2.8rem;">🏥 SISTEMA NIXON - Control de Anemia y Nutrición</h1>
-    <p style="margin: 10px 0 0 0; font-size: 1.2rem; opacity: 0.9;">
-    Usuario: <strong>{user_info['nombre']}</strong> | Rol: <strong>{user_info['rol']}</strong> | Especialidad: <strong>{user_info['especialidad']}</strong>
-    </p>
-</div>
-""", unsafe_allow_html=True)
-
 # ESTADO DE CONEXIÓN
 if supabase:
     st.markdown("""
