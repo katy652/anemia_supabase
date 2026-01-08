@@ -2661,7 +2661,7 @@ DATOS ADICIONALES:
                         st.rerun()
 
 # ==================================================
-# PESTAÑA 3: HISTORIAL COMPLETO - VERSIÓN FPDF CON FILTRO DE ESTADO
+# PESTAÑA 3: HISTORIAL COMPLETO - VERSIÓN STREAMLIT NATIVO
 # ==================================================
 
 # Función para determinar el estado del paciente
@@ -2862,46 +2862,113 @@ with tab_seg3:
                 st.rerun()
         
         # ============================================
-        # INFORMACIÓN PRINCIPAL DEL PACIENTE - VERSIÓN CORREGIDA
+        # INFORMACIÓN PRINCIPAL - VERSIÓN STREAMLIT NATIVO
         # ============================================
         
-        st.markdown(f"""
-<div style="background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%); 
-            padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem;">
-    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
-        <div>
-            <h3 style="margin: 0 0 10px 0; color: #5b21b6;">📊 HISTORIAL DE: {paciente.get('nombre_apellido', 'N/A').upper()}</h3>
-            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
-                <span style="font-size: 1.5rem;">{icono}</span>
-                <span style="font-weight: 600; color: {color}; background: {color}20; padding: 4px 12px; border-radius: 20px;">
-                    {estado}
-                </span>
-                {f'<span style="font-size: 0.9rem; color: #ef4444; background: #fee2e2; padding: 4px 12px; border-radius: 20px;">📅 Cita: {proxima_cita_fecha}</span>' if proxima_cita_proxima and proxima_cita_fecha else ''}
+        # Obtener valores del paciente
+        nombre_completo = paciente.get('nombre_apellido', 'N/A').upper()
+        dni_valor = paciente.get('dni', 'N/A')
+        edad_valor = paciente.get('edad_meses', 'N/A')
+        region_valor = paciente.get('region', 'N/A')
+        hb_valor = paciente.get('hemoglobina_dl1', 'N/A')
+        estado_valor = paciente.get('estado_paciente', 'N/A')
+        riesgo_valor = paciente.get('riesgo', 'N/A')
+        num_controles = len(historial)
+        
+        # Título principal
+        st.markdown(f"### 📊 HISTORIAL DE: {nombre_completo}")
+        
+        # Estado del paciente con icono
+        col_estado1, col_estado2 = st.columns([1, 4])
+        with col_estado1:
+            st.markdown(f"<h1 style='text-align: center; margin: 0;'>{icono}</h1>", unsafe_allow_html=True)
+        with col_estado2:
+            st.markdown(f"""
+            <div style='background: {color}20; padding: 12px; border-radius: 10px; border-left: 5px solid {color}; margin-bottom: 20px;'>
+                <div style='font-weight: bold; color: {color}; font-size: 1.1rem;'>{estado}</div>
+                <div style='color: #666; font-size: 0.9rem;'>{descripcion}</div>
             </div>
-        </div>
-    </div>
-    
-    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 15px;">
-        <div><strong>DNI:</strong> {paciente.get('dni', 'N/A')}</div>
-        <div><strong>Edad:</strong> {paciente.get('edad_meses', 'N/A')} meses</div>
-        <div><strong>Región:</strong> {paciente.get('region', 'N/A')}</div>
-        <div><strong>Hb actual:</strong> {paciente.get('hemoglobina_dl1', 'N/A')} g/dL</div>
-        <div><strong>Estado:</strong> {paciente.get('estado_paciente', 'N/A')}</div>
-        <div><strong>Riesgo:</strong> {paciente.get('riesgo', 'N/A')}</div>
-    </div>
-    
-    <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;">
-        <div style="background: #100081; color: white; padding: 8px 16px; border-radius: 20px; font-size: 0.9rem; font-weight: bold;">
-            📋 {len(historial)} controles
-        </div>
-        <div style="background: #8b5cf6; color: white; padding: 8px 16px; border-radius: 20px; font-size: 0.9rem; font-weight: bold;">
-            🩺 {paciente.get('hemoglobina_dl1', 'N/A')} g/dL
-        </div>
-        {f'<div style="background: #ef4444; color: white; padding: 8px 16px; border-radius: 20px; font-size: 0.9rem; font-weight: bold;">📅 Próxima cita: {proxima_cita_fecha}</div>' if proxima_cita_fecha else ''}
-        {f'<div style="background: #f59e0b; color: white; padding: 8px 16px; border-radius: 20px; font-size: 0.9rem; font-weight: bold;">⏰ Último: {ultima_fecha_str}</div>' if ultima_fecha_str else ''}
-    </div>
-</div>
-""", unsafe_allow_html=True)
+            """, unsafe_allow_html=True)
+        
+        # Grid de información usando st.metric
+        st.markdown("#### 📋 Información del Paciente")
+        
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.metric("DNI", dni_valor, delta=None)
+            st.metric("Edad", f"{edad_valor} meses", delta=None)
+        
+        with col2:
+            st.metric("Región", region_valor, delta=None)
+            st.metric("Hb actual", f"{hb_valor} g/dL", delta=None)
+        
+        with col3:
+            st.metric("Estado", estado_valor, delta=None)
+            st.metric("Riesgo", riesgo_valor, delta=None)
+        
+        # Badges/información adicional
+        st.markdown("#### 📊 Resumen")
+        
+        # Crear badges con información importante
+        badge_cols = st.columns(4)
+        
+        with badge_cols[0]:
+            st.markdown(f"""
+            <div style='background: #100081; color: white; padding: 15px; border-radius: 10px; text-align: center; height: 100%;'>
+                <div style='font-size: 1.5rem; margin-bottom: 5px;'>📋</div>
+                <div style='font-weight: bold; font-size: 1.2rem;'>{num_controles}</div>
+                <div style='font-size: 0.9rem;'>controles</div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with badge_cols[1]:
+            st.markdown(f"""
+            <div style='background: #8b5cf6; color: white; padding: 15px; border-radius: 10px; text-align: center; height: 100%;'>
+                <div style='font-size: 1.5rem; margin-bottom: 5px;'>🩺</div>
+                <div style='font-weight: bold; font-size: 1.2rem;'>{hb_valor}</div>
+                <div style='font-size: 0.9rem;'>g/dL actual</div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with badge_cols[2]:
+            if ultima_fecha_str:
+                st.markdown(f"""
+                <div style='background: #f59e0b; color: white; padding: 15px; border-radius: 10px; text-align: center; height: 100%;'>
+                    <div style='font-size: 1.5rem; margin-bottom: 5px;'>⏰</div>
+                    <div style='font-weight: bold; font-size: 1rem;'>Último control</div>
+                    <div style='font-size: 0.8rem;'>{ultima_fecha_str}</div>
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.markdown(f"""
+                <div style='background: #6b7280; color: white; padding: 15px; border-radius: 10px; text-align: center; height: 100%;'>
+                    <div style='font-size: 1.5rem; margin-bottom: 5px;'>📭</div>
+                    <div style='font-weight: bold; font-size: 1rem;'>Sin controles</div>
+                    <div style='font-size: 0.8rem;'>previos</div>
+                </div>
+                """, unsafe_allow_html=True)
+        
+        with badge_cols[3]:
+            if proxima_cita_fecha:
+                st.markdown(f"""
+                <div style='background: #ef4444; color: white; padding: 15px; border-radius: 10px; text-align: center; height: 100%;'>
+                    <div style='font-size: 1.5rem; margin-bottom: 5px;'>📅</div>
+                    <div style='font-weight: bold; font-size: 1rem;'>Próxima cita</div>
+                    <div style='font-size: 0.8rem;'>{proxima_cita_fecha}</div>
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.markdown(f"""
+                <div style='background: #6b7280; color: white; padding: 15px; border-radius: 10px; text-align: center; height: 100%;'>
+                    <div style='font-size: 1.5rem; margin-bottom: 5px;'>📅</div>
+                    <div style='font-weight: bold; font-size: 1rem;'>Sin cita</div>
+                    <div style='font-size: 0.8rem;'>programada</div>
+                </div>
+                """, unsafe_allow_html=True)
+        
+        # Separador
+        st.markdown("---")
         
         # ============================================
         # MOSTRAR HISTORIAL
@@ -2916,7 +2983,9 @@ with tab_seg3:
                 df_historial['fecha_seguimiento'] = pd.to_datetime(df_historial['fecha_seguimiento'])
                 df_historial = df_historial.sort_values('fecha_seguimiento', ascending=False)
             
-            # Métricas mejoradas con estado
+            # Métricas resumen
+            st.markdown("#### 📈 Resumen del Historial")
+            
             col_met1, col_met2, col_met3, col_met4 = st.columns(4)
             
             with col_met1:
@@ -2926,6 +2995,8 @@ with tab_seg3:
                 if 'hemoglobina_actual' in df_historial.columns:
                     hb_prom = df_historial['hemoglobina_actual'].mean()
                     st.metric("Hb promedio", f"{hb_prom:.1f} g/dL")
+                else:
+                    st.metric("Hb promedio", "N/A")
             
             with col_met3:
                 if ultima_fecha_str:
@@ -2944,13 +3015,13 @@ with tab_seg3:
                 st.metric("Estado actual", icono + " " + estado.split()[0])
             
             # ============================================
-            # GRÁFICO DE EVOLUCIÓN CON COLOR SEGÚN ESTADO
+            # GRÁFICO DE EVOLUCIÓN
             # ============================================
             
             if 'hemoglobina_actual' in df_historial.columns and 'fecha_seguimiento' in df_historial.columns:
-                st.markdown("#### 📈 Evolución de Hemoglobina")
+                st.markdown("#### 📊 Evolución de Hemoglobina")
                 
-                # Crear gráfico con colores según estado
+                # Crear gráfico
                 fig = go.Figure()
                 
                 # Ordenar por fecha para la línea
@@ -2990,7 +3061,7 @@ with tab_seg3:
                     fig.add_annotation(
                         x=df_ordenado['fecha_seguimiento'].iloc[-1],
                         y=ultimo_valor,
-                        text=f"{estado}<br>{ultimo_valor:.1f} g/dL",
+                        text=f"{estado.split()[0]}<br>{ultimo_valor:.1f} g/dL",
                         showarrow=True,
                         arrowhead=2,
                         arrowsize=1,
@@ -3005,7 +3076,7 @@ with tab_seg3:
                     )
                 
                 fig.update_layout(
-                    title=f"Evolución de Hemoglobina - Estado: {estado}",
+                    title=f"Evolución de Hemoglobina - {nombre_completo}",
                     xaxis_title="Fecha",
                     yaxis_title="Hemoglobina (g/dL)",
                     template="plotly_white",
@@ -3018,7 +3089,7 @@ with tab_seg3:
             # TABLA DE CONTROLES
             # ============================================
             
-            st.markdown("#### 📋 Controles Registrados")
+            st.markdown("#### 📋 Detalle de Controles")
             
             columnas_posibles = ['fecha_seguimiento', 'tipo_seguimiento', 
                                 'hemoglobina_actual', 'hemoglobina_ajustada', 
@@ -3058,20 +3129,9 @@ with tab_seg3:
                 if 'Fecha' in df_mostrar.columns:
                     df_mostrar['Fecha'] = pd.to_datetime(df_mostrar['Fecha']).dt.strftime('%d/%m/%Y')
                 
-                # Mostrar tabla con estilo y resaltar según estado
-                def color_fila_por_estado(row):
-                    """Resalta filas según la antigüedad del control"""
-                    try:
-                        if row.name == 0:  # Última fila (control más reciente)
-                            return ['background-color: ' + color + '20' for _ in row]
-                    except:
-                        pass
-                    return ['background-color: white' for _ in row]
-                
-                styled_df = df_mostrar.style.apply(color_fila_por_estado, axis=1)
-                
+                # Mostrar tabla
                 st.dataframe(
-                    styled_df,
+                    df_mostrar,
                     use_container_width=True,
                     height=min(400, len(df_mostrar) * 35 + 38),
                     hide_index=True
