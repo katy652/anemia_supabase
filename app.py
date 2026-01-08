@@ -3450,7 +3450,7 @@ with tab3:
                     }
                 )
 
-        # ============================================
+               # ============================================
         # 📊 ESTADÍSTICAS NACIONALES ADICIONALES
         # ============================================
         
@@ -3496,31 +3496,35 @@ with tab3:
             else:
                 st.metric("⚠️ Anemia Severa", "0%")
 
-         with col_stat4:
+        with col_stat4:
             # Estadística: Meta OMS
             meta_oms = 20  # Meta OMS es <20%
-    
+            
             # Convertir a número para poder calcular diferencia
             try:
-            # Asegurar que prevalencia_nacional sea número
+                # Asegurar que prevalencia_nacional sea número
                 prevalencia_num = float(indicadores['prevalencia_nacional'])
                 diferencia = prevalencia_num - meta_oms
-        
+                
                 # Formatear correctamente
                 valor_formateado = f"{diferencia:+.1f}%"
-        
+                
                 st.metric(
-                "🎯 Meta OMS", 
-                valor_formateado,
-                help="Diferencia respecto a la meta OMS (<20%). Positivo = sobre la meta"
+                    "🎯 Meta OMS", 
+                    valor_formateado,
+                    help="Diferencia respecto a la meta OMS (<20%). Positivo = sobre la meta"
                 )
             except (ValueError, TypeError) as e:
-            # Si hay error, mostrar valor simple
+                # Si hay error, mostrar valor simple
                 st.metric(
                     "🎯 Meta OMS", 
                     "Error cálculo",
-                     help=f"No se pudo calcular: {str(e)[:30]}"
+                    help=f"No se pudo calcular: {str(e)[:30]}"
                 )
+
+        # Línea separadora
+        st.markdown("---")
+
         # ============================================
         # 📥 EXPORTAR REPORTES CON PDF
         # ============================================
