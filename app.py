@@ -194,218 +194,272 @@ def generar_pdf_fpdf(paciente, historial):
                 return b"PDF_ERROR"
 
 def generar_pdf_dashboard_nacional(indicadores, datos, mapa_df=None):
-    """
-    Genera PDF para el dashboard nacional usando FPDF
-    (Misma estructura que tu función existente)
-    """
+    """Genera un PDF con el dashboard nacional de anemia usando FPDF"""
+    
     try:
+        from fpdf import FPDF
+        from io import BytesIO
+        import pandas as pd
+        
+        # ============================================
+        # PASO CRÍTICO: Convertir TODOS los valores a números
+        # ============================================
+        
+        # Asegurar que prevalencia_nacional sea número
+        try:
+            prevalencia_num = float(indicadores.get('prevalencia_nacional', 0))
+        except (ValueError, TypeError):
+            prevalencia_num = 0.0
+        
+        # Convertir otros valores importantes
+        try:
+            hb_promedio = float(indicadores.get('hb_promedio_nacional', 0))
+        except (ValueError, TypeError):
+            hb_promedio = 0.0
+        
+        try:
+            tasa_seguimiento = float(indicadores.get('tasa_seguimiento', 0))
+        except (ValueError, TypeError):
+            tasa_seguimiento = 0.0
+        
+        # Convertir valores enteros
+        total_pacientes = int(indicadores.get('total_pacientes', 0))
+        con_anemia = int(indicadores.get('con_anemia', 0))
+        casos_severa = int(indicadores.get('severa', 0))
+        casos_moderada = int(indicadores.get('moderada', 0))
+        casos_leve = int(indicadores.get('leve', 0))
+        casos_normal = int(indicadores.get('normal', 0))
+        
+        # Calcular diferencia con meta OMS (AHORA CON NÚMEROS, NO STRINGS)
+        meta_oms = 20.0
+        diferencia_oms = prevalencia_num - meta_oms
+        
+        # ============================================
+        # CREAR PDF CON FPDF
+        # ============================================
+        
         pdf = FPDF()
         pdf.add_page()
         
-        # Configurar fuentes estándar
-        pdf.set_font("Arial", "B", 16)
+        # Configurar fuentes
+        pdf.set_font("Arial", 'B', 16)
         
-        # Título
-        pdf.cell(0, 10, "DASHBOARD NACIONAL DE ANEMIA", 0, 1, "C")
-        pdf.ln(5)
-        
-        # Fecha
-        pdf.set_font("Arial", "", 10)
-        pdf.cell(0, 10, f"Generado: {datetime.now().strftime('%d/%m/%Y %H:%M')}", 0, 1, "C")
+        # Título principal
+        pdf.cell(0, 10, "DASHBOARD NACIONAL DE ANEMIA", ln=True, align='C')
+        pdf.set_font("Arial", '', 10)
+        pdf.cell(0, 10, f"Fecha: {datetime.now().strftime('%d/%m/%Y %H:%M')}", ln=True, align='C')
         pdf.ln(10)
         
-        # Función para limpiar texto (igual a la tuya)
-        def limpiar_texto(texto):
-            if not texto:
-                return "N/A"
-            texto = str(texto)
-            reemplazos = {
-                '•': '-', '–': '-', '—': '-', '‘': "'", '’': "'", 
-                '“': '"', '”': '"', '…': '...',
-                'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ú': 'u',
-                'Á': 'A', 'É': 'E', 'Í': 'I', 'Ó': 'O', 'Ú': 'U',
-                'ñ': 'n', 'Ñ': 'N', 'ü': 'u', 'Ü': 'U'
-            }
-            for char_orig, char_reemplazo in reemplazos.items():
-                texto = texto.replace(char_orig, char_reemplazo)
-            return texto
-        
         # ============================================
-        # 1. RESUMEN NACIONAL
+        # SECCIÓN 1: INDICADORES PRINCIPALES
         # ============================================
-        pdf.set_font("Arial", "B", 12)
-        pdf.cell(0, 10, "RESUMEN NACIONAL", 0, 1)
-        pdf.set_font("Arial", "", 10)
         
-        datos_resumen = [
-            f"Total de Pacientes: {indicadores.get('total_pacientes', 0)}",
-            f"Prevalencia Nacional: {indicadores.get('prevalencia_nacional', 0)}%",
-            f"Pacientes con Anemia: {indicadores.get('con_anemia', 0)}",
-            f"Hemoglobina Promedio: {indicadores.get('hb_promedio_nacional', 0):.1f} g/dL",
-            f"Tasa de Seguimiento: {indicadores.get('tasa_seguimiento', 0)}%",
-            f"Pacientes en Control: {indicadores.get('en_seguimiento', 0)}"
-        ]
-        
-        for dato in datos_resumen:
-            pdf.cell(0, 8, limpiar_texto(dato), 0, 1)
-        
+        pdf.set_font("Arial", 'B', 14)
+        pdf.set_fill_color(200, 220, 255)
+        pdf.cell(0, 10, "1. INDICADORES NACIONALES", ln=True, fill=True)
         pdf.ln(5)
         
-        # ============================================
-        # 2. DISTRIBUCIÓN POR GRAVEDAD
-        # ============================================
-        pdf.set_font("Arial", "B", 12)
-        pdf.cell(0, 10, "DISTRIBUCION POR GRAVEDAD", 0, 1)
-        pdf.set_font("Arial", "", 10)
+        pdf.set_font("Arial", '', 12)
         
-        distribucion = [
-            f"Anemia Severa: {indicadores.get('severa', 0)} pacientes",
-            f"Anemia Moderada: {indicadores.get('moderada', 0)} pacientes", 
-            f"Anemia Leve: {indicadores.get('leve', 0)} pacientes",
-            f"Normal: {indicadores.get('normal', 0)} pacientes"
-        ]
+        # Indicador 1: Prevalencia
+        pdf.set_font("Arial", 'B', 12)
+        pdf.cell(80, 10, "Prevalencia Nacional:")
+        pdf.set_font("Arial", '', 12)
+        pdf.cell(0, 10, f"{prevalencia_num:.1f}%", ln=True)
         
-        for item in distribucion:
-            pdf.cell(0, 8, limpiar_texto(item), 0, 1)
+        # Indicador 2: Total pacientes
+        pdf.set_font("Arial", 'B', 12)
+        pdf.cell(80, 10, "Total Pacientes:")
+        pdf.set_font("Arial", '', 12)
+        pdf.cell(0, 10, f"{total_pacientes:,}", ln=True)
+        
+        # Indicador 3: Con anemia
+        pdf.set_font("Arial", 'B', 12)
+        pdf.cell(80, 10, "Pacientes con Anemia:")
+        pdf.set_font("Arial", '', 12)
+        pdf.cell(0, 10, f"{con_anemia:,} ({prevalencia_num:.1f}%)", ln=True)
+        
+        # Indicador 4: Hemoglobina promedio
+        pdf.set_font("Arial", 'B', 12)
+        pdf.cell(80, 10, "Hemoglobina Promedio:")
+        pdf.set_font("Arial", '', 12)
+        pdf.cell(0, 10, f"{hb_promedio:.1f} g/dL", ln=True)
+        
+        # Indicador 5: Tasa seguimiento
+        pdf.set_font("Arial", 'B', 12)
+        pdf.cell(80, 10, "Tasa de Seguimiento:")
+        pdf.set_font("Arial", '', 12)
+        pdf.cell(0, 10, f"{tasa_seguimiento:.1f}%", ln=True)
+        
+        # Indicador 6: Diferencia meta OMS (EVITAR FORMATO +/- CON STRINGS)
+        pdf.set_font("Arial", 'B', 12)
+        pdf.cell(80, 10, "Diferencia Meta OMS:")
+        pdf.set_font("Arial", '', 12)
+        
+        # Mostrar diferencia sin formato +/- problemático
+        if diferencia_oms > 0:
+            pdf.cell(0, 10, f"+{diferencia_oms:.1f}% (sobre meta)", ln=True)
+        elif diferencia_oms < 0:
+            pdf.cell(0, 10, f"{diferencia_oms:.1f}% (bajo meta)", ln=True)
+        else:
+            pdf.cell(0, 10, f"{diferencia_oms:.1f}% (en meta)", ln=True)
         
         pdf.ln(10)
         
         # ============================================
-        # 3. TOP 5 REGIONES CON MAYOR PREVALENCIA
+        # SECCIÓN 2: DISTRIBUCIÓN POR GRAVEDAD
         # ============================================
+        
+        pdf.set_font("Arial", 'B', 14)
+        pdf.set_fill_color(220, 255, 220)
+        pdf.cell(0, 10, "2. DISTRIBUCIÓN POR GRAVEDAD", ln=True, fill=True)
+        pdf.ln(5)
+        
+        pdf.set_font("Arial", '', 12)
+        
+        # Calcular porcentajes
+        total = max(total_pacientes, 1)  # Evitar división por cero
+        
+        pdf.set_font("Arial", 'B', 12)
+        pdf.cell(80, 10, "Anemia Severa:")
+        pdf.set_font("Arial", '', 12)
+        pdf.cell(0, 10, f"{casos_severa:,} ({(casos_severa/total*100):.1f}%)", ln=True)
+        
+        pdf.set_font("Arial", 'B', 12)
+        pdf.cell(80, 10, "Anemia Moderada:")
+        pdf.set_font("Arial", '', 12)
+        pdf.cell(0, 10, f"{casos_moderada:,} ({(casos_moderada/total*100):.1f}%)", ln=True)
+        
+        pdf.set_font("Arial", 'B', 12)
+        pdf.cell(80, 10, "Anemia Leve:")
+        pdf.set_font("Arial", '', 12)
+        pdf.cell(0, 10, f"{casos_leve:,} ({(casos_leve/total*100):.1f}%)", ln=True)
+        
+        pdf.set_font("Arial", 'B', 12)
+        pdf.cell(80, 10, "Normal:")
+        pdf.set_font("Arial", '', 12)
+        pdf.cell(0, 10, f"{casos_normal:,} ({(casos_normal/total*100):.1f}%)", ln=True)
+        
+        pdf.ln(10)
+        
+        # ============================================
+        # SECCIÓN 3: DATOS POR REGIÓN (si existen)
+        # ============================================
+        
         if 'por_region' in indicadores and indicadores['por_region']:
-            pdf.set_font("Arial", "B", 12)
-            pdf.cell(0, 10, "TOP 5 REGIONES CON MAYOR PREVALENCIA", 0, 1)
+            pdf.set_font("Arial", 'B', 14)
+            pdf.set_fill_color(255, 240, 200)
+            pdf.cell(0, 10, "3. DATOS POR REGIÓN", ln=True, fill=True)
             pdf.ln(5)
             
-            # Crear tabla
-            pdf.set_font("Arial", "B", 10)
-            col_widths = [60, 35, 30, 35, 30]
-            headers = ["Region", "Prevalencia", "Total", "Con Anemia", "Hb Promedio"]
+            # Crear tabla de regiones
+            pdf.set_font("Arial", 'B', 10)
             
-            # Encabezados
+            # Encabezados de tabla
+            headers = ["Región", "Prevalencia", "Total", "Anemia", "Hb Prom"]
+            col_widths = [50, 30, 25, 25, 30]
+            
+            # Dibujar encabezados
             for i, header in enumerate(headers):
-                pdf.cell(col_widths[i], 8, header, 1, 0, "C")
+                pdf.cell(col_widths[i], 10, header, border=1, align='C')
             pdf.ln()
             
-            # Ordenar regiones por prevalencia (mayor a menor)
-            regiones_ordenadas = sorted(
-                indicadores['por_region'].items(),
-                key=lambda x: x[1]['prevalencia'],
-                reverse=True
-            )[:5]  # Top 5
+            # Dibujar datos
+            pdf.set_font("Arial", '', 9)
             
-            # Datos
-            pdf.set_font("Arial", "", 9)
-            for idx, (region, stats) in enumerate(regiones_ordenadas):
-                # Color alternado
-                if idx % 2 == 0:
-                    pdf.set_fill_color(240, 240, 240)
-                else:
-                    pdf.set_fill_color(255, 255, 255)
+            for region, stats in indicadores['por_region'].items():
+                # Asegurar que los valores de región sean números
+                try:
+                    prevalencia_reg = float(stats.get('prevalencia', 0))
+                    hb_prom_reg = float(stats.get('hb_promedio', 0))
+                except (ValueError, TypeError):
+                    prevalencia_reg = 0.0
+                    hb_prom_reg = 0.0
                 
-                # Preparar datos
-                region_limpia = limpiar_texto(region)[:25]
-                prevalencia = f"{stats['prevalencia']}%"
-                total = str(stats['total'])
-                con_anemia = str(stats['con_anemia'])
-                hb_prom = f"{stats['hb_promedio']:.1f}" if isinstance(stats['hb_promedio'], (int, float)) else "N/A"
+                total_reg = int(stats.get('total', 0))
+                con_anemia_reg = int(stats.get('con_anemia', 0))
                 
-                # Agregar fila
-                datos_fila = [region_limpia, prevalencia, total, con_anemia, hb_prom]
-                for i, dato in enumerate(datos_fila):
-                    pdf.cell(col_widths[i], 8, limpiar_texto(dato), 1, 0, "C", 1)
+                pdf.cell(col_widths[0], 8, region[:20], border=1)
+                pdf.cell(col_widths[1], 8, f"{prevalencia_reg:.1f}%", border=1, align='C')
+                pdf.cell(col_widths[2], 8, str(total_reg), border=1, align='C')
+                pdf.cell(col_widths[3], 8, str(con_anemia_reg), border=1, align='C')
+                pdf.cell(col_widths[4], 8, f"{hb_prom_reg:.1f}", border=1, align='C')
                 pdf.ln()
             
             pdf.ln(10)
-            
-            # ============================================
-            # 4. ESTADÍSTICAS ADICIONALES
-            # ============================================
-            if len(regiones_ordenadas) >= 2:
-                pdf.set_font("Arial", "B", 11)
-                pdf.cell(0, 10, "ESTADISTICAS COMPARATIVAS", 0, 1)
-                pdf.set_font("Arial", "", 10)
-                
-                # Región con mayor y menor prevalencia
-                region_max = regiones_ordenadas[0]
-                region_min = regiones_ordenadas[-1] if len(regiones_ordenadas) > 1 else regiones_ordenadas[0]
-                
-                pdf.cell(0, 8, limpiar_texto(f"- Mayor prevalencia: {region_max[0]} ({region_max[1]['prevalencia']}%)"), 0, 1)
-                pdf.cell(0, 8, limpiar_texto(f"- Menor prevalencia: {region_min[0]} ({region_min[1]['prevalencia']}%)"), 0, 1)
-                
-                # Diferencia
-                diferencia = region_max[1]['prevalencia'] - region_min[1]['prevalencia']
-                pdf.cell(0, 8, limpiar_texto(f"- Diferencia: {diferencia:.1f} puntos porcentuales"), 0, 1)
         
         # ============================================
-        # 5. RECOMENDACIONES
+        # SECCIÓN 4: ANÁLISIS Y RECOMENDACIONES
         # ============================================
-        pdf.ln(10)
-        pdf.set_font("Arial", "B", 12)
-        pdf.cell(0, 10, "RECOMENDACIONES", 0, 1)
-        pdf.set_font("Arial", "", 10)
         
-        prevalencia = indicadores.get('prevalencia_nacional', 0)
-        recomendaciones = []
+        pdf.set_font("Arial", 'B', 14)
+        pdf.set_fill_color(255, 220, 220)
+        pdf.cell(0, 10, "4. ANÁLISIS Y RECOMENDACIONES", ln=True, fill=True)
+        pdf.ln(5)
         
-        if prevalencia >= 40:
-            recomendaciones = [
-                "- PRIORIDAD ALTA: Intervencion inmediata requerida",
-                "- Fortalecer programas de suplementacion en regiones criticas",
-                -"Aumentar capacidad de diagnostico y seguimiento",
-                "- Coordinar con autoridades regionales"
-            ]
-        elif prevalencia >= 20:
-            recomendaciones = [
-                "- PRIORIDAD MEDIA: Acciones preventivas requeridas",
-                "- Mantener programas de suplementacion",
-                "- Fortalecer seguimiento de casos",
-                "- Educacion nutricional a familias"
-            ]
+        pdf.set_font("Arial", '', 11)
+        
+        # Análisis basado en prevalencia
+        if prevalencia_num > 40:
+            situacion = "CRÍTICA - Prevalencia muy alta (>40%)"
+            recomendacion = "Se requiere intervención urgente e inmediata"
+        elif prevalencia_num > 20:
+            situacion = "ALTA - Prevalencia sobre meta OMS (>20%)"
+            recomendacion = "Se requieren acciones correctivas prioritarias"
         else:
-            recomendaciones = [
-                "- Situacion controlada (meta OMS alcanzada)",
-                "- Mantener programas preventivos",
-                "- Monitoreo continuo de indicadores",
-                "- Reforzar buenas practicas"
-            ]
+            situacion = "ACEPTABLE - Prevalencia dentro de meta OMS (<20%)"
+            recomendacion = "Mantener estrategias de prevención y control"
         
-        for rec in recomendaciones:
-            pdf.cell(0, 8, limpiar_texto(rec), 0, 1)
+        pdf.multi_cell(0, 8, f"Situación Nacional: {situacion}")
+        pdf.multi_cell(0, 8, f"Recomendación Principal: {recomendacion}")
+        pdf.ln(5)
+        
+        pdf.multi_cell(0, 8, "Recomendaciones específicas:")
+        pdf.set_font("Arial", '', 10)
+        pdf.multi_cell(0, 6, "1. Priorizar atención en casos severos y moderados")
+        pdf.multi_cell(0, 6, "2. Fortalecer seguimiento de pacientes diagnosticados")
+        pdf.multi_cell(0, 6, "3. Implementar estrategias regionales diferenciadas")
+        pdf.multi_cell(0, 6, "4. Monitoreo continuo de indicadores clave")
+        pdf.multi_cell(0, 6, "5. Capacitación en diagnóstico y manejo temprano")
+        
+        pdf.ln(10)
         
         # ============================================
         # PIE DE PÁGINA
         # ============================================
-        pdf.set_y(-40)
-        pdf.set_font("Arial", "I", 8)
-        pdf.cell(0, 5, "Sistema Nacional de Monitoreo de Anemia - Ministerio de Salud", 0, 1, "C")
-        pdf.cell(0, 5, f"Informe generado: {datetime.now().strftime('%d/%m/%Y %H:%M')}", 0, 1, "C")
-        pdf.cell(0, 5, "Documento confidencial - Uso institucional", 0, 1, "C")
         
-        # Devuelve el PDF en bytes (igual que tu función)
-        return pdf.output(dest='S').encode('latin-1', errors='ignore')
+        pdf.set_font("Arial", 'I', 10)
+        pdf.cell(0, 10, "Sistema Nacional de Monitoreo de Anemia", ln=True, align='C')
+        pdf.cell(0, 10, "Ministerio de Salud - Perú", ln=True, align='C')
+        pdf.cell(0, 10, f"Documento generado automáticamente", ln=True, align='C')
+        
+        # ============================================
+        # OBTENER BYTES DEL PDF
+        # ============================================
+        
+        # Guardar en buffer de memoria
+        pdf_output = pdf.output(dest='S').encode('latin-1')
+        
+        return pdf_output
         
     except Exception as e:
-        # Manejo de errores (igual que tu función)
+        # Si hay error, crear un PDF simple de error
         try:
-            pdf = FPDF()
-            pdf.add_page()
-            pdf.set_font("Arial", "B", 16)
-            pdf.cell(0, 10, "ERROR AL GENERAR INFORME NACIONAL", 0, 1, "C")
-            pdf.set_font("Arial", "", 12)
-            error_msg = str(e)[:100].replace('•', '-').replace('–', '-').replace('—', '-')
-            pdf.multi_cell(0, 10, f"Error: {error_msg}")
-            return pdf.output(dest='S').encode('latin-1', errors='ignore')
+            pdf_error = FPDF()
+            pdf_error.add_page()
+            pdf_error.set_font("Arial", 'B', 16)
+            pdf_error.cell(0, 10, "ERROR AL GENERAR INFORME", ln=True, align='C')
+            pdf_error.ln(10)
+            pdf_error.set_font("Arial", '', 12)
+            pdf_error.multi_cell(0, 10, f"Error: {str(e)[:100]}")
+            pdf_error.ln(10)
+            pdf_error.multi_cell(0, 10, "Por favor, verifique los datos y vuelva a intentar.")
+            
+            return pdf_error.output(dest='S').encode('latin-1')
+            
         except:
-            try:
-                pdf = FPDF()
-                pdf.add_page()
-                pdf.set_font("Arial", "B", 16)
-                pdf.cell(0, 10, "INFORME NACIONAL DE ANEMIA", 0, 1, "C")
-                return pdf.output(dest='S').encode('latin-1', errors='ignore')
-            except:
-                return b"PDF_ERROR"
+            # Si incluso el PDF de error falla, retornar bytes vacíos
+            return b"Error generando PDF"
 
 # ==================================================
 # SISTEMA DE LOGIN PARA 5 USUARIOS DE SALUD
