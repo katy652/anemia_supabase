@@ -3496,19 +3496,31 @@ with tab3:
             else:
                 st.metric("⚠️ Anemia Severa", "0%")
 
-        with col_stat4:
-            # Estadística: Meta OMS
-            meta_oms = 20  # Meta OMS es <20%
-            diferencia = indicadores['prevalencia_nacional'] - meta_oms
-            st.metric(
-                "🎯 Meta OMS", 
-                f"{diferencia:+.1f}%",
-                help="Diferencia respecto a la meta OMS (<20%)"
-            )
-
-        # Línea separadora
-        st.markdown("---")
-
+      with col_stat4:
+    # Estadística: Meta OMS
+    meta_oms = 20  # Meta OMS es <20%
+    
+    # Convertir a número para poder calcular diferencia
+    try:
+        # Asegurar que prevalencia_nacional sea número
+        prevalencia_num = float(indicadores['prevalencia_nacional'])
+        diferencia = prevalencia_num - meta_oms
+        
+        # Formatear correctamente
+        valor_formateado = f"{diferencia:+.1f}%"
+        
+        st.metric(
+            "🎯 Meta OMS", 
+            valor_formateado,
+            help="Diferencia respecto a la meta OMS (<20%). Positivo = sobre la meta"
+        )
+    except (ValueError, TypeError) as e:
+        # Si hay error, mostrar valor simple
+        st.metric(
+            "🎯 Meta OMS", 
+            "Error cálculo",
+            help=f"No se pudo calcular: {str(e)[:30]}"
+        )
         # ============================================
         # 📥 EXPORTAR REPORTES CON PDF
         # ============================================
