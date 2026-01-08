@@ -2659,7 +2659,6 @@ DATOS ADICIONALES:
                         st.info("🔄 Limpiando formulario...")
                         time.sleep(1)
                         st.rerun()
-
 # ==================================================
 # PESTAÑA 3: HISTORIAL COMPLETO - VERSIÓN STREAMLIT NATIVO
 # ==================================================
@@ -2799,8 +2798,8 @@ with tab_seg3:
         # Columna para el indicador de estado
         mostrar_indicador_estado(estado, color, icono, descripcion)
         
-        # Botones de acción al lado del indicador
-        col_btn_estado1, col_btn_estado2, col_btn_estado3 = st.columns(3)
+        # Botones de acción al lado del indicador - SOLO 1 BOTÓN (Actualizar)
+        col_btn_estado1, col_btn_estado2 = st.columns(2)
         
         with col_btn_estado1:
             if st.button("🔄 Actualizar Historial", 
@@ -2828,42 +2827,12 @@ with tab_seg3:
                     st.rerun()
         
         with col_btn_estado2:
-            if st.button("📝 Nuevo Seguimiento", 
+            if st.button("📋 Ver Información Completa", 
                        type="secondary", 
                        use_container_width=True,
-                       key="btn_nuevo_seguimiento_desde_historial"):
-                # Método SIMPLE para cambiar a la pestaña Nuevo Seguimiento
-                st.markdown("""
-                <script>
-                setTimeout(() => {
-                    // Buscar todos los botones de pestaña
-                    const tabs = document.querySelectorAll('button[role="tab"]');
-                    // La segunda pestaña (índice 1) es "Nuevo Seguimiento"
-                    if (tabs.length > 1) {
-                        tabs[1].click();
-                    }
-                }, 100);
-                </script>
-                """, unsafe_allow_html=True)
-                time.sleep(0.1)
-                st.rerun()
-        
-        with col_btn_estado3:
-            if st.button("🔍 Cambiar Paciente", 
-                       type="secondary", 
-                       use_container_width=True,
-                       key="btn_cambiar_paciente"):
-                st.markdown("""
-                <script>
-                setTimeout(() => {
-                    const tabs = document.querySelectorAll('button[role="tab"]');
-                    if (tabs.length >= 2) {
-                        tabs[1].click();
-                    }
-                }, 500);
-                </script>
-                """, unsafe_allow_html=True)
-                st.rerun()
+                       key="btn_ver_info_completa"):
+                with st.expander("📄 Información Completa del Paciente", expanded=True):
+                    st.json(paciente)
         
         # ============================================
         # INFORMACIÓN PRINCIPAL - VERSIÓN CON NOMBRES EXACTOS DE COLUMNAS
@@ -2879,8 +2848,13 @@ with tab_seg3:
         # REGIÓN - columna exacta: 'region'
         region_valor = paciente.get('region', 'N/A')
         
-        # HEMOGLOBINA - columna exacta: 'hemoglobina' (numérica)
-        hb_valor = paciente.get('hemoglobina', 'N/A')
+        # HEMOGLOBINA - DEL ÚLTIMO CONTROL (¡CORRECCIÓN IMPORTANTE!)
+        if historial and len(historial) > 0:
+            # Tomar el control más reciente
+            ultimo_control = historial[0]
+            hb_valor = ultimo_control.get('hemoglobina_actual', 'N/A')
+        else:
+            hb_valor = 'N/A'  # No hay controles registrados
         
         # ESTADO del paciente - verificar columna correcta
         estado_valor = paciente.get('estado_paciente', 'Activo')
@@ -2938,7 +2912,7 @@ with tab_seg3:
                 st.metric("Departamento", region_valor, delta=None)  # Usar región si no hay departamento
         
         with col3:
-            # Hemoglobina - columna 'hemoglobina' (numérica)
+            # Hemoglobina - ÚLTIMO CONTROL (CORREGIDO)
             if hb_valor != 'N/A':
                 try:
                     hb_num = float(hb_valor)
@@ -2984,31 +2958,43 @@ with tab_seg3:
             """, unsafe_allow_html=True)
         
         with badge_cols[1]:
-            # Hemoglobina actual
-            if hb_valor != 'N/A':
-                try:
-                    hb_num = float(hb_valor)
-                    # Color según nivel de hemoglobina
-                    if hb_num < 11.0:
-                        hb_color = "#ef4444"  # Rojo para anemia
-                    elif hb_num < 12.0:
-                        hb_color = "#f59e0b"  # Amarillo para riesgo
-                    else:
-                        hb_color = "#10b981"  # Verde para normal
-                    
+            # Hemoglobina actual - DEL ÚLTIMO CONTROL (CORREGIDO)
+            if historial and len(historial) > 0:
+                ultimo_control = historial[0]
+                hb_actual = ultimo_control.get('hemoglobina_actual', 'N/A')
+                
+                if hb_actual != 'N/A':
+                    try:
+                        hb_num = float(hb_actual)
+                        # Color según nivel de hemoglobina
+                        if hb_num < 11.0:
+                            hb_color = "#ef4444"  # Rojo para anemia
+                        elif hb_num < 12.0:
+                            hb_color = "#f59e0b"  # Amarillo para riesgo
+                        else:
+                            hb_color = "#10b981"  # Verde para normal
+                        
+                        st.markdown(f"""
+                        <div style='background: {hb_color}; color: white; padding: 15px; border-radius: 10px; text-align: center; height: 100%;'>
+                            <div style='font-size: 1.5rem; margin-bottom: 5px;'>🩺</div>
+                            <div style='font-weight: bold; font-size: 1.2rem;'>{hb_num:.1f}</div>
+                            <div style='font-size: 0.9rem;'>g/dL (último control)</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    except:
+                        st.markdown(f"""
+                        <div style='background: #8b5cf6; color: white; padding: 15px; border-radius: 10px; text-align: center; height: 100%;'>
+                            <div style='font-size: 1.5rem; margin-bottom: 5px;'>🩺</div>
+                            <div style='font-weight: bold; font-size: 1.2rem;'>{hb_actual}</div>
+                            <div style='font-size: 0.9rem;'>g/dL (último control)</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                else:
                     st.markdown(f"""
-                    <div style='background: {hb_color}; color: white; padding: 15px; border-radius: 10px; text-align: center; height: 100%;'>
+                    <div style='background: #6b7280; color: white; padding: 15px; border-radius: 10px; text-align: center; height: 100%;'>
                         <div style='font-size: 1.5rem; margin-bottom: 5px;'>🩺</div>
-                        <div style='font-weight: bold; font-size: 1.2rem;'>{hb_num:.1f}</div>
-                        <div style='font-size: 0.9rem;'>g/dL actual</div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                except:
-                    st.markdown(f"""
-                    <div style='background: #8b5cf6; color: white; padding: 15px; border-radius: 10px; text-align: center; height: 100%;'>
-                        <div style='font-size: 1.5rem; margin-bottom: 5px;'>🩺</div>
-                        <div style='font-weight: bold; font-size: 1.2rem;'>{hb_valor}</div>
-                        <div style='font-size: 0.9rem;'>g/dL actual</div>
+                        <div style='font-weight: bold; font-size: 1.2rem;'>N/A</div>
+                        <div style='font-size: 0.9rem;'>sin datos Hb</div>
                     </div>
                     """, unsafe_allow_html=True)
             else:
@@ -3016,7 +3002,7 @@ with tab_seg3:
                 <div style='background: #6b7280; color: white; padding: 15px; border-radius: 10px; text-align: center; height: 100%;'>
                     <div style='font-size: 1.5rem; margin-bottom: 5px;'>🩺</div>
                     <div style='font-weight: bold; font-size: 1.2rem;'>N/A</div>
-                    <div style='font-size: 0.9rem;'>sin datos Hb</div>
+                    <div style='font-size: 0.9rem;'>sin controles</div>
                 </div>
                 """, unsafe_allow_html=True)
         
@@ -3279,6 +3265,7 @@ with tab_seg3:
                                 paciente_con_estado['estado_control'] = estado
                                 paciente_con_estado['descripcion_estado'] = descripcion
                                 paciente_con_estado['ultimo_control'] = ultima_fecha_str
+                                paciente_con_estado['hemoglobina_actual'] = hb_valor  # Agregar Hb del último control
                                 
                                 # IMPORTANTE: Asegúrate de tener esta función definida
                                 if 'generar_pdf_fpdf' in globals() or 'generar_pdf_fpdf' in locals():
@@ -3291,6 +3278,7 @@ with tab_seg3:
                                     pdf.set_font("Arial", size=12)
                                     pdf.cell(200, 10, txt=f"Historial de: {paciente.get('nombre_apellido', 'N/A')}", ln=1)
                                     pdf.cell(200, 10, txt=f"Estado: {estado}", ln=1)
+                                    pdf.cell(200, 10, txt=f"Hemoglobina último control: {hb_valor} g/dL", ln=1)
                                     pdf_bytes = pdf.output(dest='S').encode('latin1')
                                 
                                 if pdf_bytes and len(pdf_bytes) > 100:
@@ -3334,6 +3322,7 @@ with tab_seg3:
                 **Estado:** {icono} **{estado}**
                 **Descripción:** {descripcion}
                 **Último control:** {ultima_fecha_str if ultima_fecha_str else 'N/A'}
+                **Hemoglobina último control:** {hb_valor if hb_valor != 'N/A' else 'N/A'} g/dL
                 **Controles totales:** {len(historial)}
                 
                 **Acciones recomendadas:**
@@ -3356,7 +3345,7 @@ with tab_seg3:
                 **Descripción:** {descripcion}
                 
                 **Acción requerida:**
-                👉 Vaya a la pestaña **📝 Nuevo Seguimiento** para crear el primer control
+                👉 Vaya a la pestaña **🔍 Buscar Paciente** para seleccionar otro paciente
                 """)
             else:
                 st.info(f"""
@@ -3365,22 +3354,22 @@ with tab_seg3:
                 **Estado actual:** {icono} {estado}
                 **Descripción:** {descripcion}
                 
-                Para agregar el primer control:
-                👉 Vaya a la pestaña **📝 Nuevo Seguimiento**
+                Para ver otro paciente:
+                👉 Vaya a la pestaña **🔍 Buscar Paciente**
                 """)
             
-            # Botón para crear primer seguimiento
-            if st.button("📝 Crear primer seguimiento", 
+            # Botón para ir a buscar paciente
+            if st.button("🔍 Buscar otro paciente", 
                        use_container_width=True,
                        type="primary",
-                       key="btn_primer_seguimiento"):
+                       key="btn_buscar_otro_paciente"):
                 st.markdown("""
                 <script>
                 setTimeout(() => {
                     const tabs = document.querySelectorAll('button[role="tab"]');
-                    // La segunda pestaña (índice 1) es "Nuevo Seguimiento"
-                    if (tabs.length > 1) {
-                        tabs[1].click();
+                    // La primera pestaña (índice 0) es "Buscar Paciente"
+                    if (tabs.length > 0) {
+                        tabs[0].click();
                     }
                 }, 100);
                 </script>
