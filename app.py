@@ -3715,56 +3715,56 @@ with tab3:
                 </div>
                 """, unsafe_allow_html=True)
         
-        # ============================================
-        # GRÁFICOS DE DISTRIBUCIÓN
-        # ============================================
-        
-        st.markdown("""
-        <div class="section-title-blue" style="font-size: 1.3rem;">
-            📈 DISTRIBUCIÓN Y TENDENCIAS
-        </div>
-        """, unsafe_allow_html=True)
-        
-        col_graf1, col_graf2 = st.columns(2)
-        
-        with col_graf1:
-            # Gráfico de niveles de anemia
-            niveles_data = {
-                'SEVERA': indicadores['severa'],
-                'MODERADA': indicadores['moderada'],
-                'LEVE': indicadores['leve'],
-                'NORMAL': indicadores['normal']
-            }
-            
-            fig_niveles = px.bar(
-                x=list(niveles_data.keys()),
-                y=list(niveles_data.values()),
-                title='<b>Distribución por Nivel de Anemia</b>',
-                color=list(niveles_data.keys()),
-                color_discrete_map={
-                    'SEVERA': '#dc2626',
-                    'MODERADA': '#f59e0b',
-                    'LEVE': '#3b82f6',
-                    'NORMAL': '#10b981'
-                },
-                text=list(niveles_data.values())
-            )
-            
-            fig_niveles.update_traces(
-                texttemplate='%{y}',
-                textposition='outside'
-            )
-            
-            fig_niveles.update_layout(
-                xaxis_title="Nivel de Anemia",
-                yaxis_title="Número de Pacientes",
-                showlegend=False,
-                height=350
-            )
-            
-            st.plotly_chart(fig_niveles, use_container_width=True)
-        
-       with col_graf2:
+     # ============================================
+# GRÁFICOS DE DISTRIBUCIÓN
+# ============================================
+
+st.markdown("""
+<div class="section-title-blue" style="font-size: 1.3rem;">
+    📈 DISTRIBUCIÓN Y TENDENCIAS
+</div>
+""", unsafe_allow_html=True)
+
+col_graf1, col_graf2 = st.columns(2)
+
+with col_graf1:
+    # Gráfico de niveles de anemia
+    niveles_data = {
+        'SEVERA': indicadores['severa'],
+        'MODERADA': indicadores['moderada'],
+        'LEVE': indicadores['leve'],
+        'NORMAL': indicadores['normal']
+    }
+    
+    fig_niveles = px.bar(
+        x=list(niveles_data.keys()),
+        y=list(niveles_data.values()),
+        title='<b>Distribución por Nivel de Anemia</b>',
+        color=list(niveles_data.keys()),
+        color_discrete_map={
+            'SEVERA': '#dc2626',
+            'MODERADA': '#f59e0b',
+            'LEVE': '#3b82f6',
+            'NORMAL': '#10b981'
+        },
+        text=list(niveles_data.values())
+    )
+    
+    fig_niveles.update_traces(
+        texttemplate='%{y}',
+        textposition='outside'
+    )
+    
+    fig_niveles.update_layout(
+        xaxis_title="Nivel de Anemia",
+        yaxis_title="Número de Pacientes",
+        showlegend=False,
+        height=350
+    )
+    
+    st.plotly_chart(fig_niveles, use_container_width=True)
+
+with col_graf2:  # <-- ¡CORREGIDO! Ahora tiene 8 espacios (mismo nivel que with col_graf1)
     # Gráfico ALTERNATIVO SEGURO - distribución por género - VERSIÓN CORREGIDA
     if 'genero' in datos.columns:
         # Limpiar y normalizar los datos de género
