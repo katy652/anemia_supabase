@@ -1656,6 +1656,9 @@ with tab1:
             enfermedades_cronicas = st.text_area("Enfermedades crónicas", placeholder="Ej: Asma, alergias, etc.", key="enfermedades_input")
         
         with col4:
+            # ============================================
+            # 1. FACTORES DE RIESGO
+            # ============================================
             st.markdown('<div class="section-title-blue" style="font-size: 1.4rem;">📋 Factores de Riesgo</div>', unsafe_allow_html=True)
             
             st.markdown('<div style="color: #1e40af; font-weight: 600; margin: 10px 0;">🏥 Factores Clínicos</div>', unsafe_allow_html=True)
@@ -1673,15 +1676,24 @@ with tab1:
             ], key="factores_sociales_input")
             
             # ============================================
-            # AGREGAR AQUÍ: PROGRAMA NACIONAL DE ALIMENTACIÓN
+            # 2. PROGRAMA NACIONAL DE ALIMENTACIÓN (SEPARADO)
             # ============================================
-            st.markdown('<div style="color: #1e40af; font-weight: 600; margin: 10px 0;">🍎 Programa Nacional de Alimentación</div>', unsafe_allow_html=True)
+            st.markdown("---")
+            st.markdown('<div class="section-title-blue" style="font-size: 1.4rem;">🍎 Programa Nacional de Alimentación</div>', unsafe_allow_html=True)
+            
             programas_alimentacion = st.multiselect("Seleccione programa(s) de alimentación:", [
                 "Cuna Más",
                 "Qali Warma",
                 "Otro programa social",
                 "No participa en programas"
             ], key="programas_alimentacion_input")
+            
+            # Mostrar información sobre los programas
+            if programas_alimentacion:
+                if "Cuna Más" in programas_alimentacion:
+                    st.info("🏫 **Cuna Más**: Atención integral para niños de 0-3 años")
+                if "Qali Warma" in programas_alimentacion:
+                    st.info("🎒 **Qali Warma**: Alimentación escolar para niños de 3-12 años")
         
         # Mostrar resumen de validación
         st.markdown("---")
