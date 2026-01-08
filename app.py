@@ -3235,7 +3235,7 @@ with tab3:
                     }
                 )
         
-        with col_exp3:
+       with col_exp3:
     # Botón para generar informe HTML (que se puede guardar como PDF)
     if st.button("📄 Generar Informe", 
                 use_container_width=True,
