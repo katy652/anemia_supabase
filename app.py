@@ -2861,11 +2861,11 @@ with tab_seg3:
                 """, unsafe_allow_html=True)
                 st.rerun()
         
-       # ============================================
-# INFORMACIÓN PRINCIPAL DEL PACIENTE - VERSIÓN CORREGIDA
-# ============================================
-
-st.markdown(f"""
+        # ============================================
+        # INFORMACIÓN PRINCIPAL DEL PACIENTE - VERSIÓN CORREGIDA
+        # ============================================
+        
+        st.markdown(f"""
 <div style="background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%); 
             padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem;">
     <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
