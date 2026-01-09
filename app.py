@@ -109,6 +109,49 @@ def generar_pdf_historial(paciente, historial):
     except Exception as e:
         print(f"Error fatal: {e}")
         return _generar_texto_plano(paciente, historial, e)
+
+
+def generar_pdf_dashboard_nacional(indicadores, datos):
+    """Genera el contenido binario de un PDF para el Dashboard Nacional"""
+    try:
+        from fpdf import FPDF
+    except ImportError:
+        return None
+
+    pdf = FPDF()
+    pdf.add_page()
+    
+    # Título del Reporte
+    pdf.set_font("Arial", 'B', 16)
+    pdf.cell(0, 10, "REPORTE NACIONAL DE ANEMIA", ln=True, align='C')
+    pdf.ln(5)
+    
+    # Indicadores Clave
+    pdf.set_font("Arial", 'B', 12)
+    pdf.cell(0, 10, "RESUMEN DE INDICADORES:", ln=True)
+    pdf.set_font("Arial", size=11)
+    pdf.cell(0, 8, f"- Prevalencia Nacional: {indicadores.get('prevalencia_nacional', 0)}%", ln=True)
+    pdf.cell(0, 8, f"- Hemoglobina Promedio: {indicadores.get('hb_promedio_nacional', 0):.1f} g/dL", ln=True)
+    pdf.cell(0, 8, f"- Tasa de Seguimiento: {indicadores.get('tasa_seguimiento', 0)}%", ln=True)
+    pdf.ln(5)
+
+    # Tabla de Regiones
+    pdf.set_font("Arial", 'B', 10)
+    pdf.cell(60, 8, "Region", 1)
+    pdf.cell(40, 8, "Prevalencia", 1)
+    pdf.cell(40, 8, "Pacientes", 1)
+    pdf.ln()
+    
+    pdf.set_font("Arial", size=10)
+    if 'por_region' in indicadores:
+        # Mostrar las primeras 15 regiones
+        for region, stats in list(indicadores['por_region'].items())[:15]:
+            pdf.cell(60, 8, str(region), 1)
+            pdf.cell(40, 8, f"{stats['prevalencia']}%", 1)
+            pdf.cell(40, 8, str(stats['total']), 1)
+            pdf.ln()
+
+    return pdf.output(dest='S').encode('latin-1')
 # ==================================================
 # SISTEMA DE LOGIN PARA 5 USUARIOS DE SALUD
 # ==================================================
@@ -4522,10 +4565,30 @@ with tab_seg3:
             else:
                 st.info("No hay datos suficientes para mostrar en la tabla")
             
-            # ============================================
-            # GENERACIÓN DE PDF (FUERA DE LOS BOTONES)
-            # ============================================
-            
+# ============================================
+# COLUMNA 3: Generar PDF
+# ============================================
+with col_exp3:
+    if 'indicadores_anemia' in st.session_state:
+        # Generamos el contenido del PDF
+        pdf_data = generar_pdf_dashboard_nacional(
+            st.session_state.indicadores_anemia, 
+            st.session_state.datos_nacionales
+        )
+        
+                   
+        if pdf_data:
+            st.download_button(
+                label="📄 Descargar PDF",
+                data=pdf_data,
+                file_name=f"Reporte_Anemia_Nacional_{datetime.now().strftime('%Y%m%d')}.pdf",
+                mime="application/pdf",
+                use_container_width=True,
+                type="primary",
+                key="btn_descargar_pdf_nacional"
+            )
+        else:
+            st.error("Instala fpdf para exportar")
             if generar_pdf:
                 with st.spinner("🔄 Generando PDF profesional..."):
                     try:
