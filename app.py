@@ -9,47 +9,499 @@ import time
 from datetime import datetime, timedelta
 from fpdf import FPDF
 
-if generar_pdf:
-    with st.spinner("🔄 Generando informe..."):
-        try:
-            # Generar el contenido (HTML o PDF según disponibilidad)
-            pdf_content = generar_pdf_historial(paciente, historial)
+def generar_pdf_historial(paciente, historial):
+    """
+    Genera un PDF profesional usando FPDF - VERSIÓN CORREGIDA
+    """
+    try:
+        from fpdf import FPDF
+        from datetime import datetime
+        
+        # Crear PDF
+        pdf = FPDF()
+        pdf.add_page()
+        
+        # Configuración
+        pdf.set_auto_page_break(auto=True, margin=15)
+        
+        # TÍTULO (sin caracteres especiales)
+        pdf.set_font('Arial', 'B', 16)
+        pdf.set_fill_color(30, 64, 175)
+        pdf.set_text_color(255, 255, 255)
+        pdf.cell(0, 12, 'SISTEMA NIXON - HISTORIAL CLINICO', 0, 1, 'C', True)
+        pdf.ln(5)
+        
+        # Fecha
+        pdf.set_font('Arial', '', 10)
+        pdf.set_text_color(0, 0, 0)
+        pdf.cell(0, 8, f'Generado: {datetime.now().strftime("%d/%m/%Y %H:%M")}', 0, 1, 'C')
+        pdf.ln(5)
+        
+        # Línea separadora
+        pdf.line(10, pdf.get_y(), 200, pdf.get_y())
+        pdf.ln(8)
+        
+        # 1. INFORMACIÓN DEL PACIENTE
+        pdf.set_font('Arial', 'B', 12)
+        pdf.cell(0, 10, 'INFORMACION DEL PACIENTE', 0, 1)
+        pdf.set_font('Arial', '', 10)
+        
+        # Limpiar caracteres especiales
+        def limpiar_texto(texto):
+            if not texto:
+                return 'N/A'
+            # Reemplazar caracteres problemáticos
+            reemplazos = {
+                'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ú': 'u',
+                'Á': 'A', 'É': 'E', 'Í': 'I', 'Ó': 'O', 'Ú': 'U',
+                'ñ': 'n', 'Ñ': 'N', '¿': '', '¡': '', 'º': '', 'ª': ''
+            }
+            for original, reemplazo in reemplazos.items():
+                texto = texto.replace(original, reemplazo)
+            return texto
+        
+        datos = [
+            ['Nombre:', limpiar_texto(paciente.get('nombre_apellido', 'N/A'))],
+            ['DNI:', paciente.get('dni', 'N/A')],
+            ['Edad:', f"{paciente.get('edad_meses', 'N/A')} meses"],
+            ['Region:', limpiar_texto(paciente.get('region', 'N/A'))],
+            ['Telefono:', paciente.get('telefono', 'N/A')],
+            ['Hemoglobina actual:', f"{paciente.get('hemoglobina_dl1', 'N/A')} g/dL"],
+            ['Estado:', limpiar_texto(paciente.get('estado_paciente', 'N/A'))],
+            ['Riesgo:', limpiar_texto(paciente.get('riesgo', 'N/A'))],
+            ['Controles registrados:', str(len(historial))]
+        ]
+        
+        for etiqueta, valor in datos:
+            pdf.cell(60, 8, etiqueta, 0, 0)
+            pdf.cell(0, 8, str(valor), 0, 1)
+        
+        pdf.ln(10)
+        
+        # 2. ESTADÍSTICAS
+        if historial:
+            pdf.set_font('Arial', 'B', 12)
+            pdf.cell(0, 10, 'ESTADISTICAS', 0, 1)
+            pdf.set_font('Arial', '', 10)
             
-            # Determinar si es PDF o HTML
-            is_pdf = pdf_content.startswith(b'%PDF') if pdf_content else False
+            # Calcular estadísticas de hemoglobina
+            valores_hb = []
+            for control in historial:
+                hb = control.get('hemoglobina_actual')
+                if hb:
+                    try:
+                        valores_hb.append(float(hb))
+                    except:
+                        pass
             
-            if is_pdf:
-                mime_type = "application/pdf"
-                extension = ".pdf"
-            else:
-                mime_type = "text/html"
-                extension = ".html"
+            if valores_hb:
+                promedio = sum(valores_hb) / len(valores_hb)
+                primera = valores_hb[0]
+                ultima = valores_hb[-1]
+                minimo = min(valores_hb)
+                maximo = max(valores_hb)
+                
+                pdf.cell(0, 8, f'• Promedio hemoglobina: {promedio:.1f} g/dL', 0, 1)
+                pdf.cell(0, 8, f'• Rango: {minimo:.1f} - {maximo:.1f} g/dL', 0, 1)
+                
+                # Tendencia
+                if len(valores_hb) >= 2:
+                    cambio = ultima - primera
+                    if cambio > 0.5:
+                        tendencia = f'Mejoria significativa (+{cambio:.1f} g/dL)'
+                    elif cambio > 0:
+                        tendencia = f'Ligera mejoria (+{cambio:.1f} g/dL)'
+                    elif cambio < -0.5:
+                        tendencia = f'Empeoramiento ({cambio:+.1f} g/dL)'
+                    elif cambio < 0:
+                        tendencia = f'Ligero empeoramiento ({cambio:+.1f} g/dL)'
+                    else:
+                        tendencia = 'Estable'
+                    
+                    pdf.cell(0, 8, f'• Tendencia: {tendencia}', 0, 1)
             
-            # Crear nombre de archivo
-            nombre_paciente = paciente.get('nombre_apellido', 'paciente').replace(' ', '_')
-            fecha = datetime.now().strftime('%Y%m%d_%H%M')
-            filename = f"Historial_{nombre_paciente}_{fecha}{extension}"
+            pdf.ln(10)
+        
+        # 3. HISTORIAL DE CONTROLES
+        if historial:
+            pdf.set_font('Arial', 'B', 12)
+            pdf.cell(0, 10, f'HISTORIAL DE CONTROLES ({len(historial)} registros)', 0, 1)
+            pdf.ln(3)
             
-            # Botón de descarga
-            st.download_button(
-                label=f"📥 Descargar {'PDF' if is_pdf else 'HTML'}",
-                data=pdf_content,
-                file_name=filename,
-                mime=mime_type,
-                use_container_width=True,
-                key="btn_descargar_pdf_completo"
-            )
+            # Encabezado de tabla
+            pdf.set_font('Arial', 'B', 10)
+            pdf.set_fill_color(59, 130, 246)
+            pdf.set_text_color(255, 255, 255)
             
-            # Mostrar vista previa si es HTML
-            if not is_pdf:
-                st.info("💡 Para guardar como PDF: 1️⃣ Descargue el archivo HTML 2️⃣ Ábralo en su navegador 3️⃣ Use 'Imprimir' → 'Guardar como PDF'")
-                with st.expander("👁️ Vista previa del informe", expanded=False):
-                    st.components.v1.html(pdf_content.decode('utf-8'), height=600, scrolling=True)
+            # Columnas
+            encabezados = ['#', 'Fecha', 'Hb', 'Tipo', 'Clasif.', 'Responsable']
+            anchos = [10, 30, 20, 40, 40, 50]
             
-            st.success("✅ Informe generado exitosamente")
+            for i, encabezado in enumerate(encabezados):
+                pdf.cell(anchos[i], 8, encabezado, 1, 0, 'C', True)
+            pdf.ln()
             
-        except Exception as e:
-            st.error(f"❌ Error al generar informe: {str(e)[:100]}")
+            # Filas
+            pdf.set_font('Arial', '', 9)
+            pdf.set_text_color(0, 0, 0)
+            
+            for idx, control in enumerate(historial[:40], 1):  # Máximo 40 controles
+                # Alternar colores
+                if idx % 2 == 0:
+                    pdf.set_fill_color(240, 240, 240)
+                else:
+                    pdf.set_fill_color(255, 255, 255)
+                
+                # Verificar espacio para nueva página
+                if pdf.get_y() > 260:
+                    pdf.add_page()
+                    # Redibujar encabezado
+                    pdf.set_font('Arial', 'B', 10)
+                    pdf.set_fill_color(59, 130, 246)
+                    pdf.set_text_color(255, 255, 255)
+                    for i, encabezado in enumerate(encabezados):
+                        pdf.cell(anchos[i], 8, encabezado, 1, 0, 'C', True)
+                    pdf.ln()
+                    pdf.set_font('Arial', '', 9)
+                    pdf.set_text_color(0, 0, 0)
+                
+                # Datos del control
+                fecha = control.get('fecha_seguimiento', 'N/A')
+                if fecha and len(fecha) > 10:
+                    fecha = fecha[:10]
+                
+                hb = control.get('hemoglobina_actual', 'N/A')
+                if isinstance(hb, (int, float)):
+                    hb = f"{float(hb):.1f}"
+                
+                tipo = limpiar_texto(control.get('tipo_seguimiento', 'N/A'))
+                clasif = limpiar_texto(control.get('clasificacion_actual', 'N/A'))
+                responsable = limpiar_texto(control.get('usuario_responsable', 'N/A'))
+                
+                # Acortar textos largos
+                if len(tipo) > 15:
+                    tipo = tipo[:13] + '..'
+                if len(clasif) > 15:
+                    clasif = clasif[:13] + '..'
+                if len(responsable) > 20:
+                    responsable = responsable[:18] + '..'
+                
+                # Escribir fila
+                fila_datos = [str(idx), fecha, str(hb), tipo, clasif, responsable]
+                for i, dato in enumerate(fila_datos):
+                    pdf.cell(anchos[i], 8, dato, 1, 0, 'C', True)
+                pdf.ln()
+            
+            pdf.ln(10)
+            
+            # 4. DETALLES DEL ÚLTIMO CONTROL
+            if historial:
+                pdf.set_font('Arial', 'B', 12)
+                pdf.cell(0, 10, 'ULTIMO CONTROL', 0, 1)
+                pdf.set_font('Arial', '', 10)
+                
+                ultimo = historial[0]
+                detalles = [
+                    ['Fecha:', ultimo.get('fecha_seguimiento', 'N/A')],
+                    ['Hemoglobina:', f"{ultimo.get('hemoglobina_actual', 'N/A')} g/dL"],
+                    ['Tipo:', limpiar_texto(ultimo.get('tipo_seguimiento', 'N/A'))],
+                    ['Clasificacion:', limpiar_texto(ultimo.get('clasificacion_actual', 'N/A'))],
+                    ['Tratamiento:', limpiar_texto(str(ultimo.get('tratamiento_actual', 'N/A')))],
+                    ['Proximo control:', ultimo.get('proximo_control', 'N/A')]
+                ]
+                
+                for etiqueta, valor in detalles:
+                    pdf.cell(50, 8, etiqueta, 0, 0)
+                    pdf.cell(0, 8, str(valor), 0, 1)
+                
+                # Observaciones
+                observaciones = ultimo.get('observaciones', '')
+                if observaciones and str(observaciones).lower() != 'nan':
+                    pdf.ln(5)
+                    pdf.set_font('Arial', 'B', 10)
+                    pdf.cell(0, 8, 'Observaciones:', 0, 1)
+                    pdf.set_font('Arial', '', 9)
+                    
+                    obs_text = limpiar_texto(str(observaciones))
+                    if len(obs_text) > 200:
+                        obs_text = obs_text[:197] + '...'
+                    
+                    pdf.multi_cell(0, 5, obs_text)
+        
+        else:
+            pdf.set_font('Arial', 'I', 12)
+            pdf.cell(0, 10, 'No hay controles registrados para este paciente.', 0, 1, 'C')
+        
+        # PIE DE PÁGINA
+        pdf.set_y(-25)
+        pdf.set_font('Arial', 'I', 8)
+        pdf.set_text_color(100, 100, 100)
+        pdf.cell(0, 5, f'Documento generado: {datetime.now().strftime("%d/%m/%Y %H:%M")}', 0, 1, 'C')
+        pdf.cell(0, 5, 'Sistema Nixon v2.0 - Control de Anemia Infantil', 0, 1, 'C')
+        
+        # IMPORTANTE: Usar latin-1 que es lo que FPDF espera
+        return pdf.output(dest='S').encode('latin-1', errors='ignore')
+        
+    except Exception as e:
+        # En caso de error, devolver un PDF de error simple
+        error_content = f"""
+        ERROR AL GENERAR PDF
+        ====================
+        
+        Se produjo un error al generar el PDF:
+        {str(e)[:100]}
+        
+        DATOS DEL PACIENTE:
+        -------------------
+        Nombre: {paciente.get('nombre_apellido', 'N/A')}
+        DNI: {paciente.get('dni', 'N/A')}
+        Controles: {len(historial)}
+        
+        Fecha: {datetime.now().strftime('%d/%m/%Y %H:%M')}
+        
+        Por favor, intente nuevamente o contacte al soporte.
+        """
+        return error_content.encode('utf-8')
+
+
+# ============================================
+# CORRECCIÓN EN LA PESTAÑA DE HISTORIAL
+# ============================================
+
+with tab_seg3:
+    st.header("📋 HISTORIAL CLÍNICO COMPLETO")
+    
+    # Verificar si hay paciente seleccionado
+    if not st.session_state.seguimiento_paciente:
+        st.warning("⚠️ Seleccione un paciente primero en la pestaña 'Buscar Paciente'")
+        
+        if st.button("🔍 Ir a Buscar Paciente", 
+                    use_container_width=True,
+                    key="btn_ir_buscar_desde_historial"):
+            st.markdown("""
+            <script>
+            setTimeout(() => {
+                const tabs = document.querySelectorAll('button[role="tab"]');
+                if (tabs.length >= 2) {
+                    tabs[1].click();
+                }
+            }, 500);
+            </script>
+            """, unsafe_allow_html=True)
+            st.rerun()
+    else:
+        paciente = st.session_state.seguimiento_paciente
+        historial = st.session_state.get('seguimiento_historial', [])
+        
+        # Mostrar información del paciente
+        st.markdown(f"""
+        <div style="background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%); 
+                    padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem;">
+            <h3 style="margin: 0 0 10px 0; color: #5b21b6;">📊 HISTORIAL DE: {paciente.get('nombre_apellido', 'N/A')}</h3>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+                <div><strong>DNI:</strong> {paciente.get('dni', 'N/A')}</div>
+                <div><strong>Edad:</strong> {paciente.get('edad_meses', 'N/A')} meses</div>
+                <div><strong>Región:</strong> {paciente.get('region', 'N/A')}</div>
+                <div><strong>Hb actual:</strong> {paciente.get('hemoglobina_dl1', 'N/A')} g/dL</div>
+                <div><strong>Estado:</strong> {paciente.get('estado_paciente', 'N/A')}</div>
+                <div><strong>Controles:</strong> {len(historial)}</div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Botones de acción
+        col_act1, col_act2, col_act3 = st.columns(3)
+        
+        with col_act1:
+            if st.button("🔄 Actualizar Historial", 
+                       type="primary", 
+                       use_container_width=True,
+                       key="btn_actualizar_historial"):
+                dni_paciente = str(paciente.get('dni', ''))
+                if dni_paciente:
+                    try:
+                        response = supabase.table("seguimientos")\
+                            .select("*")\
+                            .eq("dni_paciente", dni_paciente)\
+                            .order("fecha_seguimiento", desc=True)\
+                            .execute()
+                        
+                        if response.data:
+                            st.session_state.seguimiento_historial = response.data
+                            st.success(f"✅ Historial actualizado: {len(response.data)} controles")
+                        else:
+                            st.session_state.seguimiento_historial = []
+                            st.info("📭 No hay controles registrados")
+                            
+                    except Exception as e:
+                        st.error(f"❌ Error al cargar historial: {str(e)[:100]}")
+                    time.sleep(1)
+                    st.rerun()
+        
+        with col_act2:
+            if st.button("📝 Nuevo Seguimiento", 
+                       type="secondary", 
+                       use_container_width=True,
+                       key="btn_nuevo_seguimiento_desde_historial"):
+                st.markdown("""
+                <script>
+                setTimeout(() => {
+                    const tabs = document.querySelectorAll('button[role="tab"]');
+                    if (tabs.length >= 3) {
+                        tabs[2].click();
+                    }
+                }, 500);
+                </script>
+                """, unsafe_allow_html=True)
+                st.rerun()
+        
+        with col_act3:
+            if st.button("🔍 Cambiar Paciente", 
+                       type="secondary", 
+                       use_container_width=True,
+                       key="btn_cambiar_paciente"):
+                st.markdown("""
+                <script>
+                setTimeout(() => {
+                    const tabs = document.querySelectorAll('button[role="tab"]');
+                    if (tabs.length >= 2) {
+                        tabs[1].click();
+                    }
+                }, 500);
+                </script>
+                """, unsafe_allow_html=True)
+                st.rerun()
+        
+        # Mostrar historial si existe
+        if historial:
+            # ... (tu código existente para mostrar gráficos y tabla) ...
+            
+            # ============================================
+            # SECCIÓN CORREGIDA DE GENERACIÓN DE PDF
+            # ============================================
+            
+            st.markdown("---")
+            st.markdown("#### 📤 Exportar Historial")
+            
+            # Crear dos columnas para los botones
+            col_pdf1, col_pdf2 = st.columns(2)
+            
+            with col_pdf1:
+                # Botón para generar PDF
+                if st.button("📄 Generar PDF del Historial", 
+                           use_container_width=True,
+                           type="primary",
+                           key="btn_generar_pdf_historial"):
+                    
+                    with st.spinner("🔄 Generando PDF..."):
+                        try:
+                            # Generar el PDF
+                            pdf_bytes = generar_pdf_historial(paciente, historial)
+                            
+                            # Crear nombre de archivo
+                            nombre_paciente = paciente.get('nombre_apellido', 'paciente')
+                            # Limpiar nombre para archivo
+                            nombre_limpio = "".join(c for c in nombre_paciente if c.isalnum() or c in (' ', '_')).rstrip()
+                            fecha = datetime.now().strftime('%Y%m%d_%H%M')
+                            filename = f"Historial_{nombre_limpio}_{fecha}.pdf"
+                            
+                            # Botón de descarga
+                            st.download_button(
+                                label="📥 Descargar PDF",
+                                data=pdf_bytes,
+                                file_name=filename,
+                                mime="application/pdf",
+                                use_container_width=True,
+                                key="btn_descargar_pdf_historial"
+                            )
+                            
+                            st.success("✅ PDF generado exitosamente")
+                            
+                        except Exception as e:
+                            st.error(f"❌ Error al generar PDF: {str(e)}")
+            
+            with col_pdf2:
+                # Botón para exportar a CSV
+                if st.button("📊 Exportar a CSV", 
+                           use_container_width=True,
+                           type="secondary",
+                           key="btn_exportar_csv_historial"):
+                    try:
+                        df_historial = pd.DataFrame(historial)
+                        csv = df_historial.to_csv(index=False, encoding='utf-8')
+                        
+                        st.download_button(
+                            label="📥 Descargar CSV",
+                            data=csv,
+                            file_name=f"historial_{paciente.get('dni', 'paciente')}_{datetime.now().strftime('%Y%m%d')}.csv",
+                            mime="text/csv",
+                            use_container_width=True,
+                            key="btn_descargar_csv_historial"
+                        )
+                    except Exception as e:
+                        st.error(f"❌ Error al exportar CSV: {str(e)}")
+            
+            # Botón para vista de impresión
+            if st.button("🖨️ Vista para Impresión", 
+                       use_container_width=True,
+                       type="secondary",
+                       key="btn_vista_impresion_historial"):
+                
+                with st.expander("📄 Vista para Impresión", expanded=True):
+                    st.markdown(f"""
+                    <div style="padding: 20px; background: white; color: black; font-family: Arial, sans-serif;">
+                        <h2 style="text-align: center; color: #1e40af;">HISTORIAL CLÍNICO</h2>
+                        <h3 style="color: #374151;">Paciente: {paciente.get('nombre_apellido', 'N/A')}</h3>
+                        <p><strong>DNI:</strong> {paciente.get('dni', 'N/A')}</p>
+                        <p><strong>Edad:</strong> {paciente.get('edad_meses', 'N/A')} meses</p>
+                        <p><strong>Región:</strong> {paciente.get('region', 'N/A')}</p>
+                        <p><strong>Total de controles:</strong> {len(historial)}</p>
+                        <hr style="border: 1px solid #ccc; margin: 20px 0;">
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
+                    for idx, control in enumerate(historial, 1):
+                        st.markdown(f"""
+                        <div style="border: 1px solid #ccc; padding: 15px; margin-bottom: 15px; background: #f9fafb;">
+                            <h4 style="color: #5b21b6;">Control #{idx} - {control.get('fecha_seguimiento', 'N/A')}</h4>
+                            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 10px;">
+                                <div><strong>Tipo:</strong> {control.get('tipo_seguimiento', 'N/A')}</div>
+                                <div><strong>Hemoglobina:</strong> {control.get('hemoglobina_actual', 'N/A')} g/dL</div>
+                                <div><strong>Clasificación:</strong> {control.get('clasificacion_actual', 'N/A')}</div>
+                                <div><strong>Responsable:</strong> {control.get('usuario_responsable', 'N/A')}</div>
+                                <div><strong>Tratamiento:</strong> {control.get('tratamiento_actual', 'N/A')}</div>
+                                <div><strong>Próximo control:</strong> {control.get('proximo_control', 'N/A')}</div>
+                            </div>
+                            <div style="background: #f3f4f6; padding: 10px; border-radius: 5px; margin-top: 10px;">
+                                <strong>Observaciones:</strong><br/>
+                                {control.get('observaciones', 'Sin observaciones').replace(chr(10), '<br>')}
+                            </div>
+                        </div>
+                        """, unsafe_allow_html=True)
+        
+        else:
+            st.info("""
+            📭 **No hay controles registrados para este paciente**
+            
+            Para agregar el primer control:
+            👉 Vaya a la pestaña **📝 Nuevo Seguimiento**
+            """)
+            
+            if st.button("📝 Crear primer seguimiento", 
+                       use_container_width=True,
+                       type="primary",
+                       key="btn_primer_seguimiento"):
+                st.markdown("""
+                <script>
+                setTimeout(() => {
+                    const tabs = document.querySelectorAll('button[role="tab"]');
+                    if (tabs.length >= 3) {
+                        tabs[2].click();
+                    }
+                }, 500);
+                </script>
+                """, unsafe_allow_html=True)
+                st.rerun()
 # ==================================================
 # SISTEMA DE LOGIN PARA 5 USUARIOS DE SALUD
 # ==================================================
