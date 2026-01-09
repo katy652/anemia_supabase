@@ -156,36 +156,35 @@ def generar_pdf_historial(paciente, historial):
     """
     try:
         from fpdf import FPDF
+        from datetime import datetime
         
         # Crear PDF
         pdf = FPDF()
         pdf.add_page()
         
-        # Configurar fuentes
-        pdf.add_font('Arial', '', 'arial.ttf', uni=True)
-        pdf.add_font('Arial', 'B', 'arialbd.ttf', uni=True)
-        pdf.add_font('Arial', 'I', 'ariali.ttf', uni=True)
+        # Configurar fuentes (usar fuentes por defecto, no archivos externos)
+        # FPDF viene con fuentes básicas: Courier, Helvetica, Times
         
         # Título
-        pdf.set_font('Arial', 'B', 16)
+        pdf.set_font('Helvetica', 'B', 16)
         pdf.set_fill_color(30, 64, 175)  # Azul Nixon
         pdf.set_text_color(255, 255, 255)
-        pdf.cell(0, 12, 'SISTEMA NIXON - HISTORIAL CLÍNICO', 0, 1, 'C', True)
+        pdf.cell(0, 12, 'SISTEMA NIXON - HISTORIAL CLINICO', 0, 1, 'C', True)
         pdf.ln(5)
         
         # Información del paciente
-        pdf.set_font('Arial', 'B', 12)
+        pdf.set_font('Helvetica', 'B', 12)
         pdf.set_text_color(0, 0, 0)
         pdf.cell(0, 10, 'DATOS DEL PACIENTE', 0, 1)
-        pdf.set_font('Arial', '', 10)
+        pdf.set_font('Helvetica', '', 10)
         
         datos = [
             ['Nombre:', paciente.get('nombre_apellido', 'N/A')],
             ['DNI:', paciente.get('dni', 'N/A')],
             ['Edad:', f"{paciente.get('edad_meses', 'N/A')} meses"],
-            ['Género:', paciente.get('genero', 'N/A')],
-            ['Región:', paciente.get('region', 'N/A')],
-            ['Teléfono:', paciente.get('telefono', 'N/A')],
+            ['Genero:', paciente.get('genero', 'N/A')],
+            ['Region:', paciente.get('region', 'N/A')],
+            ['Telefono:', paciente.get('telefono', 'N/A')],
             ['Hemoglobina actual:', f"{paciente.get('hemoglobina_dl1', 'N/A')} g/dL"],
             ['Estado:', paciente.get('estado_paciente', 'N/A')],
             ['Riesgo:', paciente.get('riesgo', 'N/A')]
@@ -199,28 +198,41 @@ def generar_pdf_historial(paciente, historial):
         
         # Historial de controles
         if historial and len(historial) > 0:
-            pdf.set_font('Arial', 'B', 12)
+            pdf.set_font('Helvetica', 'B', 12)
             pdf.cell(0, 10, f'HISTORIAL DE CONTROLES ({len(historial)} registros)', 0, 1)
             pdf.ln(3)
             
             # Encabezado de tabla
             pdf.set_fill_color(59, 130, 246)
             pdf.set_text_color(255, 255, 255)
-            pdf.set_font('Arial', 'B', 10)
+            pdf.set_font('Helvetica', 'B', 9)
             
             # Ancho de columnas
-            col_widths = [30, 35, 25, 40, 40]
-            headers = ['Fecha', 'Tipo', 'Hb', 'Responsable', 'Próximo']
+            col_widths = [25, 30, 25, 40, 35]
+            headers = ['Fecha', 'Tipo', 'Hb', 'Responsable', 'Proximo']
             
             for i, header in enumerate(headers):
                 pdf.cell(col_widths[i], 8, header, 1, 0, 'C', True)
             pdf.ln()
             
             # Filas de la tabla
-            pdf.set_font('Arial', '', 9)
+            pdf.set_font('Helvetica', '', 8)
             pdf.set_text_color(0, 0, 0)
             
-            for idx, control in enumerate(historial[:25]):  # Máximo 25 controles
+            for idx, control in enumerate(historial[:30]):  # Máximo 30 controles
+                # Verificar si necesitamos nueva página
+                if pdf.get_y() > 260 and idx < len(historial) - 1:
+                    pdf.add_page()
+                    # Redibujar encabezado en nueva página
+                    pdf.set_fill_color(59, 130, 246)
+                    pdf.set_text_color(255, 255, 255)
+                    pdf.set_font('Helvetica', 'B', 9)
+                    for i, header in enumerate(headers):
+                        pdf.cell(col_widths[i], 8, header, 1, 0, 'C', True)
+                    pdf.ln()
+                    pdf.set_font('Helvetica', '', 8)
+                    pdf.set_text_color(0, 0, 0)
+                
                 # Alternar color de fondo
                 if idx % 2 == 0:
                     pdf.set_fill_color(240, 249, 255)
@@ -228,21 +240,34 @@ def generar_pdf_historial(paciente, historial):
                     pdf.set_fill_color(255, 255, 255)
                 
                 # Obtener datos
-                fecha = control.get('fecha_seguimiento', 'N/A')[:10] if control.get('fecha_seguimiento') else 'N/A'
+                fecha = control.get('fecha_seguimiento', 'N/A')
+                if fecha and isinstance(fecha, str):
+                    fecha = fecha[:10]
+                else:
+                    fecha = 'N/A'
+                    
                 tipo = control.get('tipo_seguimiento', 'N/A')
                 hb = control.get('hemoglobina_actual', 'N/A')
                 responsable = control.get('usuario_responsable', 'N/A')
-                proximo = control.get('proximo_control', 'N/A')[:10] if control.get('proximo_control') else 'N/A'
+                proximo = control.get('proximo_control', 'N/A')
                 
                 # Formatear
                 if isinstance(hb, (int, float)):
                     hb = f"{hb:.1f}"
+                elif hb:
+                    try:
+                        hb = f"{float(hb):.1f}"
+                    except:
+                        hb = str(hb)
+                
+                if proximo and isinstance(proximo, str):
+                    proximo = proximo[:10]
                 
                 # Acortar textos largos
-                if len(tipo) > 12:
-                    tipo = tipo[:10] + '..'
-                if len(responsable) > 12:
-                    responsable = responsable[:10] + '..'
+                if tipo and len(tipo) > 8:
+                    tipo = tipo[:7] + '..'
+                if responsable and len(responsable) > 10:
+                    responsable = responsable[:9] + '..'
                 
                 # Agregar fila
                 datos_fila = [fecha, tipo, str(hb), responsable, proximo]
@@ -253,17 +278,22 @@ def generar_pdf_historial(paciente, historial):
             pdf.ln(5)
             
             # Estadísticas
-            pdf.set_font('Arial', 'B', 11)
+            pdf.set_font('Helvetica', 'B', 11)
             pdf.set_text_color(0, 0, 0)
-            pdf.cell(0, 10, 'ESTADÍSTICAS', 0, 1)
-            pdf.set_font('Arial', '', 10)
+            pdf.cell(0, 10, 'ESTADISTICAS', 0, 1)
+            pdf.set_font('Helvetica', '', 10)
             
             # Calcular estadísticas
             valores_hb = []
             for control in historial:
                 hb = control.get('hemoglobina_actual')
                 if isinstance(hb, (int, float)):
-                    valores_hb.append(hb)
+                    valores_hb.append(float(hb))
+                elif hb:
+                    try:
+                        valores_hb.append(float(hb))
+                    except:
+                        pass
             
             if valores_hb:
                 promedio = sum(valores_hb) / len(valores_hb)
@@ -273,17 +303,17 @@ def generar_pdf_historial(paciente, historial):
                 maximo = max(valores_hb)
                 
                 pdf.cell(0, 8, f'• Promedio de hemoglobina: {promedio:.1f} g/dL', 0, 1)
-                pdf.cell(0, 8, f'• Primera medición: {primera:.1f} g/dL', 0, 1)
-                pdf.cell(0, 8, f'• Última medición: {ultima:.1f} g/dL', 0, 1)
+                pdf.cell(0, 8, f'• Primera medicion: {primera:.1f} g/dL', 0, 1)
+                pdf.cell(0, 8, f'• Ultima medicion: {ultima:.1f} g/dL', 0, 1)
                 pdf.cell(0, 8, f'• Rango: {minimo:.1f} - {maximo:.1f} g/dL', 0, 1)
                 
                 # Tendencia
                 if len(valores_hb) >= 2:
                     cambio = ultima - primera
                     if cambio > 0.5:
-                        tendencia = f'Mejoría significativa (+{cambio:.1f} g/dL)'
+                        tendencia = f'Mejoria significativa (+{cambio:.1f} g/dL)'
                     elif cambio > 0:
-                        tendencia = f'Ligera mejoría (+{cambio:.1f} g/dL)'
+                        tendencia = f'Ligera mejoria (+{cambio:.1f} g/dL)'
                     elif cambio < -0.5:
                         tendencia = f'Empeoramiento significativo ({cambio:+.1f} g/dL)'
                     elif cambio < 0:
@@ -297,37 +327,59 @@ def generar_pdf_historial(paciente, historial):
             if historial:
                 ultimo_control = historial[0]
                 observaciones = ultimo_control.get('observaciones', 'Sin observaciones')
-                if observaciones and observaciones != 'Sin observaciones':
+                if observaciones and observaciones != 'Sin observaciones' and str(observaciones).lower() != 'nan':
                     pdf.ln(5)
-                    pdf.set_font('Arial', 'B', 11)
-                    pdf.cell(0, 10, 'OBSERVACIONES DEL ÚLTIMO CONTROL', 0, 1)
-                    pdf.set_font('Arial', '', 10)
+                    pdf.set_font('Helvetica', 'B', 11)
+                    pdf.cell(0, 10, 'OBSERVACIONES DEL ULTIMO CONTROL', 0, 1)
+                    pdf.set_font('Helvetica', '', 10)
                     
-                    # Dividir texto largo
-                    if len(observaciones) > 300:
-                        observaciones = observaciones[:297] + '...'
-                    
-                    pdf.multi_cell(0, 8, observaciones)
+                    # Limpiar texto
+                    observaciones_str = str(observaciones).replace('nan', '').strip()
+                    if observaciones_str:
+                        # Dividir texto largo
+                        if len(observaciones_str) > 300:
+                            observaciones_str = observaciones_str[:297] + '...'
+                        
+                        pdf.multi_cell(0, 8, observaciones_str)
         
         else:
-            pdf.set_font('Arial', 'I', 10)
+            pdf.set_font('Helvetica', 'I', 10)
             pdf.cell(0, 10, 'No hay controles registrados para este paciente.', 0, 1)
         
         # Pie de página
-        pdf.set_y(-30)
-        pdf.set_font('Arial', 'I', 8)
+        pdf.set_y(-25)
+        pdf.set_font('Helvetica', 'I', 8)
         pdf.set_text_color(100, 100, 100)
         pdf.cell(0, 5, f'Generado el: {datetime.now().strftime("%d/%m/%Y %H:%M")}', 0, 1, 'C')
         pdf.cell(0, 5, 'Sistema Nixon v2.0 - Control de Anemia Infantil', 0, 1, 'C')
-        pdf.cell(0, 5, '© 2024 - Uso médico profesional', 0, 1, 'C')
         
         # Devolver bytes del PDF
         return pdf.output(dest='S').encode('latin-1')
         
     except Exception as e:
-        # Si falla FPDF, usar versión simple
-        st.warning(f"⚠️ FPDF no disponible, usando versión básica: {str(e)[:50]}")
-        return generar_pdf_simple(paciente, historial)
+        # Si falla FPDF, registrar error y usar versión simple
+        error_msg = f"Error al generar PDF profesional: {str(e)[:100]}"
+        print(error_msg)  # Registrar en consola
+        
+        # Usar la versión simple que ya tienes definida
+        from datetime import datetime
+        
+        # Crear un PDF simple de emergencia
+        contenido = f"""
+        ERROR AL GENERAR PDF
+        ===================
+        {error_msg}
+        
+        INFORMACION DEL PACIENTE:
+        ------------------------
+        Nombre: {paciente.get('nombre_apellido', 'N/A')}
+        DNI: {paciente.get('dni', 'N/A')}
+        Controles: {len(historial)}
+        
+        Fecha: {datetime.now().strftime('%d/%m/%Y %H:%M')}
+        """
+        
+        return contenido.encode('utf-8')
 # ==================================================
 # SISTEMA DE LOGIN PARA 5 USUARIOS DE SALUD
 # ==================================================
