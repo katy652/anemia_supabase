@@ -9,83 +9,33 @@ import time
 from datetime import datetime, timedelta
 from fpdf import FPDF
 
-# En la sección de exportación de la pestaña de historial:
+# En tu código principal, al final de la sección de exportación PDF:
 
-st.markdown("---")
-st.markdown("#### Exportar Historial")
-
-# Crear dos columnas para los botones
-col_pdf1, col_pdf2 = st.columns(2)
-
-with col_pdf1:
-    # Botón para generar HTML
-    if st.button("Generar Informe", 
-               use_container_width=True,
-               type="primary",
-               key="btn_generar_html_historial"):
-        
-        with st.spinner("Generando informe..."):
-            try:
-                # Generar el HTML
-                html_bytes = generar_html_historial(paciente, historial)
-                
-                # Crear nombre de archivo
-                nombre_paciente = paciente.get('nombre_apellido', 'paciente')
-                # Limpiar nombre para archivo
-                nombre_limpio = "".join(c for c in nombre_paciente if c.isalnum() or c in (' ', '_')).rstrip()
-                fecha = datetime.now().strftime('%Y%m%d_%H%M')
-                
-                # Guardar como HTML
-                filename = f"Historial_{nombre_limpio}_{fecha}.html"
-                
-                # Mostrar instrucciones
-                st.success("✅ Informe generado exitosamente")
-                st.info("""
-                **Instrucciones para guardar como PDF:**
-                1. Descargue el archivo HTML
-                2. Ábralo en su navegador (Chrome, Firefox, Edge, etc.)
-                3. Presione **Ctrl+P** (Windows) o **Cmd+P** (Mac)
-                4. En el destino de impresión, seleccione **"Guardar como PDF"**
-                5. Haga clic en **"Guardar"**
-                """)
-                
-                # Botón de descarga HTML
-                st.download_button(
-                    label="📥 Descargar Archivo HTML",
-                    data=html_bytes,
-                    file_name=filename,
-                    mime="text/html",
-                    use_container_width=True,
-                    key="btn_descargar_html_historial"
-                )
-                
-                # También mostrar vista previa
-                with st.expander("👁️ Vista previa del informe", expanded=False):
-                    st.components.v1.html(html_bytes.decode('utf-8'), height=600, scrolling=True)
-                
-            except Exception as e:
-                st.error(f"Error al generar informe: {str(e)}")
-
-with col_pdf2:
-    # Botón para exportar a CSV
-    if st.button("Exportar a CSV", 
-               use_container_width=True,
-               type="secondary",
-               key="btn_exportar_csv_historial"):
+if generar_pdf:
+    with st.spinner("🔄 Generando PDF profesional..."):
         try:
-            df_historial = pd.DataFrame(historial)
-            csv = df_historial.to_csv(index=False, encoding='utf-8')
+            # Generar PDF
+            pdf_content = generar_pdf_historial(paciente, historial)
             
+            # Verificar si es un PDF válido o texto de error
+            if b'ERROR AL GENERAR PDF' in pdf_content[:100]:
+                st.warning("⚠️ Generando PDF básico como alternativa...")
+                pdf_content = generar_pdf_simple(paciente, historial)
+            
+            # Botón de descarga
             st.download_button(
-                label="Descargar CSV",
-                data=csv,
-                file_name=f"historial_{paciente.get('dni', 'paciente')}_{datetime.now().strftime('%Y%m%d')}.csv",
-                mime="text/csv",
+                label="📥 Descargar PDF Completo",
+                data=pdf_content,
+                file_name=f"Historial_{paciente.get('nombre_apellido', 'paciente').replace(' ', '_')}_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf",
+                mime="application/pdf",
                 use_container_width=True,
-                key="btn_descargar_csv_historial"
+                key="btn_descargar_pdf_completo"
             )
+            
+            st.success("✅ PDF generado exitosamente")
+            
         except Exception as e:
-            st.error(f"Error al exportar CSV: {str(e)}")
+            st.error(f"❌ Error crítico: {str(e)[:100]}")
 # ==================================================
 # SISTEMA DE LOGIN PARA 5 USUARIOS DE SALUD
 # ==================================================
