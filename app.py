@@ -10,80 +10,145 @@ from datetime import datetime, timedelta
 from fpdf import FPDF
 
 def generar_pdf_simple(paciente, historial):
-    """Genera un PDF básico usando reportlab como alternativa"""
+    """Genera un PDF básico usando FPDF (sin ReportLab)"""
     try:
-        from reportlab.lib.pagesizes import letter
-        from reportlab.pdfgen import canvas
-        import io
+        from fpdf import FPDF
+        from datetime import datetime
         
-        buffer = io.BytesIO()
-        c = canvas.Canvas(buffer, pagesize=letter)
-        width, height = letter
+        # Crear PDF con FPDF
+        pdf = FPDF()
+        pdf.set_auto_page_break(auto=True, margin=15)
         
-        # Título
-        c.setFont("Helvetica-Bold", 16)
-        c.drawString(50, height - 50, "Historial Clínico - Sistema Nixon")
-        c.setFont("Helvetica", 10)
-        c.drawString(50, height - 70, f"Generado: {datetime.now().strftime('%d/%m/%Y %H:%M')}")
+        # Página 1
+        pdf.add_page()
+        
+        # Configurar fuente (FPDF usa tamaños en puntos)
+        pdf.set_font('Arial', 'B', 16)
+        pdf.cell(0, 10, 'HISTORIAL CLÍNICO - SISTEMA NIXON', 0, 1, 'C')
+        
+        pdf.set_font('Arial', '', 10)
+        pdf.cell(0, 8, f'Generado: {datetime.now().strftime("%d/%m/%Y %H:%M")}', 0, 1, 'C')
+        pdf.ln(5)
+        
+        # Línea separadora
+        pdf.line(10, pdf.get_y(), 200, pdf.get_y())
+        pdf.ln(10)
         
         # Información del paciente
-        c.setFont("Helvetica-Bold", 12)
-        c.drawString(50, height - 100, "DATOS DEL PACIENTE")
-        c.setFont("Helvetica", 10)
+        pdf.set_font('Arial', 'B', 12)
+        pdf.cell(0, 8, 'DATOS DEL PACIENTE', 0, 1)
+        pdf.set_font('Arial', '', 10)
         
-        y = height - 120
         datos = [
             f"Nombre: {paciente.get('nombre_apellido', 'N/A')}",
             f"DNI: {paciente.get('dni', 'N/A')}",
             f"Edad: {paciente.get('edad_meses', 'N/A')} meses",
             f"Región: {paciente.get('region', 'N/A')}",
-            f"Hemoglobina: {paciente.get('hemoglobina_dl1', 'N/A')} g/dL",
-            f"Estado: {paciente.get('estado_paciente', 'N/A')}"
+            f"Hemoglobina actual: {paciente.get('hemoglobina_dl1', 'N/A')} g/dL",
+            f"Estado: {paciente.get('estado_paciente', 'N/A')}",
+            f"Controles registrados: {len(historial)}"
         ]
         
         for dato in datos:
-            c.drawString(50, y, dato)
-            y -= 15
+            pdf.cell(0, 6, dato, 0, 1)
         
-        # Controles
-        c.setFont("Helvetica-Bold", 12)
-        c.drawString(50, y - 20, f"HISTORIAL DE CONTROLES ({len(historial)} registros)")
-        c.setFont("Helvetica", 10)
-        y -= 40
+        pdf.ln(10)
         
-        for idx, control in enumerate(historial[:20]):
-            fecha = control.get('fecha_seguimiento', 'N/A')
-            hb = control.get('hemoglobina_actual', 'N/A')
-            tipo = control.get('tipo_seguimiento', 'N/A')
+        # Historial de controles
+        if historial:
+            pdf.set_font('Arial', 'B', 12)
+            pdf.cell(0, 8, f'HISTORIAL DE CONTROLES ({len(historial)} registros)', 0, 1)
+            pdf.set_font('Arial', '', 9)
             
-            texto = f"{idx+1}. {fecha} - Hb: {hb} g/dL - {tipo}"
-            if len(texto) > 80:
-                texto = texto[:77] + "..."
+            for idx, control in enumerate(historial, 1):
+                # Verificar si necesitamos nueva página
+                if pdf.get_y() > 250:  # Cerca del final de la página
+                    pdf.add_page()
+                
+                # Encabezado del control
+                pdf.set_font('Arial', 'B', 10)
+                fecha = control.get('fecha_seguimiento', 'N/A')
+                pdf.cell(0, 6, f'Control #{idx} - {fecha}', 0, 1)
+                
+                # Detalles del control
+                pdf.set_font('Arial', '', 9)
+                
+                # Primera línea
+                hb = control.get('hemoglobina_actual', 'N/A')
+                clasif = control.get('clasificacion_actual', 'N/A')
+                pdf.cell(0, 5, f'Hemoglobina: {hb} g/dL | Clasificación: {clasif}', 0, 1)
+                
+                # Segunda línea
+                tipo = control.get('tipo_seguimiento', 'N/A')
+                responsable = control.get('usuario_responsable', 'N/A')
+                pdf.cell(0, 5, f'Tipo: {tipo} | Responsable: {responsable}', 0, 1)
+                
+                # Tercera línea
+                tratamiento = control.get('tratamiento_actual', 'N/A')
+                prox_control = control.get('proximo_control', 'N/A')
+                pdf.cell(0, 5, f'Tratamiento: {tratamiento} | Próximo control: {prox_control}', 0, 1)
+                
+                # Observaciones (si existen)
+                observaciones = str(control.get('observaciones', ''))
+                if observaciones and observaciones.lower() != 'nan' and len(observaciones) > 3:
+                    pdf.set_font('Arial', 'I', 8)
+                    # Asegurar que las observaciones no sean demasiado largas
+                    obs_text = observaciones[:200] + "..." if len(observaciones) > 200 else observaciones
+                    pdf.multi_cell(0, 4, f'Observaciones: {obs_text}')
+                    pdf.set_font('Arial', '', 9)
+                
+                pdf.ln(3)
+                pdf.line(10, pdf.get_y(), 200, pdf.get_y())
+                pdf.ln(3)
+        
+        # Resumen estadístico si hay múltiples controles
+        if len(historial) > 1:
+            pdf.ln(5)
+            pdf.set_font('Arial', 'B', 11)
+            pdf.cell(0, 8, 'RESUMEN ESTADÍSTICO', 0, 1)
+            pdf.set_font('Arial', '', 9)
             
-            c.drawString(50, y, texto)
-            y -= 15
+            # Calcular estadísticas de hemoglobina
+            hb_valores = []
+            for control in historial:
+                hb_val = control.get('hemoglobina_actual')
+                if hb_val:
+                    try:
+                        hb_valores.append(float(hb_val))
+                    except:
+                        pass
             
-            if y < 50 and idx < len(historial) - 1:
-                c.showPage()
-                y = height - 50
+            if hb_valores:
+                hb_prom = sum(hb_valores) / len(hb_valores)
+                hb_min = min(hb_valores)
+                hb_max = max(hb_valores)
+                
+                pdf.cell(0, 5, f'• Hemoglobina promedio: {hb_prom:.1f} g/dL', 0, 1)
+                pdf.cell(0, 5, f'• Rango de hemoglobina: {hb_min:.1f} - {hb_max:.1f} g/dL', 0, 1)
+                
+                # Calcular tendencia
+                if len(hb_valores) >= 2:
+                    if hb_valores[-1] > hb_valores[0]:
+                        tendencia = "Mejorando"
+                    elif hb_valores[-1] < hb_valores[0]:
+                        tendencia = "Deteriorando"
+                    else:
+                        tendencia = "Estable"
+                    pdf.cell(0, 5, f'• Tendencia: {tendencia}', 0, 1)
         
         # Pie de página
-        c.setFont("Helvetica-Oblique", 8)
-        c.drawString(50, 30, "© 2024 Sistema Nixon - Control de Anemia Infantil")
-        c.drawString(width - 150, 30, f"Página 1/1")
+        pdf.set_y(-30)
+        pdf.set_font('Arial', 'I', 8)
+        pdf.cell(0, 10, 'Sistema Nixon - Seguimiento Clínico de Anemia Infantil', 0, 0, 'C')
+        pdf.ln(5)
+        pdf.cell(0, 10, 'Documento confidencial - Uso exclusivo médico', 0, 0, 'C')
         
-        c.save()
-        buffer.seek(0)
-        return buffer.getvalue()
+        # Devolver PDF como bytes
+        return pdf.output(dest='S').encode('latin-1')
         
     except Exception as e:
-        # Si todo falla, crear PDF de error
-        import io
-        buffer = io.BytesIO()
-        error_msg = f"Error al generar PDF: {str(e)[:100]}"
-        buffer.write(error_msg.encode('utf-8'))
-        return buffer.getvalue()
-
+        # Si FPDF falla, crear texto plano
+        return _generar_texto_plano(paciente, historial, e)
 
 def generar_pdf_historial(paciente, historial):
     """
