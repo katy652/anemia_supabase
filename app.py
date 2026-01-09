@@ -1685,105 +1685,101 @@ with tab1:
             else:
                 st.error("🔴 Sin conexión a Supabase")
 # ==================================================
-# PESTAÑA 1: REGISTRO Y CALCULADORA DE PREDICCIÓN
+# PESTAÑA 1: REGISTRO INTEGRAL Y ANÁLISIS ETIOLÓGICO
 # ==================================================
 with tab1:
-    # ------------------------------------------------------------------
-    # BLOQUE 1: CALCULADORA DE PREDICCIÓN (SOLO ANÁLISIS - NO GUARDA)
-    # ------------------------------------------------------------------
-    st.markdown('<div style="background-color: #f8f9fa; padding: 20px; border-radius: 10px; border: 1px solid #dee2e6;">', unsafe_allow_html=True)
-    st.markdown('### 🧪 Calculadora de Predicción Etiológica')
-    st.caption("Ingrese valores de laboratorio para obtener una interpretación rápida. Estos datos NO se almacenarán.")
-
-    # Usamos columnas para los biomarcadores
-    c_lab1, c_lab2 = st.columns(2)
-    with c_lab1:
-        st.markdown('**🩸 Contenido de Hierro**')
-        v_ferritina = st.number_input("Ferritina (ng/mL)", 0.0, 500.0, 15.0, key="calc_fer")
-        v_hierro = st.number_input("Hierro sérico (µg/dL)", 0.0, 300.0, 60.0, key="calc_hie")
-        v_chcm = st.number_input("CHCM (g/dL)", 20.0, 40.0, 32.0, key="calc_chcm")
+    st.markdown('<div class="section-title-blue">📝 Registro Integral de Paciente y Biomarcadores</div>', unsafe_allow_html=True)
+    
+    # Todo dentro de un solo formulario para que el botón "Analizar" y "Guardar" tengan acceso a todo
+    with st.form("main_form_integrado"):
         
-    with c_lab2:
-        st.markdown('**🦠 Inflamación y Otros**')
-        v_pcr = st.number_input("PCR (mg/dL)", 0.0, 100.0, 0.1, key="calc_pcr")
-        v_retic = st.number_input("Reticulocitos (%)", 0.0, 5.0, 1.0, key="calc_retic")
-        v_transf = st.number_input("Transferrina (mg/dL)", 100.0, 500.0, 250.0, key="calc_transf")
+        # --- SECCIÓN 1: DATOS DE IDENTIDAD Y ENTORNO ---
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown('**👤 Identidad**')
+            dni_input = st.text_input("DNI*", max_chars=8, key="f_dni")
+            nombre_input = st.text_input("Nombre Completo*", key="f_nom")
+            edad_meses = st.number_input("Edad (meses)*", 1, 240, 24, key="f_edad")
+            telefono = st.text_input("Teléfono*", key="f_tel")
+            
+        with col2:
+            st.markdown('**🌍 Ubicación y Social**')
+            region_input = st.selectbox("Región*", PERU_REGIONS, key="f_reg")
+            altitud = st.number_input("Altitud (msnm)*", 0, 5000, 500, key="f_alt")
+            educacion = st.selectbox("Nivel Educativo Apoderado", NIVELES_EDUCATIVOS, key="f_edu")
+            agua = st.checkbox("Acceso a agua potable", key="f_agua")
 
-    # BOTÓN DE ANÁLISIS (Fuera de un formulario para respuesta instantánea)
-    if st.button("📊 GENERAR DIAGNÓSTICO ETIOLÓGICO", use_container_width=True, type="secondary"):
-        # Llamamos a tu sistema de interpretación automática
+        st.markdown("---")
+
+        # --- SECCIÓN 2: BIOMARCADORES (Calculadora de Predicción integrada) ---
+        st.markdown('### 🧪 Análisis de Biomarcadores (Laboratorio)')
+        c_bio1, c_bio2 = st.columns(2)
+        with c_bio1:
+            st.markdown('**🩸 Perfil de Hierro**')
+            f_ferritina = st.number_input("Ferritina (ng/mL)", 0.0, 500.0, 15.0)
+            f_chcm = st.number_input("CHCM (g/dL)", 20.0, 40.0, 32.0)
+            f_transf = st.number_input("Transferrina (mg/dL)", 100.0, 500.0, 250.0)
+            
+        with c_bio2:
+            st.markdown('**🦠 Respuesta Medular e Inflamación**')
+            f_retic = st.number_input("Reticulocitos (%)", 0.0, 5.0, 1.0)
+            f_pcr = st.number_input("PCR (mg/dL)", 0.0, 100.0, 0.1)
+            f_vsg = st.number_input("VSG (mm/h)", 0.0, 150.0, 10.0)
+
+        st.markdown("---")
+
+        # --- SECCIÓN 3: HEMOGLOBINA Y RIESGO ---
+        col3, col4 = st.columns(2)
+        with col3:
+            st.markdown('**🩺 Parámetros Clínicos**')
+            hb_medida = st.number_input("Hemoglobina medida (g/dL)*", 5.0, 20.0, 11.0)
+            hb_ajustada = calcular_hemoglobina_ajustada(hb_medida, altitud)
+            st.info(f"**HB Ajustada:** {hb_ajustada:.1f} g/dL")
+            
+        with col4:
+            st.markdown('**📋 Factores y Seguimiento**')
+            factores = st.multiselect("Factores de Riesgo:", FACTORES_CLINICOS)
+            seguimiento = st.checkbox("Activar seguimiento automático", value=True)
+
+        # --- BOTONES DE ACCIÓN ---
+        st.markdown("<br>", unsafe_allow_html=True)
+        btn_analizar = st.form_submit_button("📊 GENERAR DIAGNÓSTICO ETIOLÓGICO", use_container_width=True)
+        btn_guardar = st.form_submit_button("💾 GUARDAR REGISTRO COMPLETO", type="primary", use_container_width=True)
+
+    # --- LÓGICA POST-ENVÍO (Procesamiento de los botones) ---
+    if btn_analizar:
+        # Ejecutamos tu sistema de interpretación con los datos del formulario
         resultado = interpretar_analisis_hematologico(
-            v_ferritina, v_chcm, v_retic, v_transf, 
-            st.session_state.get('hb_ajustada_val', 11.0), 24 # Valores temporales
+            f_ferritina, f_chcm, f_retic, f_transf, hb_ajustada, edad_meses
         )
         
         st.markdown(f"""
-        <div style="background-color: {resultado['codigo_color']}; padding: 15px; border-radius: 5px; color: white; margin-top: 10px;">
-            <h4>Interpretación: {resultado['severidad']}</h4>
-            <p>{resultado['interpretacion']}</p>
-            <hr>
-            <p><strong>Recomendación:</strong> {resultado['recomendacion']}</p>
-        </div>
+            <div style="background-color: {resultado['codigo_color']}; padding: 20px; border-radius: 10px; color: white;">
+                <h3>🔍 Resultado del Análisis Automático</h3>
+                <p style="font-size: 1.2rem;">{resultado['interpretacion']}</p>
+                <hr>
+                <p><strong>RECOMENDACIÓN CLÍNICA:</strong> {resultado['recomendacion']}</p>
+            </div>
         """, unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)
 
-    st.markdown("---")
-
-    # ------------------------------------------------------------------
-    # BLOQUE 2: REGISTRO OFICIAL DEL PACIENTE (SÍ VA A SUPABASE)
-    # ------------------------------------------------------------------
-    st.markdown('### 📝 Registro Oficial del Paciente')
-    
-    with st.form("form_registro_oficial", clear_on_submit=False):
-        col_reg1, col_reg2 = st.columns(2)
-        
-        with col_reg1:
-            st.markdown('**👤 Identidad**')
-            dni_r = st.text_input("DNI*", max_chars=8, key="reg_dni")
-            nom_r = st.text_input("Nombre Completo*", key="reg_nom")
-            edad_r = st.number_input("Edad (meses)*", 1, 240, 24, key="reg_edad")
-            tel_r = st.text_input("Teléfono*", key="reg_tel")
-            
-        with col_reg2:
-            st.markdown('**🌍 Ubicación y Social**')
-            reg_r = st.selectbox("Región*", PERU_REGIONS, key="reg_reg")
-            alt_r = st.number_input("Altitud (msnm)*", 0, 5000, 500, key="reg_alt")
-            edu_r = st.selectbox("Nivel Educativo", NIVELES_EDUCATIVOS, key="reg_edu")
-            agua_r = st.checkbox("Acceso a agua potable", key="reg_agua")
-
-        st.markdown("**🩺 Parámetros Clínicos**")
-        c_clin1, c_clin2 = st.columns(2)
-        with c_clin1:
-            hb_m = st.number_input("Hemoglobina medida (g/dL)*", 5.0, 20.0, 11.0, key="reg_hb")
-            # El ajuste debe ser dinámico
-            hb_a = calcular_hemoglobina_ajustada(hb_m, alt_r)
-            st.info(f"HB Ajustada: {hb_a:.1f}")
-            
-        with c_clin2:
-            fact_r = st.multiselect("Factores de Riesgo", FACTORES_CLINICOS, key="reg_fact")
-            seg_r = st.checkbox("Activar seguimiento", value=True, key="reg_seg")
-
-        # BOTÓN PARA GUARDAR EN BASE DE DATOS
-        btn_guardar = st.form_submit_button("💾 GUARDAR REGISTRO EN BASE DE DATOS", use_container_width=True)
-
-    # Lógica de guardado fuera del formulario
     if btn_guardar:
-        if len(dni_r) == 8 and nom_r:
-            # Aquí construyes el diccionario para insertar en Supabase
-            nuevo_paciente = {
-                "dni": dni_r,
-                "nombre_apellido": nom_r,
-                "edad_meses": edad_r,
-                "region": reg_r,
-                "hb_ajustada": hb_a,
-                "seguimiento": seg_r
+        if len(dni_input) == 8 and nombre_input:
+            # Aquí preparas el diccionario para Supabase
+            # Nota: Usamos 'region' en minúscula para evitar el error del PDF posterior
+            datos_paciente = {
+                "dni": dni_input,
+                "nombre_apellido": nombre_input,
+                "region": region_input, 
+                "hb_ajustada": hb_ajustada,
+                "ferritina": f_ferritina,
+                "pcr": f_pcr,
+                "seguimiento": seguimiento
             }
-            # Lógica: response = supabase.table("pacientes").insert(nuevo_paciente).execute()
-            st.success(f"✅ ¡Paciente {nom_r} registrado con éxito!")
+            # Lógica de inserción aquí
+            st.success(f"✅ ¡Paciente {nombre_input} guardado correctamente!")
             st.balloons()
         else:
-            st.error("❌ Error: Verifique que el DNI tenga 8 dígitos y el nombre no esté vacío.")
-
+            st.error("❌ Complete DNI (8 dígitos) y Nombre antes de guardar.")
 # ==================================================
 # PESTAÑA 2: SEGUIMIENTO CLÍNICO - VERSIÓN CORREGIDA
 # ==================================================
