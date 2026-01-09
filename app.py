@@ -9,156 +9,83 @@ import time
 from datetime import datetime, timedelta
 from fpdf import FPDF
 
-def generar_pdf_historial(paciente, historial):
-    """Genera un PDF ULTRA SIMPLE que SI funciona"""
-    try:
-        from datetime import datetime
+# En la sección de exportación de la pestaña de historial:
+
+st.markdown("---")
+st.markdown("#### Exportar Historial")
+
+# Crear dos columnas para los botones
+col_pdf1, col_pdf2 = st.columns(2)
+
+with col_pdf1:
+    # Botón para generar HTML
+    if st.button("Generar Informe", 
+               use_container_width=True,
+               type="primary",
+               key="btn_generar_html_historial"):
         
-        # Crear contenido de texto plano estructurado
-        contenido = []
-        contenido.append("=" * 80)
-        contenido.append("                     HISTORIAL CLINICO - SISTEMA NIXON")
-        contenido.append("=" * 80)
-        contenido.append("")
-        contenido.append(f"Fecha de generacion: {datetime.now().strftime('%d/%m/%Y %H:%M')}")
-        contenido.append("")
-        contenido.append("=" * 80)
-        contenido.append("                        INFORMACION DEL PACIENTE")
-        contenido.append("=" * 80)
-        contenido.append("")
-        
-        # Información del paciente
-        contenido.append(f"Nombre: {paciente.get('nombre_apellido', 'N/A')}")
-        contenido.append(f"DNI: {paciente.get('dni', 'N/A')}")
-        contenido.append(f"Edad: {paciente.get('edad_meses', 'N/A')} meses")
-        contenido.append(f"Region: {paciente.get('region', 'N/A')}")
-        contenido.append(f"Telefono: {paciente.get('telefono', 'N/A')}")
-        contenido.append(f"Hemoglobina actual: {paciente.get('hemoglobina_dl1', 'N/A')} g/dL")
-        contenido.append(f"Estado: {paciente.get('estado_paciente', 'N/A')}")
-        contenido.append(f"Riesgo: {paciente.get('riesgo', 'N/A')}")
-        contenido.append(f"Controles totales: {len(historial)}")
-        contenido.append("")
-        
-        if historial:
-            contenido.append("=" * 80)
-            contenido.append(f"                 HISTORIAL DE CONTROLES ({len(historial)} registros)")
-            contenido.append("=" * 80)
-            contenido.append("")
+        with st.spinner("Generando informe..."):
+            try:
+                # Generar el HTML
+                html_bytes = generar_html_historial(paciente, historial)
+                
+                # Crear nombre de archivo
+                nombre_paciente = paciente.get('nombre_apellido', 'paciente')
+                # Limpiar nombre para archivo
+                nombre_limpio = "".join(c for c in nombre_paciente if c.isalnum() or c in (' ', '_')).rstrip()
+                fecha = datetime.now().strftime('%Y%m%d_%H%M')
+                
+                # Guardar como HTML
+                filename = f"Historial_{nombre_limpio}_{fecha}.html"
+                
+                # Mostrar instrucciones
+                st.success("✅ Informe generado exitosamente")
+                st.info("""
+                **Instrucciones para guardar como PDF:**
+                1. Descargue el archivo HTML
+                2. Ábralo en su navegador (Chrome, Firefox, Edge, etc.)
+                3. Presione **Ctrl+P** (Windows) o **Cmd+P** (Mac)
+                4. En el destino de impresión, seleccione **"Guardar como PDF"**
+                5. Haga clic en **"Guardar"**
+                """)
+                
+                # Botón de descarga HTML
+                st.download_button(
+                    label="📥 Descargar Archivo HTML",
+                    data=html_bytes,
+                    file_name=filename,
+                    mime="text/html",
+                    use_container_width=True,
+                    key="btn_descargar_html_historial"
+                )
+                
+                # También mostrar vista previa
+                with st.expander("👁️ Vista previa del informe", expanded=False):
+                    st.components.v1.html(html_bytes.decode('utf-8'), height=600, scrolling=True)
+                
+            except Exception as e:
+                st.error(f"Error al generar informe: {str(e)}")
+
+with col_pdf2:
+    # Botón para exportar a CSV
+    if st.button("Exportar a CSV", 
+               use_container_width=True,
+               type="secondary",
+               key="btn_exportar_csv_historial"):
+        try:
+            df_historial = pd.DataFrame(historial)
+            csv = df_historial.to_csv(index=False, encoding='utf-8')
             
-            # Calcular estadísticas
-            valores_hb = []
-            for control in historial:
-                hb = control.get('hemoglobina_actual')
-                if hb:
-                    try:
-                        valores_hb.append(float(hb))
-                    except:
-                        pass
-            
-            if valores_hb:
-                contenido.append("ESTADISTICAS:")
-                contenido.append("-" * 40)
-                promedio = sum(valores_hb) / len(valores_hb)
-                primera = valores_hb[0]
-                ultima = valores_hb[-1]
-                minimo = min(valores_hb)
-                maximo = max(valores_hb)
-                
-                contenido.append(f"  • Promedio de hemoglobina: {promedio:.1f} g/dL")
-                contenido.append(f"  • Primera medicion: {primera:.1f} g/dL")
-                contenido.append(f"  • Ultima medicion: {ultima:.1f} g/dL")
-                contenido.append(f"  • Rango: {minimo:.1f} - {maximo:.1f} g/dL")
-                
-                if len(valores_hb) >= 2:
-                    cambio = ultima - primera
-                    if cambio > 0.5:
-                        tendencia = f"MEJORIA SIGNIFICATIVA (+{cambio:.1f} g/dL)"
-                    elif cambio > 0:
-                        tendencia = f"Ligera mejoria (+{cambio:.1f} g/dL)"
-                    elif cambio < -0.5:
-                        tendencia = f"EMPEORAMIENTO ({cambio:+.1f} g/dL)"
-                    elif cambio < 0:
-                        tendencia = f"Ligero empeoramiento ({cambio:+.1f} g/dL)"
-                    else:
-                        tendencia = "ESTABLE"
-                    
-                    contenido.append(f"  • Tendencia: {tendencia}")
-                
-                contenido.append("")
-            
-            # Tabla de controles
-            contenido.append("CONTROLES REGISTRADOS:")
-            contenido.append("-" * 100)
-            contenido.append(f"{'No.':<4} {'Fecha':<12} {'Hb (g/dL)':<10} {'Clasificacion':<20} {'Tipo':<15} {'Responsable':<20}")
-            contenido.append("-" * 100)
-            
-            for idx, control in enumerate(historial, 1):
-                fecha = control.get('fecha_seguimiento', 'N/A')[:10] if control.get('fecha_seguimiento') else 'N/A'
-                hb = control.get('hemoglobina_actual', 'N/A')
-                if isinstance(hb, (int, float)):
-                    hb = f"{float(hb):.1f}"
-                
-                clasif = control.get('clasificacion_actual', 'N/A')
-                tipo = control.get('tipo_seguimiento', 'N/A')
-                responsable = control.get('usuario_responsable', 'N/A')
-                
-                # Ajustar largo de textos
-                if len(clasif) > 18:
-                    clasif = clasif[:16] + '..'
-                if len(tipo) > 13:
-                    tipo = tipo[:11] + '..'
-                if len(responsable) > 18:
-                    responsable = responsable[:16] + '..'
-                
-                contenido.append(f"{idx:<4} {fecha:<12} {str(hb):<10} {clasif:<20} {tipo:<15} {responsable:<20}")
-            
-            contenido.append("-" * 100)
-            contenido.append("")
-            
-            # Detalles del último control
-            if historial:
-                contenido.append("ULTIMO CONTROL DETALLADO:")
-                contenido.append("-" * 40)
-                ultimo = historial[0]
-                
-                contenido.append(f"Fecha: {ultimo.get('fecha_seguimiento', 'N/A')}")
-                contenido.append(f"Hemoglobina: {ultimo.get('hemoglobina_actual', 'N/A')} g/dL")
-                contenido.append(f"Clasificacion: {ultimo.get('clasificacion_actual', 'N/A')}")
-                contenido.append(f"Tipo: {ultimo.get('tipo_seguimiento', 'N/A')}")
-                contenido.append(f"Responsable: {ultimo.get('usuario_responsable', 'N/A')}")
-                contenido.append(f"Tratamiento: {ultimo.get('tratamiento_actual', 'N/A')}")
-                contenido.append(f"Proximo control: {ultimo.get('proximo_control', 'N/A')}")
-                
-                observaciones = ultimo.get('observaciones', '')
-                if observaciones and str(observaciones).lower() != 'nan':
-                    contenido.append("Observaciones:")
-                    contenido.append("-" * 20)
-                    contenido.append(str(observaciones))
-        
-        else:
-            contenido.append("=" * 80)
-            contenido.append("               NO HAY CONTROLES REGISTRADOS PARA ESTE PACIENTE")
-            contenido.append("=" * 80)
-        
-        contenido.append("")
-        contenido.append("=" * 80)
-        contenido.append("Fin del documento - Sistema Nixon v2.0")
-        contenido.append(f"Generado el: {datetime.now().strftime('%d/%m/%Y %H:%M')}")
-        contenido.append("=" * 80)
-        
-        # Convertir a bytes
-        texto_completo = "\n".join(contenido)
-        
-        # IMPORTANTE: Para que funcione como PDF, podemos hacer un truco:
-        # 1. Devolver como texto plano
-        # 2. El usuario puede abrirlo y usar "Imprimir como PDF"
-        
-        return texto_completo.encode('utf-8')
-        
-    except Exception as e:
-        # Si todo falla, devolver mensaje de error
-        error_msg = f"ERROR: {str(e)[:100]}"
-        return error_msg.encode('utf-8')
+            st.download_button(
+                label="Descargar CSV",
+                data=csv,
+                file_name=f"historial_{paciente.get('dni', 'paciente')}_{datetime.now().strftime('%Y%m%d')}.csv",
+                mime="text/csv",
+                use_container_width=True,
+                key="btn_descargar_csv_historial"
+            )
+        except Exception as e:
+            st.error(f"Error al exportar CSV: {str(e)}")
 # ==================================================
 # SISTEMA DE LOGIN PARA 5 USUARIOS DE SALUD
 # ==================================================
