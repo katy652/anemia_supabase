@@ -1333,54 +1333,79 @@ def obtener_referencia_crecimiento():
         return pd.DataFrame()
 
 def evaluar_estado_nutricional(edad_meses, peso_kg, talla_cm, genero):
-    """Evalúa el estado nutricional asegurando que la edad coincida con la tabla"""
+    """
+    Evalúa el estado nutricional comparando con la tabla de referencia.
+    Incluye manejo de errores para datos nulos y fallos de conexión.
+    """
+    # 1. Obtener la tabla (Asegúrate de que obtener_referencia_crecimiento use @st.cache_data)
     referencia_df = obtener_referencia_crecimiento()
     
-    # Verificamos si la tabla de la OMS cargó correctamente
+    # Verificación de carga de base de datos
     if referencia_df is None or referencia_df.empty:
-        return "Error: Tabla OMS vacía", "Error: Tabla OMS vacía", "ERROR DE BASE DE DATOS"
+        return "Error de DB", "Error de DB", "TABLA OMS NO CARGADA"
     
-    # FORZAMOS REDONDEO: Si es 12.4 meses, buscará el mes 12
-    edad_entera = int(round(float(edad_meses)))
-    
-    # Filtramos por edad y género
-    ref_edad = referencia_df[referencia_df['edad_meses'] == edad_entera]
-    
-    if ref_edad.empty:
-        # Esto te dirá si el problema es que la edad es muy alta o muy baja
-        return f"Edad {edad_entera}m no encontrada", "N/A", "EDAD FUERA DE RANGO"
-    
-    ref = ref_edad.iloc[0]
-    
-    # Selección de columnas según género
-    # Asegúrate que en tu base de datos las columnas se llamen exactamente así
-    if str(genero).upper() in ['F', 'FEMENINO', 'NIÑA']:
-        p_min, p_max = ref['peso_min_ninas'], ref['peso_max_ninas']
-        t_min, t_max = ref['talla_min_ninas'], ref['talla_max_ninas']
-    else:
-        p_min, p_max = ref['peso_min_ninos'], ref['peso_max_ninos']
-        t_min, t_max = ref['talla_min_ninos'], ref['talla_max_ninos']
-    
-    # --- LÓGICA DE EVALUACIÓN ---
-    estado_peso = "PESO NORMAL"
-    if peso_kg < p_min: estado_peso = "BAJO PESO"
-    elif peso_kg > p_max: estado_peso = "SOBREPESO"
-    
-    estado_talla = "TALLA NORMAL"
-    if talla_cm < t_min: estado_talla = "TALLA BAJA"
-    elif talla_cm > t_max: estado_talla = "TALLA ALTA"
-    
-    # Diagnóstico Final
-    if estado_peso == "BAJO PESO" and estado_talla == "TALLA BAJA":
-        estado_nut = "DESNUTRICIÓN CRÓNICA"
-    elif estado_peso == "BAJO PESO":
-        estado_nut = "DESNUTRICIÓN AGUDA"
-    elif estado_peso == "SOBREPESO":
-        estado_nut = "RIESGO DE SOBREPESO"
-    else:
-        estado_nut = "NUTRICIÓN ADECUADA"
+    try:
+        # 2. Normalización de entrada
+        # Convertimos a float por si vienen como strings del formulario
+        edad_val = float(edad_meses)
+        peso_val = float(peso_kg)
+        talla_val = float(talla_cm)
         
-    return estado_peso, estado_talla, estado_nut
+        # Redondeo para buscar en la tabla (ej: 15.2 -> 15)
+        edad_entera = int(round(edad_val))
+        
+        # 3. Búsqueda en la tabla
+        ref_edad = referencia_df[referencia_df['edad_meses'] == edad_entera]
+        
+        if ref_edad.empty:
+            return f"Edad {edad_entera}m no encontrada", "N/A", "EDAD FUERA DE RANGO"
+        
+        ref = ref_edad.iloc[0]
+        
+        # 4. Selección dinámica de columnas según género
+        # Usamos .get() o validación para evitar errores si la columna es NULA
+        es_femenino = str(genero).upper() in ['F', 'FEMENINO', 'NIÑA']
+        
+        if es_femenino:
+            p_min, p_max = ref['peso_min_ninas'], ref['peso_max_ninas']
+            t_min, t_max = ref['talla_min_ninas'], ref['talla_max_ninas']
+        else:
+            p_min, p_max = ref['peso_min_ninos'], ref['peso_max_ninos']
+            t_min, t_max = ref['talla_min_ninos'], ref['talla_max_ninos']
+
+        # Verificar que los valores de la tabla no sean None/NaN
+        if pd.isna([p_min, p_max, t_min, t_max]).any():
+            return "Datos tabla incompletos", "Datos tabla incompletos", "ERROR TABLA OMS"
+
+        # 5. Lógica de Evaluación (Criterios OMS)
+        estado_peso = "PESO NORMAL"
+        if peso_val < p_min: 
+            estado_peso = "BAJO PESO"
+        elif peso_val > p_max: 
+            estado_peso = "SOBREPESO"
+        
+        estado_talla = "TALLA NORMAL"
+        if talla_val < t_min: 
+            estado_talla = "TALLA BAJA"
+        elif talla_val > t_max: 
+            estado_talla = "TALLA ALTA"
+        
+        # 6. Diagnóstico Final Integrado
+        if estado_peso == "BAJO PESO" and estado_talla == "TALLA BAJA":
+            estado_nut = "DESNUTRICIÓN CRÓNICA"
+        elif estado_peso == "BAJO PESO":
+            estado_nut = "DESNUTRICIÓN AGUDA"
+        elif estado_peso == "SOBREPESO" or estado_talla == "TALLA ALTA":
+            estado_nut = "SOBREPESO / RIESGO"
+        else:
+            estado_nut = "NUTRICIÓN ADECUADA"
+            
+        return estado_peso, estado_talla, estado_nut
+
+    except ValueError:
+        return "Datos inválidos", "Datos inválidos", "ERROR EN FORMULARIO"
+    except Exception as e:
+        return "Error inesperado", "Error inesperado", f"CONSULTAR SOPORTE: {str(e)}"
 
 # ==================================================
 # LISTAS DE OPCIONES
