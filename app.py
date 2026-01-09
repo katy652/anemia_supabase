@@ -3797,16 +3797,206 @@ with tab_citas2:
         else:
             st.info("👆 Presiona 'Cargar Recordatorios' para ver citas próximas")
     
-    # ============================================
-# TAB 4: HISTORIAL DE CITAS - VERSIÓN CORREGIDA
+# ============================================
+# TAB 4: HISTORIAL DE CITAS - CON PDF FPDF
 # ============================================
 with tab_citas4:
     st.markdown('<div class="section-title-purple">📋 HISTORIAL COMPLETO DE CITAS</div>', unsafe_allow_html=True)
     
-    # Función para obtener citas con información de anemia
+    # ====== FUNCIÓN PARA GENERAR PDF CON FPDF ======
+    def generar_pdf_cita_fpdf(cita_data):
+        """Genera un PDF con los detalles de una cita usando FPDF"""
+        try:
+            pdf = FPDF()
+            pdf.add_page()
+            
+            # Título
+            pdf.set_font("Arial", 'B', 16)
+            pdf.cell(0, 10, "COMPROBANTE DE CITA MÉDICA", 0, 1, 'C')
+            pdf.ln(5)
+            
+            # Línea separadora
+            pdf.set_draw_color(0, 0, 0)
+            pdf.set_line_width(0.5)
+            pdf.line(10, pdf.get_y(), 200, pdf.get_y())
+            pdf.ln(10)
+            
+            # Información del paciente
+            pdf.set_font("Arial", 'B', 12)
+            pdf.cell(0, 10, "DATOS DEL PACIENTE", 0, 1)
+            pdf.set_font("Arial", '', 11)
+            pdf.cell(0, 8, f"Nombre: {cita_data.get('nombre_paciente', 'N/A')}", 0, 1)
+            pdf.cell(0, 8, f"DNI: {cita_data.get('dni_paciente', 'N/A')}", 0, 1)
+            pdf.cell(0, 8, f"Edad: {cita_data.get('edad_meses', 'N/A')} meses", 0, 1)
+            pdf.ln(5)
+            
+            # Detalles de la cita
+            pdf.set_font("Arial", 'B', 12)
+            pdf.cell(0, 10, "DETALLES DE LA CITA", 0, 1)
+            
+            # Crear tabla de detalles
+            detalles = [
+                ("Fecha", cita_data.get('fecha_cita', 'N/A')),
+                ("Hora", cita_data.get('hora_cita', 'N/A')),
+                ("Tipo de consulta", cita_data.get('tipo_consulta', 'N/A')),
+                ("Hemoglobina", f"{cita_data.get('hemoglobina', 'N/A')} g/dL"),
+                ("Estado de anemia", cita_data.get('clasificacion_anemia', 'N/A')),
+                ("Nivel de riesgo", cita_data.get('riesgo', 'N/A'))
+            ]
+            
+            pdf.set_font("Arial", '', 11)
+            for label, value in detalles:
+                pdf.cell(60, 8, f"{label}:", 0, 0)
+                pdf.set_font("Arial", 'B', 11)
+                pdf.cell(0, 8, str(value), 0, 1)
+                pdf.set_font("Arial", '', 11)
+            
+            pdf.ln(5)
+            
+            # Diagnóstico
+            pdf.set_font("Arial", 'B', 12)
+            pdf.cell(0, 10, "DIAGNÓSTICO", 0, 1)
+            pdf.set_font("Arial", '', 11)
+            
+            diagnostico = cita_data.get('diagnostico', 'No especificado')
+            # Manejar texto largo con multi_cell
+            pdf.multi_cell(0, 8, diagnostico)
+            pdf.ln(5)
+            
+            # Tratamiento
+            pdf.set_font("Arial", 'B', 12)
+            pdf.cell(0, 10, "TRATAMIENTO PRESCRITO", 0, 1)
+            pdf.set_font("Arial", '', 11)
+            
+            tratamiento = cita_data.get('tratamiento', 'No especificado')
+            pdf.multi_cell(0, 8, tratamiento)
+            pdf.ln(5)
+            
+            # Observaciones
+            pdf.set_font("Arial", 'B', 12)
+            pdf.cell(0, 10, "OBSERVACIONES", 0, 1)
+            pdf.set_font("Arial", '', 11)
+            
+            observaciones = cita_data.get('observaciones', 'No especificado')
+            pdf.multi_cell(0, 8, observaciones)
+            pdf.ln(10)
+            
+            # Pie de página
+            pdf.set_font("Arial", 'I', 10)
+            pdf.cell(0, 8, f"Generado el: {datetime.now().strftime('%d/%m/%Y %H:%M')}", 0, 1, 'C')
+            pdf.cell(0, 8, "Sistema de Seguimiento de Anemia - Centro de Salud", 0, 1, 'C')
+            
+            # Guardar en buffer
+            import io
+            buffer = io.BytesIO()
+            pdf_output = pdf.output(dest='S').encode('latin-1')
+            buffer.write(pdf_output)
+            buffer.seek(0)
+            
+            return buffer.getvalue()
+            
+        except Exception as e:
+            st.error(f"Error generando PDF: {str(e)}")
+            return None
+    
+    def generar_pdf_historial_fpdf(citas_data):
+        """Genera un PDF con el historial completo de citas"""
+        try:
+            pdf = FPDF()
+            pdf.add_page()
+            
+            # Título
+            pdf.set_font("Arial", 'B', 16)
+            pdf.cell(0, 10, "HISTORIAL DE CITAS MÉDICAS", 0, 1, 'C')
+            pdf.set_font("Arial", '', 12)
+            pdf.cell(0, 10, f"Generado: {datetime.now().strftime('%d/%m/%Y %H:%M')}", 0, 1, 'C')
+            pdf.ln(10)
+            
+            # Estadísticas
+            total_citas = len(citas_data)
+            con_anemia = len([c for c in citas_data if c.get('clasificacion_anemia') in ['Leve', 'Moderada', 'Severa']])
+            
+            pdf.set_font("Arial", 'B', 14)
+            pdf.cell(0, 10, "ESTADÍSTICAS", 0, 1)
+            pdf.set_font("Arial", '', 11)
+            
+            pdf.cell(100, 8, "Total de citas:", 0, 0)
+            pdf.cell(0, 8, str(total_citas), 0, 1)
+            
+            pdf.cell(100, 8, "Citas con anemia:", 0, 0)
+            pdf.cell(0, 8, str(con_anemia), 0, 1)
+            
+            if total_citas > 0:
+                porcentaje = (con_anemia / total_citas) * 100
+                pdf.cell(100, 8, "Porcentaje con anemia:", 0, 0)
+                pdf.cell(0, 8, f"{porcentaje:.1f}%", 0, 1)
+            
+            pdf.ln(10)
+            
+            # Tabla de citas
+            pdf.set_font("Arial", 'B', 14)
+            pdf.cell(0, 10, "DETALLE DE CITAS", 0, 1)
+            pdf.ln(5)
+            
+            # Encabezados de la tabla
+            pdf.set_font("Arial", 'B', 10)
+            pdf.set_fill_color(200, 200, 200)
+            pdf.cell(25, 8, "Fecha", 1, 0, 'C', True)
+            pdf.cell(50, 8, "Paciente", 1, 0, 'C', True)
+            pdf.cell(25, 8, "DNI", 1, 0, 'C', True)
+            pdf.cell(20, 8, "Hb", 1, 0, 'C', True)
+            pdf.cell(30, 8, "Estado", 1, 0, 'C', True)
+            pdf.cell(40, 8, "Tipo", 1, 1, 'C', True)
+            
+            # Datos de la tabla
+            pdf.set_font("Arial", '', 9)
+            pdf.set_fill_color(255, 255, 255)
+            
+            for cita in citas_data[:30]:  # Limitar a 30 citas por página
+                # Formatear nombre para que quepa
+                nombre = cita.get('nombre_paciente', 'N/A')
+                if len(nombre) > 20:
+                    nombre = nombre[:17] + "..."
+                
+                # Formatear fecha
+                fecha = cita.get('fecha_cita', 'N/A')
+                if isinstance(fecha, str) and len(fecha) > 10:
+                    fecha = fecha[:10]
+                
+                pdf.cell(25, 8, str(fecha), 1, 0, 'C')
+                pdf.cell(50, 8, nombre, 1, 0, 'L')
+                pdf.cell(25, 8, str(cita.get('dni_paciente', 'N/A')), 1, 0, 'C')
+                pdf.cell(20, 8, str(cita.get('hemoglobina', 'N/A')), 1, 0, 'C')
+                pdf.cell(30, 8, str(cita.get('clasificacion_anemia', 'N/A')), 1, 0, 'C')
+                pdf.cell(40, 8, str(cita.get('tipo_consulta', 'N/A'))[:15], 1, 1, 'C')
+            
+            if len(citas_data) > 30:
+                pdf.ln(5)
+                pdf.set_font("Arial", 'I', 9)
+                pdf.cell(0, 8, f"Mostrando 30 de {len(citas_data)} citas. Para el listado completo exporte a CSV.", 0, 1)
+            
+            pdf.ln(10)
+            
+            # Pie de página
+            pdf.set_font("Arial", 'I', 10)
+            pdf.cell(0, 8, "Sistema de Seguimiento de Anemia - Reporte generado automáticamente", 0, 1, 'C')
+            
+            # Guardar en buffer
+            import io
+            buffer = io.BytesIO()
+            pdf_output = pdf.output(dest='S').encode('latin-1')
+            buffer.write(pdf_output)
+            buffer.seek(0)
+            
+            return buffer.getvalue()
+            
+        except Exception as e:
+            st.error(f"Error generando PDF histórico: {str(e)}")
+            return None
+    
+    # ====== FUNCIÓN PARA OBTENER CITAS ======
     def obtener_citas_con_info_anemia():
         try:
-            # Primero obtener todas las citas
             response_citas = supabase.table("citas").select("*").order("fecha_cita", desc=True).execute()
             citas = response_citas.data if response_citas.data else []
             
@@ -3814,31 +4004,23 @@ with tab_citas4:
                 return []
             
             citas_con_info = []
-            
-            # Obtener todos los DNIs únicos para hacer una sola consulta
             dnis_unicos = list(set([c.get('dni_paciente') for c in citas if c.get('dni_paciente')]))
             
-            # Obtener información de pacientes en batch
             pacientes_info = {}
             if dnis_unicos:
-                # Consultar todos los pacientes de una vez
                 response_pacientes = supabase.table("alertas_hemoglobina")\
                     .select("*")\
                     .in_("dni", dnis_unicos)\
                     .execute()
                 
-                # Crear diccionario para acceso rápido
                 for paciente in response_pacientes.data:
                     pacientes_info[paciente['dni']] = paciente
             
-            # Procesar cada cita
             for cita in citas:
                 dni = cita.get('dni_paciente')
                 
                 if dni and dni in pacientes_info:
                     info_anemia = pacientes_info[dni]
-                    
-                    # Clasificar anemia
                     hemoglobina = info_anemia.get('hemoglobina_dl1', 0)
                     edad_meses = info_anemia.get('edad_meses', 0)
                     
@@ -3891,36 +4073,24 @@ with tab_citas4:
             
         except Exception as e:
             st.error(f"❌ Error al obtener citas: {str(e)}")
-            import traceback
-            st.error(f"Detalles: {traceback.format_exc()}")
             return []
     
-    # Función para obtener icono de anemia
-    def obtener_color_anemia(clasificacion):
-        colores = {
-            "Normal": "🟢",
-            "Leve": "🟡",
-            "Moderada": "🟠",
-            "Severa": "🔴",
-            "Sin datos": "⚪"
-        }
-        return colores.get(clasificacion, "⚪")
-    
-    # Botón para cargar/cargar automáticamente
+    # ====== INTERFAZ PRINCIPAL ======
     if 'citas_historial' not in st.session_state:
         st.session_state.citas_historial = []
     
+    # Botón para cargar citas
     col_load1, col_load2 = st.columns([3, 1])
     
     with col_load1:
-        if st.button("🔄 Cargar historial completo", key="cargar_historial", use_container_width=True):
-            with st.spinner("Cargando historial de citas..."):
+        if st.button("🔄 Cargar historial completo", key="cargar_historial_pdf", use_container_width=True):
+            with st.spinner("Cargando..."):
                 citas_vinculadas = obtener_citas_con_info_anemia()
                 st.session_state.citas_historial = citas_vinculadas
                 st.success(f"✅ {len(citas_vinculadas)} citas cargadas")
     
     with col_load2:
-        if st.button("🧹 Limpiar cache", type="secondary", use_container_width=True):
+        if st.button("🧹 Limpiar cache", type="secondary", use_container_width=True, key="limpiar_cache_pdf"):
             st.session_state.citas_historial = []
             st.rerun()
     
@@ -3928,206 +4098,142 @@ with tab_citas4:
     if st.session_state.citas_historial:
         citas_df = pd.DataFrame(st.session_state.citas_historial)
         
-        # Asegurar que las columnas necesarias existan
+        # Procesamiento de datos
         if 'clasificacion_anemia' not in citas_df.columns:
             citas_df['clasificacion_anemia'] = "Sin datos"
         
-        # Agregar icono
+        def obtener_color_anemia(clasificacion):
+            colores = {
+                "Normal": "🟢", "Leve": "🟡", "Moderada": "🟠", 
+                "Severa": "🔴", "Sin datos": "⚪"
+            }
+            return colores.get(clasificacion, "⚪")
+        
         citas_df['anemia_icono'] = citas_df['clasificacion_anemia'].apply(obtener_color_anemia)
         citas_df['anemia_mostrar'] = citas_df['anemia_icono'] + " " + citas_df['clasificacion_anemia']
-        
-        # Asegurar que la columna de fecha sea datetime
         citas_df['fecha_cita'] = pd.to_datetime(citas_df['fecha_cita'], errors='coerce')
         
         # Filtros
         st.markdown("### 🔍 Filtros de búsqueda")
-        
-        col_filt1, col_filt2, col_filt3, col_filt4 = st.columns(4)
+        col_filt1, col_filt2, col_filt3 = st.columns(3)
         
         with col_filt1:
             if 'tipo_consulta' in citas_df.columns and not citas_df['tipo_consulta'].empty:
-                tipos_disponibles = citas_df['tipo_consulta'].dropna().unique()
-                filtro_tipo = st.multiselect(
-                    "Tipo de consulta",
-                    tipos_disponibles,
-                    default=tipos_disponibles[:min(3, len(tipos_disponibles))]
-                )
-            else:
-                filtro_tipo = []
-                st.info("No hay tipos de consulta")
+                tipos = citas_df['tipo_consulta'].dropna().unique()
+                filtro_tipo = st.multiselect("Tipo de consulta", tipos, default=tipos[:min(3, len(tipos))], key="filtro_tipo_pdf")
         
         with col_filt2:
             if 'clasificacion_anemia' in citas_df.columns:
                 clasificaciones = citas_df['clasificacion_anemia'].dropna().unique()
-                filtro_anemia = st.multiselect(
-                    "Estado anemia",
-                    clasificaciones,
-                    default=clasificaciones
-                )
-            else:
-                filtro_anemia = []
+                filtro_anemia = st.multiselect("Estado anemia", clasificaciones, default=clasificaciones, key="filtro_anemia_pdf")
         
         with col_filt3:
             fecha_min = citas_df['fecha_cita'].min().date() if not citas_df['fecha_cita'].isnull().all() else datetime.now().date() - timedelta(days=30)
             fecha_max = citas_df['fecha_cita'].max().date() if not citas_df['fecha_cita'].isnull().all() else datetime.now().date()
-            
-            fecha_min_sel = st.date_input("Desde", value=fecha_min)
-            fecha_max_sel = st.date_input("Hasta", value=fecha_max)
-        
-        with col_filt4:
-            if 'dni_paciente' in citas_df.columns:
-                dni_options = ["Todos"] + list(citas_df['dni_paciente'].dropna().unique())
-                filtro_dni = st.selectbox("Filtrar por DNI", dni_options)
-            else:
-                filtro_dni = "Todos"
+            fecha_min_sel = st.date_input("Desde", value=fecha_min, key="fecha_desde_pdf")
+            fecha_max_sel = st.date_input("Hasta", value=fecha_max, key="fecha_hasta_pdf")
         
         # Aplicar filtros
         citas_filtradas = citas_df.copy()
-        
-        # Filtrar por tipo
-        if filtro_tipo:
+        if 'filtro_tipo' in locals() and filtro_tipo:
             citas_filtradas = citas_filtradas[citas_filtradas['tipo_consulta'].isin(filtro_tipo)]
-        
-        # Filtrar por anemia
-        if filtro_anemia:
+        if 'filtro_anemia' in locals() and filtro_anemia:
             citas_filtradas = citas_filtradas[citas_filtradas['clasificacion_anemia'].isin(filtro_anemia)]
         
-        # Filtrar por fechas
         if not citas_filtradas.empty:
             citas_filtradas = citas_filtradas[
                 (citas_filtradas['fecha_cita'].dt.date >= fecha_min_sel) &
                 (citas_filtradas['fecha_cita'].dt.date <= fecha_max_sel)
             ]
         
-        # Filtrar por DNI
-        if filtro_dni != "Todos" and filtro_dni:
-            citas_filtradas = citas_filtradas[citas_filtradas['dni_paciente'] == filtro_dni]
-        
-        # Mostrar tabla filtrada
-        st.markdown("### 📋 Listado de citas")
-        
+        # Mostrar tabla
         if not citas_filtradas.empty:
-            # Seleccionar columnas para mostrar
-            columnas_mostrar = [
-                'fecha_cita', 'hora_cita', 'nombre_paciente', 'dni_paciente',
-                'anemia_mostrar', 'hemoglobina', 'tipo_consulta', 'diagnostico'
-            ]
+            st.markdown("### 📋 Listado de citas")
             
-            # Añadir columnas adicionales si existen
-            columnas_disponibles = citas_filtradas.columns.tolist()
-            for col in ['riesgo', 'edad_meses', 'peso_kg']:
-                if col in columnas_disponibles:
+            columnas_mostrar = ['fecha_cita', 'hora_cita', 'nombre_paciente', 'dni_paciente',
+                               'anemia_mostrar', 'hemoglobina', 'tipo_consulta', 'diagnostico']
+            
+            for col in ['riesgo', 'edad_meses']:
+                if col in citas_filtradas.columns:
                     columnas_mostrar.append(col)
             
-            # Mostrar dataframe
+            # Crear lista para selección individual
+            citas_lista = citas_filtradas.to_dict('records')
+            
+            # Mostrar tabla
             st.dataframe(
                 citas_filtradas[columnas_mostrar],
                 use_container_width=True,
-                height=400,
+                height=300,
                 column_config={
                     "fecha_cita": st.column_config.DateColumn("Fecha", format="DD/MM/YYYY"),
                     "hora_cita": "Hora",
                     "nombre_paciente": "Paciente",
                     "dni_paciente": "DNI",
-                    "anemia_mostrar": st.column_config.TextColumn("Estado Anemia", width="small"),
+                    "anemia_mostrar": "Estado Anemia",
                     "hemoglobina": st.column_config.NumberColumn("Hb (g/dL)", format="%.1f"),
-                    "tipo_consulta": "Tipo Consulta",
-                    "diagnostico": st.column_config.TextColumn("Diagnóstico", width="medium"),
-                    "riesgo": "Riesgo",
-                    "edad_meses": st.column_config.NumberColumn("Edad (meses)", format="%d"),
-                    "peso_kg": st.column_config.NumberColumn("Peso (kg)", format="%.1f")
+                    "tipo_consulta": "Tipo",
+                    "diagnostico": st.column_config.TextColumn("Diagnóstico", width="medium")
                 }
             )
             
-            # ESTADÍSTICAS DEL HISTORIAL - VERSIÓN CORREGIDA
-            st.markdown("---")
-            st.markdown('<div class="section-title-purple" style="font-size: 1.2rem;">📊 ESTADÍSTICAS DEL HISTORIAL</div>', unsafe_allow_html=True)
+            # ====== SECCIÓN DE PDF INDIVIDUAL ======
+            st.markdown("### 📄 Generar comprobante de cita")
             
-            col_stat1, col_stat2, col_stat3, col_stat4 = st.columns(4)
+            col_pdf1, col_pdf2 = st.columns([3, 2])
             
-            with col_stat1:
-                total_citas = len(citas_filtradas)
-                st.metric("Total citas", total_citas)
-            
-            with col_stat2:
-                # CORRECCIÓN: Variable correctamente escrita
-                con_anemia = len(citas_filtradas[
-                    citas_filtradas['clasificacion_anemia'].isin(["Leve", "Moderada", "Severa"])
-                ])
-                st.metric("Con anemia", con_anemia)
-            
-            with col_stat3:
-                severas = len(citas_filtradas[citas_filtradas['clasificacion_anemia'] == "Severa"])
-                st.metric("Anemia severa", severas)
-            
-            with col_stat4:
-                if not citas_filtradas.empty and 'fecha_cita' in citas_filtradas.columns:
-                    ultima_fecha = citas_filtradas['fecha_cita'].max()
-                    if pd.notna(ultima_fecha):
-                        st.metric("Última cita", ultima_fecha.strftime('%d/%m/%Y'))
-                    else:
-                        st.metric("Última cita", "N/A")
-                else:
-                    st.metric("Última cita", "N/A")
-            
-            # Más estadísticas
-            col_stat5, col_stat6, col_stat7, col_stat8 = st.columns(4)
-            
-            with col_stat5:
-                if 'tipo_consulta' in citas_filtradas.columns:
-                    seguimientos = len(citas_filtradas[citas_filtradas['tipo_consulta'].str.contains('Seguimiento', case=False, na=False)])
-                    st.metric("Seguimientos", seguimientos)
-            
-            with col_stat6:
-                if 'hemoglobina' in citas_filtradas.columns:
-                    try:
-                        promedio_hb = citas_filtradas['hemoglobina'].apply(pd.to_numeric, errors='coerce').mean()
-                        st.metric("Promedio Hb", f"{promedio_hb:.1f}" if not pd.isna(promedio_hb) else "N/A")
-                    except:
-                        st.metric("Promedio Hb", "N/A")
-            
-            with col_stat7:
-                if 'en_seguimiento' in citas_filtradas.columns:
-                    try:
-                        en_seguimiento = citas_filtradas['en_seguimiento'].sum()
-                        st.metric("En seguimiento", int(en_seguimiento))
-                    except:
-                        st.metric("En seguimiento", "N/A")
-            
-            with col_stat8:
-                pacientes_unicos = citas_filtradas['dni_paciente'].nunique() if 'dni_paciente' in citas_filtradas.columns else 0
-                st.metric("Pacientes únicos", pacientes_unicos)
-            
-            # Gráfico de distribución por estado de anemia
-            st.markdown("### 📈 Distribución por estado de anemia")
-            
-            if 'clasificacion_anemia' in citas_filtradas.columns:
-                distribucion = citas_filtradas['clasificacion_anemia'].value_counts()
-                
-                col_chart1, col_chart2 = st.columns([2, 1])
-                
-                with col_chart1:
-                    if not distribucion.empty:
-                        fig, ax = plt.subplots(figsize=(8, 4))
-                        bars = ax.bar(distribucion.index, distribucion.values, 
-                                     color=['green', 'yellow', 'orange', 'red', 'gray'])
-                        ax.set_ylabel('Número de citas')
-                        ax.set_title('Distribución por estado de anemia')
+            with col_pdf1:
+                # Seleccionar cita para PDF individual
+                if citas_lista:
+                    opciones_citas = [
+                        f"{c['fecha_cita']} - {c['nombre_paciente']} (DNI: {c['dni_paciente']})" 
+                        for c in citas_lista
+                    ]
+                    
+                    cita_seleccionada_idx = st.selectbox(
+                        "Seleccionar cita para generar PDF:",
+                        range(len(opciones_citas)),
+                        format_func=lambda x: opciones_citas[x],
+                        key="select_cita_pdf"
+                    )
+                    
+                    if st.button("🖨️ Generar PDF de esta cita", use_container_width=True, key="btn_generar_pdf_individual"):
+                        cita_seleccionada = citas_lista[cita_seleccionada_idx]
                         
-                        # Añadir valores en las barras
-                        for bar in bars:
-                            height = bar.get_height()
-                            ax.text(bar.get_x() + bar.get_width()/2., height,
-                                   f'{int(height)}', ha='center', va='bottom')
-                        
-                        st.pyplot(fig)
-                
-                with col_chart2:
-                    st.dataframe(distribucion.reset_index().rename(
-                        columns={'index': 'Estado', 'clasificacion_anemia': 'Citas'}
-                    ))
+                        with st.spinner("Generando PDF..."):
+                            pdf_bytes = generar_pdf_cita_fpdf(cita_seleccionada)
+                            
+                            if pdf_bytes:
+                                nombre_paciente = cita_seleccionada.get('nombre_paciente', 'cita').replace(" ", "_")
+                                fecha = cita_seleccionada.get('fecha_cita', '')
+                                
+                                st.download_button(
+                                    label="⬇️ Descargar PDF",
+                                    data=pdf_bytes,
+                                    file_name=f"cita_{nombre_paciente}_{fecha}.pdf",
+                                    mime="application/pdf",
+                                    use_container_width=True,
+                                    key="download_pdf_individual"
+                                )
             
-            # Exportar datos
+            with col_pdf2:
+                # PDF del historial completo
+                st.markdown("###")
+                if st.button("📚 Generar PDF del historial", use_container_width=True, key="btn_pdf_historial"):
+                    with st.spinner("Generando PDF del historial..."):
+                        pdf_bytes = generar_pdf_historial_fpdf(citas_lista[:50])  # Limitar a 50 citas
+                        
+                        if pdf_bytes:
+                            st.download_button(
+                                label="📕 Descargar PDF histórico",
+                                data=pdf_bytes,
+                                file_name=f"historial_citas_{datetime.now().strftime('%Y%m%d')}.pdf",
+                                mime="application/pdf",
+                                use_container_width=True,
+                                key="download_pdf_historial"
+                            )
+            
+            # ====== SECCIÓN DE EXPORTACIÓN ======
             st.markdown("---")
             st.markdown("### 📤 Exportar datos")
             
@@ -4139,43 +4245,70 @@ with tab_citas4:
                 st.download_button(
                     label="📊 Descargar CSV",
                     data=csv_data,
-                    file_name=f"historial_citas_filtrado_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
+                    file_name=f"historial_citas_{datetime.now().strftime('%Y%m%d')}.csv",
                     mime="text/csv",
-                    use_container_width=True
+                    use_container_width=True,
+                    key="download_csv"
                 )
             
             with col_exp2:
                 # Exportar Excel
                 try:
+                    import openpyxl
                     import io
-                    output = io.BytesIO()
-                    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                    
+                    excel_buffer = io.BytesIO()
+                    with pd.ExcelWriter(excel_buffer, engine='openpyxl') as writer:
                         citas_filtradas.to_excel(writer, sheet_name='Citas', index=False)
                     
                     st.download_button(
                         label="📄 Descargar Excel",
-                        data=output.getvalue(),
+                        data=excel_buffer.getvalue(),
                         file_name=f"historial_citas_{datetime.now().strftime('%Y%m%d')}.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                        use_container_width=True
+                        use_container_width=True,
+                        key="download_excel"
                     )
+                except ImportError:
+                    st.info("Para Excel, instala: pip install openpyxl")
                 except Exception as e:
-                    st.warning(f"No se pudo generar Excel: {str(e)}")
+                    st.error(f"Error Excel: {str(e)}")
             
+            # ====== ESTADÍSTICAS ======
+            st.markdown("---")
+            st.markdown("### 📊 Estadísticas")
+            
+            col_stat1, col_stat2, col_stat3, col_stat4 = st.columns(4)
+            
+            with col_stat1:
+                total = len(citas_filtradas)
+                st.metric("Total citas", total, key="metric_total")
+            
+            with col_stat2:
+                con_anemia = len([c for c in citas_lista if c.get('clasificacion_anemia') in ['Leve', 'Moderada', 'Severa']])
+                st.metric("Con anemia", con_anemia, key="metric_anemia")
+            
+            with col_stat3:
+                severas = len([c for c in citas_lista if c.get('clasificacion_anemia') == 'Severa'])
+                st.metric("Severas", severas, key="metric_severas")
+            
+            with col_stat4:
+                if 'fecha_cita' in citas_filtradas.columns and not citas_filtradas.empty:
+                    ultima = citas_filtradas['fecha_cita'].max()
+                    st.metric("Última cita", ultima.strftime('%d/%m') if pd.notna(ultima) else "N/A", key="metric_ultima")
+        
         else:
-            st.info("📝 No hay citas que coincidan con los filtros seleccionados")
+            st.info("📝 No hay citas con los filtros seleccionados")
     
     else:
         st.info("👈 Haz clic en 'Cargar historial completo' para ver las citas")
         
-        # Botón para ver estadísticas rápidas
-        if st.button("📊 Ver estadísticas rápidas", type="secondary"):
+        # Estadísticas rápidas
+        if st.button("📊 Ver estadísticas rápidas", type="secondary", key="btn_stats_rapidas"):
             try:
-                # Conteo simple de citas
                 response = supabase.table("citas").select("count", count="exact").execute()
                 total_citas = response.count if response.count else 0
                 
-                # Citas del último mes
                 fecha_limite = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
                 response_recientes = supabase.table("citas")\
                     .select("count", count="exact")\
@@ -4188,7 +4321,6 @@ with tab_citas4:
                 
             except Exception as e:
                 st.error(f"Error al obtener estadísticas: {str(e)}")
-
 # ==================================================
 # PESTAÑA 5: CONFIGURACIÓN
 # ==================================================
