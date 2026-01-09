@@ -112,46 +112,25 @@ def generar_pdf_historial(paciente, historial):
 
 
 def generar_pdf_dashboard_nacional(indicadores, datos):
-    """Genera el contenido binario de un PDF para el Dashboard Nacional"""
+    """Crea el contenido binario del PDF para el reporte nacional"""
     try:
-        from fpdf import FPDF
-    except ImportError:
+        pdf = FPDF()
+        pdf.add_page()
+        pdf.set_font("Arial", 'B', 16)
+        pdf.cell(0, 10, "REPORTE NACIONAL DE ANEMIA", ln=True, align='C')
+        pdf.ln(10)
+        
+        # Resumen de indicadores
+        pdf.set_font("Arial", size=12)
+        pdf.cell(0, 10, f"Prevalencia Nacional: {indicadores.get('prevalencia_nacional', 0)}%", ln=True)
+        pdf.cell(0, 10, f"Total Pacientes: {indicadores.get('total_pacientes', 0)}", ln=True)
+        pdf.cell(0, 10, f"Fecha de reporte: {datetime.now().strftime('%d/%m/%Y')}", ln=True)
+        
+        # Retornar como bytes para Streamlit
+        return pdf.output(dest='S').encode('latin-1')
+    except Exception as e:
+        st.error(f"Error interno en PDF: {e}")
         return None
-
-    pdf = FPDF()
-    pdf.add_page()
-    
-    # Título del Reporte
-    pdf.set_font("Arial", 'B', 16)
-    pdf.cell(0, 10, "REPORTE NACIONAL DE ANEMIA", ln=True, align='C')
-    pdf.ln(5)
-    
-    # Indicadores Clave
-    pdf.set_font("Arial", 'B', 12)
-    pdf.cell(0, 10, "RESUMEN DE INDICADORES:", ln=True)
-    pdf.set_font("Arial", size=11)
-    pdf.cell(0, 8, f"- Prevalencia Nacional: {indicadores.get('prevalencia_nacional', 0)}%", ln=True)
-    pdf.cell(0, 8, f"- Hemoglobina Promedio: {indicadores.get('hb_promedio_nacional', 0):.1f} g/dL", ln=True)
-    pdf.cell(0, 8, f"- Tasa de Seguimiento: {indicadores.get('tasa_seguimiento', 0)}%", ln=True)
-    pdf.ln(5)
-
-    # Tabla de Regiones
-    pdf.set_font("Arial", 'B', 10)
-    pdf.cell(60, 8, "Region", 1)
-    pdf.cell(40, 8, "Prevalencia", 1)
-    pdf.cell(40, 8, "Pacientes", 1)
-    pdf.ln()
-    
-    pdf.set_font("Arial", size=10)
-    if 'por_region' in indicadores:
-        # Mostrar las primeras 15 regiones
-        for region, stats in list(indicadores['por_region'].items())[:15]:
-            pdf.cell(60, 8, str(region), 1)
-            pdf.cell(40, 8, f"{stats['prevalencia']}%", 1)
-            pdf.cell(40, 8, str(stats['total']), 1)
-            pdf.ln()
-
-    return pdf.output(dest='S').encode('latin-1')
 # ==================================================
 # SISTEMA DE LOGIN PARA 5 USUARIOS DE SALUD
 # ==================================================
@@ -4566,16 +4545,34 @@ with tab_seg3:
                 st.info("No hay datos suficientes para mostrar en la tabla")
             
 # ============================================
-# COLUMNA 3: Generar PDF
+# EXPORTAR REPORTES (Corrección de Sintaxis)
 # ============================================
+
+# Columna para el PDF
 with col_exp3:
-    if 'indicadores_anemia' in st.session_state:
-        # Generamos el contenido del PDF
-        pdf_data = generar_pdf_dashboard_nacional(
-            st.session_state.indicadores_anemia, 
-            st.session_state.datos_nacionales
-        )
-        
+    # Verificamos que existan los datos en el estado de sesión
+    if 'indicadores_anemia' in st.session_state and st.session_state.indicadores_anemia:
+        try:
+            # Llamamos a la función definida arriba
+            pdf_data = generar_pdf_dashboard_nacional(
+                st.session_state.indicadores_anemia, 
+                st.session_state.datos_nacionales
+            )
+            
+            if pdf_data:
+                st.download_button(
+                    label="📄 Descargar PDF",
+                    data=pdf_data,
+                    file_name=f"Reporte_Nacional_{datetime.now().strftime('%Y%m%d')}.pdf",
+                    mime="application/pdf",
+                    use_container_width=True,
+                    key="btn_descarga_nacional_ok"
+                )
+        except Exception as e:
+            st.error("Error al procesar el archivo PDF")
+    else:
+        # Este es el 'else' que causaba error si no había un 'if' claro arriba
+        st.warning("⚠️ No hay datos cargados para generar el PDF")
                    
         if pdf_data:
             st.download_button(
