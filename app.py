@@ -9,8 +9,51 @@ import time
 from datetime import datetime, timedelta
 from fpdf import FPDF
 
+def _generar_texto_plano(paciente, historial, error=None):
+    """Alternativa si FPDF no funciona"""
+    from datetime import datetime
+    
+    contenido = []
+    contenido.append("=" * 60)
+    contenido.append("HISTORIAL CLINICO - SISTEMA NIXON")
+    contenido.append("=" * 60)
+    contenido.append(f"Generado: {datetime.now().strftime('%d/%m/%Y %H:%M')}")
+    
+    if error:
+        contenido.append(f"NOTA: Error al generar PDF ({str(error)[:50]})")
+    
+    contenido.append("")
+    contenido.append("DATOS DEL PACIENTE")
+    contenido.append("-" * 40)
+    contenido.append(f"Nombre: {paciente.get('nombre_apellido', 'N/A')}")
+    contenido.append(f"DNI: {paciente.get('dni', 'N/A')}")
+    contenido.append(f"Edad: {paciente.get('edad_meses', 'N/A')} meses")
+    contenido.append(f"Region: {paciente.get('region', 'N/A')}")
+    contenido.append(f"Hemoglobina actual: {paciente.get('hemoglobina_dl1', 'N/A')} g/dL")
+    contenido.append(f"Controles: {len(historial)}")
+    contenido.append("")
+    
+    if historial:
+        contenido.append("CONTROLES REGISTRADOS")
+        contenido.append("-" * 40)
+        
+        for idx, control in enumerate(historial, 1):
+            contenido.append(f"[{idx}] {control.get('fecha_seguimiento', 'N/A')}")
+            contenido.append(f"  Hb: {control.get('hemoglobina_actual', 'N/A')} g/dL")
+            contenido.append(f"  Clasif: {control.get('clasificacion_actual', 'N/A')}")
+            contenido.append(f"  Tipo: {control.get('tipo_seguimiento', 'N/A')}")
+            contenido.append(f"  Resp: {control.get('usuario_responsable', 'N/A')}")
+            contenido.append("")
+    
+    contenido.append("=" * 60)
+    contenido.append("Fin del documento")
+    contenido.append("=" * 60)
+    
+    return "\n".join(contenido).encode('utf-8')
+
+
 def generar_pdf_simple(paciente, historial):
-    """Genera un PDF básico usando FPDF (sin ReportLab)"""
+    """Genera un PDF básico usando FPDF - VERSIÓN CORREGIDA CON UTF-8"""
     try:
         from fpdf import FPDF
         from datetime import datetime
@@ -22,9 +65,9 @@ def generar_pdf_simple(paciente, historial):
         # Página 1
         pdf.add_page()
         
-        # Configurar fuente (FPDF usa tamaños en puntos)
+        # Configurar fuente - EVITAR CARACTERES ESPECIALES EN TÍTULOS
         pdf.set_font('Arial', 'B', 16)
-        pdf.cell(0, 10, 'HISTORIAL CLÍNICO - SISTEMA NIXON', 0, 1, 'C')
+        pdf.cell(0, 10, 'HISTORIAL CLINICO - SISTEMA NIXON', 0, 1, 'C')
         
         pdf.set_font('Arial', '', 10)
         pdf.cell(0, 8, f'Generado: {datetime.now().strftime("%d/%m/%Y %H:%M")}', 0, 1, 'C')
@@ -34,18 +77,23 @@ def generar_pdf_simple(paciente, historial):
         pdf.line(10, pdf.get_y(), 200, pdf.get_y())
         pdf.ln(10)
         
-        # Información del paciente
+        # Información del paciente - SIN ACENTOS
         pdf.set_font('Arial', 'B', 12)
         pdf.cell(0, 8, 'DATOS DEL PACIENTE', 0, 1)
         pdf.set_font('Arial', '', 10)
         
+        # Quitar acentos de los datos
+        nombre_sin_acentos = paciente.get('nombre_apellido', 'N/A').replace('á', 'a').replace('é', 'e').replace('í', 'i').replace('ó', 'o').replace('ú', 'u').replace('ñ', 'n')
+        region_sin_acentos = paciente.get('region', 'N/A').replace('á', 'a').replace('é', 'e').replace('í', 'i').replace('ó', 'o').replace('ú', 'u').replace('ñ', 'n')
+        estado_sin_acentos = paciente.get('estado_paciente', 'N/A').replace('á', 'a').replace('é', 'e').replace('í', 'i').replace('ó', 'o').replace('ú', 'u').replace('ñ', 'n')
+        
         datos = [
-            f"Nombre: {paciente.get('nombre_apellido', 'N/A')}",
+            f"Nombre: {nombre_sin_acentos}",
             f"DNI: {paciente.get('dni', 'N/A')}",
             f"Edad: {paciente.get('edad_meses', 'N/A')} meses",
-            f"Región: {paciente.get('region', 'N/A')}",
+            f"Region: {region_sin_acentos}",
             f"Hemoglobina actual: {paciente.get('hemoglobina_dl1', 'N/A')} g/dL",
-            f"Estado: {paciente.get('estado_paciente', 'N/A')}",
+            f"Estado: {estado_sin_acentos}",
             f"Controles registrados: {len(historial)}"
         ]
         
@@ -70,30 +118,44 @@ def generar_pdf_simple(paciente, historial):
                 fecha = control.get('fecha_seguimiento', 'N/A')
                 pdf.cell(0, 6, f'Control #{idx} - {fecha}', 0, 1)
                 
-                # Detalles del control
+                # Detalles del control - SIN ACENTOS
                 pdf.set_font('Arial', '', 9)
                 
-                # Primera línea
+                # Limpiar acentos
                 hb = control.get('hemoglobina_actual', 'N/A')
                 clasif = control.get('clasificacion_actual', 'N/A')
-                pdf.cell(0, 5, f'Hemoglobina: {hb} g/dL | Clasificación: {clasif}', 0, 1)
+                if clasif:
+                    clasif = clasif.replace('á', 'a').replace('é', 'e').replace('í', 'i').replace('ó', 'o').replace('ú', 'u').replace('ñ', 'n')
+                
+                # Primera línea
+                pdf.cell(0, 5, f'Hemoglobina: {hb} g/dL | Clasificacion: {clasif}', 0, 1)
                 
                 # Segunda línea
                 tipo = control.get('tipo_seguimiento', 'N/A')
+                if tipo:
+                    tipo = tipo.replace('á', 'a').replace('é', 'e').replace('í', 'i').replace('ó', 'o').replace('ú', 'u').replace('ñ', 'n')
                 responsable = control.get('usuario_responsable', 'N/A')
+                if responsable:
+                    responsable = responsable.replace('á', 'a').replace('é', 'e').replace('í', 'i').replace('ó', 'o').replace('ú', 'u').replace('ñ', 'n')
+                
                 pdf.cell(0, 5, f'Tipo: {tipo} | Responsable: {responsable}', 0, 1)
                 
                 # Tercera línea
                 tratamiento = control.get('tratamiento_actual', 'N/A')
+                if tratamiento:
+                    tratamiento = str(tratamiento).replace('á', 'a').replace('é', 'e').replace('í', 'i').replace('ó', 'o').replace('ú', 'u').replace('ñ', 'n')
                 prox_control = control.get('proximo_control', 'N/A')
-                pdf.cell(0, 5, f'Tratamiento: {tratamiento} | Próximo control: {prox_control}', 0, 1)
+                
+                pdf.cell(0, 5, f'Tratamiento: {tratamiento} | Proximo control: {prox_control}', 0, 1)
                 
                 # Observaciones (si existen)
                 observaciones = str(control.get('observaciones', ''))
                 if observaciones and observaciones.lower() != 'nan' and len(observaciones) > 3:
                     pdf.set_font('Arial', 'I', 8)
+                    # Quitar acentos de observaciones
+                    obs_text = observaciones.replace('á', 'a').replace('é', 'e').replace('í', 'i').replace('ó', 'o').replace('ú', 'u').replace('ñ', 'n')
                     # Asegurar que las observaciones no sean demasiado largas
-                    obs_text = observaciones[:200] + "..." if len(observaciones) > 200 else observaciones
+                    obs_text = obs_text[:200] + "..." if len(obs_text) > 200 else obs_text
                     pdf.multi_cell(0, 4, f'Observaciones: {obs_text}')
                     pdf.set_font('Arial', '', 9)
                 
@@ -105,7 +167,7 @@ def generar_pdf_simple(paciente, historial):
         if len(historial) > 1:
             pdf.ln(5)
             pdf.set_font('Arial', 'B', 11)
-            pdf.cell(0, 8, 'RESUMEN ESTADÍSTICO', 0, 1)
+            pdf.cell(0, 8, 'RESUMEN ESTADISTICO', 0, 1)
             pdf.set_font('Arial', '', 9)
             
             # Calcular estadísticas de hemoglobina
@@ -136,23 +198,24 @@ def generar_pdf_simple(paciente, historial):
                         tendencia = "Estable"
                     pdf.cell(0, 5, f'• Tendencia: {tendencia}', 0, 1)
         
-        # Pie de página
+        # Pie de página - SIN ACENTOS
         pdf.set_y(-30)
         pdf.set_font('Arial', 'I', 8)
-        pdf.cell(0, 10, 'Sistema Nixon - Seguimiento Clínico de Anemia Infantil', 0, 0, 'C')
+        pdf.cell(0, 10, 'Sistema Nixon - Seguimiento Clinico de Anemia Infantil', 0, 0, 'C')
         pdf.ln(5)
-        pdf.cell(0, 10, 'Documento confidencial - Uso exclusivo médico', 0, 0, 'C')
+        pdf.cell(0, 10, 'Documento confidencial - Uso exclusivo medico', 0, 0, 'C')
         
-        # Devolver PDF como bytes
-        return pdf.output(dest='S').encode('latin-1')
+        # CORRECCIÓN PRINCIPAL: Usar UTF-8 en lugar de latin-1
+        return pdf.output(dest='S').encode('utf-8', errors='ignore')
         
     except Exception as e:
         # Si FPDF falla, crear texto plano
         return _generar_texto_plano(paciente, historial, e)
 
+
 def generar_pdf_historial(paciente, historial):
     """
-    Genera un PDF profesional del historial clínico usando FPDF
+    Genera un PDF profesional del historial clínico usando FPDF - VERSIÓN CORREGIDA
     """
     try:
         from fpdf import FPDF
@@ -162,10 +225,7 @@ def generar_pdf_historial(paciente, historial):
         pdf = FPDF()
         pdf.add_page()
         
-        # Configurar fuentes (usar fuentes por defecto, no archivos externos)
-        # FPDF viene con fuentes básicas: Courier, Helvetica, Times
-        
-        # Título
+        # Título - SIN ACENTOS
         pdf.set_font('Helvetica', 'B', 16)
         pdf.set_fill_color(30, 64, 175)  # Azul Nixon
         pdf.set_text_color(255, 255, 255)
@@ -178,16 +238,37 @@ def generar_pdf_historial(paciente, historial):
         pdf.cell(0, 10, 'DATOS DEL PACIENTE', 0, 1)
         pdf.set_font('Helvetica', '', 10)
         
+        # Preparar datos sin acentos
+        nombre = paciente.get('nombre_apellido', 'N/A')
+        if nombre:
+            nombre = nombre.replace('á', 'a').replace('é', 'e').replace('í', 'i').replace('ó', 'o').replace('ú', 'u').replace('ñ', 'n')
+        
+        region = paciente.get('region', 'N/A')
+        if region:
+            region = region.replace('á', 'a').replace('é', 'e').replace('í', 'i').replace('ó', 'o').replace('ú', 'u').replace('ñ', 'n')
+        
+        genero = paciente.get('genero', 'N/A')
+        if genero:
+            genero = genero.replace('á', 'a').replace('é', 'e').replace('í', 'i').replace('ó', 'o').replace('ú', 'u').replace('ñ', 'n')
+        
+        estado = paciente.get('estado_paciente', 'N/A')
+        if estado:
+            estado = estado.replace('á', 'a').replace('é', 'e').replace('í', 'i').replace('ó', 'o').replace('ú', 'u').replace('ñ', 'n')
+        
+        riesgo = paciente.get('riesgo', 'N/A')
+        if riesgo:
+            riesgo = riesgo.replace('á', 'a').replace('é', 'e').replace('í', 'i').replace('ó', 'o').replace('ú', 'u').replace('ñ', 'n')
+        
         datos = [
-            ['Nombre:', paciente.get('nombre_apellido', 'N/A')],
+            ['Nombre:', nombre],
             ['DNI:', paciente.get('dni', 'N/A')],
             ['Edad:', f"{paciente.get('edad_meses', 'N/A')} meses"],
-            ['Genero:', paciente.get('genero', 'N/A')],
-            ['Region:', paciente.get('region', 'N/A')],
+            ['Genero:', genero],
+            ['Region:', region],
             ['Telefono:', paciente.get('telefono', 'N/A')],
             ['Hemoglobina actual:', f"{paciente.get('hemoglobina_dl1', 'N/A')} g/dL"],
-            ['Estado:', paciente.get('estado_paciente', 'N/A')],
-            ['Riesgo:', paciente.get('riesgo', 'N/A')]
+            ['Estado:', estado],
+            ['Riesgo:', riesgo]
         ]
         
         for etiqueta, valor in datos:
@@ -239,7 +320,7 @@ def generar_pdf_historial(paciente, historial):
                 else:
                     pdf.set_fill_color(255, 255, 255)
                 
-                # Obtener datos
+                # Obtener datos y limpiar acentos
                 fecha = control.get('fecha_seguimiento', 'N/A')
                 if fecha and isinstance(fecha, str):
                     fecha = fecha[:10]
@@ -247,8 +328,18 @@ def generar_pdf_historial(paciente, historial):
                     fecha = 'N/A'
                     
                 tipo = control.get('tipo_seguimiento', 'N/A')
+                if tipo:
+                    tipo = tipo.replace('á', 'a').replace('é', 'e').replace('í', 'i').replace('ó', 'o').replace('ú', 'u').replace('ñ', 'n')
+                    if len(tipo) > 8:
+                        tipo = tipo[:7] + '..'
+                
                 hb = control.get('hemoglobina_actual', 'N/A')
                 responsable = control.get('usuario_responsable', 'N/A')
+                if responsable:
+                    responsable = responsable.replace('á', 'a').replace('é', 'e').replace('í', 'i').replace('ó', 'o').replace('ú', 'u').replace('ñ', 'n')
+                    if len(responsable) > 10:
+                        responsable = responsable[:9] + '..'
+                
                 proximo = control.get('proximo_control', 'N/A')
                 
                 # Formatear
@@ -262,12 +353,6 @@ def generar_pdf_historial(paciente, historial):
                 
                 if proximo and isinstance(proximo, str):
                     proximo = proximo[:10]
-                
-                # Acortar textos largos
-                if tipo and len(tipo) > 8:
-                    tipo = tipo[:7] + '..'
-                if responsable and len(responsable) > 10:
-                    responsable = responsable[:9] + '..'
                 
                 # Agregar fila
                 datos_fila = [fecha, tipo, str(hb), responsable, proximo]
@@ -333,9 +418,10 @@ def generar_pdf_historial(paciente, historial):
                     pdf.cell(0, 10, 'OBSERVACIONES DEL ULTIMO CONTROL', 0, 1)
                     pdf.set_font('Helvetica', '', 10)
                     
-                    # Limpiar texto
+                    # Limpiar texto y acentos
                     observaciones_str = str(observaciones).replace('nan', '').strip()
                     if observaciones_str:
+                        observaciones_str = observaciones_str.replace('á', 'a').replace('é', 'e').replace('í', 'i').replace('ó', 'o').replace('ú', 'u').replace('ñ', 'n')
                         # Dividir texto largo
                         if len(observaciones_str) > 300:
                             observaciones_str = observaciones_str[:297] + '...'
@@ -353,33 +439,12 @@ def generar_pdf_historial(paciente, historial):
         pdf.cell(0, 5, f'Generado el: {datetime.now().strftime("%d/%m/%Y %H:%M")}', 0, 1, 'C')
         pdf.cell(0, 5, 'Sistema Nixon v2.0 - Control de Anemia Infantil', 0, 1, 'C')
         
-        # Devolver bytes del PDF
-        return pdf.output(dest='S').encode('latin-1')
+        # CORRECCIÓN PRINCIPAL: Cambiar latin-1 por UTF-8
+        return pdf.output(dest='S').encode('utf-8', errors='ignore')
         
     except Exception as e:
-        # Si falla FPDF, registrar error y usar versión simple
-        error_msg = f"Error al generar PDF profesional: {str(e)[:100]}"
-        print(error_msg)  # Registrar en consola
-        
-        # Usar la versión simple que ya tienes definida
-        from datetime import datetime
-        
-        # Crear un PDF simple de emergencia
-        contenido = f"""
-        ERROR AL GENERAR PDF
-        ===================
-        {error_msg}
-        
-        INFORMACION DEL PACIENTE:
-        ------------------------
-        Nombre: {paciente.get('nombre_apellido', 'N/A')}
-        DNI: {paciente.get('dni', 'N/A')}
-        Controles: {len(historial)}
-        
-        Fecha: {datetime.now().strftime('%d/%m/%Y %H:%M')}
-        """
-        
-        return contenido.encode('utf-8')
+        # Si falla, usar la versión simple
+        return generar_pdf_simple(paciente, historial)
 # ==================================================
 # SISTEMA DE LOGIN PARA 5 USUARIOS DE SALUD
 # ==================================================
