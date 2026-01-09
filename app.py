@@ -1449,6 +1449,9 @@ with tab1:
     error_nombre = None
     error_telefono = None
     
+    # Variable para controlar si se mostró el resultado
+    resultado_mostrado = False
+    
     # Inicializar session state para limpiar
     if 'limpiar_formulario' not in st.session_state:
         st.session_state.limpiar_formulario = False
@@ -1569,9 +1572,6 @@ with tab1:
                 "No participa en programas"
             ], key="programas_alimentacion_input")
         
-        # VALIDACIÓN SIMPLE
-        st.markdown("---")
-        
         # Botones
         col_b1, col_b2, col_b3 = st.columns(3)
         
@@ -1646,7 +1646,7 @@ with tab1:
                     "estado_nutricional": estado_nutricional
                 }
                 
-                # Mostrar resultados simples
+                # Mostrar resultados
                 st.markdown("---")
                 st.markdown("### 📊 Resultados del Análisis")
                 
