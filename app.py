@@ -1079,7 +1079,20 @@ def obtener_ajuste_hemoglobina(altitud):
 def calcular_hemoglobina_ajustada(hemoglobina_medida, altitud):
     ajuste = obtener_ajuste_hemoglobina(altitud)
     return hemoglobina_medida + ajuste
-
+def clasificar_estado_anemia(hb_ajustada):
+    """Clasifica el nivel de anemia según la Hb Ajustada"""
+    try:
+        hb = float(hb_ajustada)
+        if hb < 7.0:
+            return "Anemia Severa"
+        elif 7.0 <= hb < 10.0:
+            return "Anemia Moderada"
+        elif 10.0 <= hb < 11.0:
+            return "Anemia Leve"
+        else:
+            return "Normal"
+    except:
+        return "Sin Datos"
 # ==================================================
 # SISTEMA DE INTERPRETACIÓN AUTOMÁTICA
 # ==================================================
