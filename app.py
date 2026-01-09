@@ -1333,58 +1333,54 @@ def obtener_referencia_crecimiento():
         return pd.DataFrame()
 
 def evaluar_estado_nutricional(edad_meses, peso_kg, talla_cm, genero):
-    """Evalúa el estado nutricional basado en tablas de referencia OMS"""
+    """Evalúa el estado nutricional asegurando que la edad coincida con la tabla"""
     referencia_df = obtener_referencia_crecimiento()
     
-    if referencia_df.empty:
-        return "Sin datos referencia", "Sin datos referencia", "NUTRICIÓN NO EVALUADA"
+    # Verificamos si la tabla de la OMS cargó correctamente
+    if referencia_df is None or referencia_df.empty:
+        return "Error: Tabla OMS vacía", "Error: Tabla OMS vacía", "ERROR DE BASE DE DATOS"
     
-    referencia_edad = referencia_df[referencia_df['edad_meses'] == edad_meses]
+    # FORZAMOS REDONDEO: Si es 12.4 meses, buscará el mes 12
+    edad_entera = int(round(float(edad_meses)))
     
-    if referencia_edad.empty:
-        return "Edad sin referencia", "Edad sin referencia", "NO EVALUABLE"
+    # Filtramos por edad y género
+    ref_edad = referencia_df[referencia_df['edad_meses'] == edad_entera]
     
-    ref = referencia_edad.iloc[0]
+    if ref_edad.empty:
+        # Esto te dirá si el problema es que la edad es muy alta o muy baja
+        return f"Edad {edad_entera}m no encontrada", "N/A", "EDAD FUERA DE RANGO"
     
-    if genero == 'F':
-        peso_min = ref['peso_min_ninas']
-        peso_promedio = ref['peso_promedio_ninas']
-        peso_max = ref['peso_max_ninas']
-        talla_min = ref['talla_min_ninas']
-        talla_promedio = ref['talla_promedio_ninas']
-        talla_max = ref['talla_max_ninas']
+    ref = ref_edad.iloc[0]
+    
+    # Selección de columnas según género
+    # Asegúrate que en tu base de datos las columnas se llamen exactamente así
+    if str(genero).upper() in ['F', 'FEMENINO', 'NIÑA']:
+        p_min, p_max = ref['peso_min_ninas'], ref['peso_max_ninas']
+        t_min, t_max = ref['talla_min_ninas'], ref['talla_max_ninas']
     else:
-        peso_min = ref['peso_min_ninos']
-        peso_promedio = ref['peso_promedio_ninos']
-        peso_max = ref['peso_max_ninos']
-        talla_min = ref['talla_min_ninos']
-        talla_promedio = ref['talla_promedio_ninos']
-        talla_max = ref['talla_max_ninos']
+        p_min, p_max = ref['peso_min_ninos'], ref['peso_max_ninos']
+        t_min, t_max = ref['talla_min_ninos'], ref['talla_max_ninos']
     
-    if peso_kg < peso_min:
-        estado_peso = "BAJO PESO"
-    elif peso_kg > peso_max:
-        estado_peso = "SOBREPESO"
-    else:
-        estado_peso = "PESO NORMAL"
+    # --- LÓGICA DE EVALUACIÓN ---
+    estado_peso = "PESO NORMAL"
+    if peso_kg < p_min: estado_peso = "BAJO PESO"
+    elif peso_kg > p_max: estado_peso = "SOBREPESO"
     
-    if talla_cm < talla_min:
-        estado_talla = "TALLA BAJA"
-    elif talla_cm > talla_max:
-        estado_talla = "TALLA ALTA"
-    else:
-        estado_talla = "TALLA NORMAL"
+    estado_talla = "TALLA NORMAL"
+    if talla_cm < t_min: estado_talla = "TALLA BAJA"
+    elif talla_cm > t_max: estado_talla = "TALLA ALTA"
     
+    # Diagnóstico Final
     if estado_peso == "BAJO PESO" and estado_talla == "TALLA BAJA":
-        estado_nutricional = "DESNUTRICIÓN CRÓNICA"
+        estado_nut = "DESNUTRICIÓN CRÓNICA"
     elif estado_peso == "BAJO PESO":
-        estado_nutricional = "DESNUTRICIÓN AGUDA"
+        estado_nut = "DESNUTRICIÓN AGUDA"
     elif estado_peso == "SOBREPESO":
-        estado_nutricional = "SOBREPESO"
+        estado_nut = "RIESGO DE SOBREPESO"
     else:
-        estado_nutricional = "NUTRICIÓN ADECUADA"
-    
-    return estado_peso, estado_talla, estado_nutricional
+        estado_nut = "NUTRICIÓN ADECUADA"
+        
+    return estado_peso, estado_talla, estado_nut
 
 # ==================================================
 # LISTAS DE OPCIONES
