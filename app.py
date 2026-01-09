@@ -382,7 +382,7 @@ def show_login_page():
                     st.error("❌ Usuario o contraseña incorrectos")
     
     # Información de usuarios de prueba
-    with st.expander("👥 USUARIOS AUTORIZADOS DEL SISTEMA", expanded=True):
+    with st.expander("👥 USUARIOS AUTORIZADOS DEL SISTEMA", expanded=False):
         st.markdown('<div class="test-users">', unsafe_allow_html=True)
         st.markdown("**Personal de Salud Autorizado:**")
         
