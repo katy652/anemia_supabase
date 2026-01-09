@@ -1092,20 +1092,24 @@ def calcular_hemoglobina_ajustada(hemoglobina_medida, altitud):
         return None
 
 def clasificar_estado_anemia(hb_ajustada):
-    """Lógica unificada para todas las pestañas según Norma Técnica"""
-    if hb_ajustada is None:
-        return "SIN DATOS"
+    """Lógica unificada y sincronizada con el Dashboard y Base de Datos"""
+    if hb_ajustada is None or hb_ajustada == "":
+        return "NULO"
+    
     try:
         hb = float(hb_ajustada)
+        
+        # Sincronizado con las etiquetas de tus gráficos (MAYÚSCULAS)
         if hb < 7.0:
-            return "Anemia severa"  # <--- CRUCIAL: Detecta casos críticos
-        elif 7.0 <= hb <= 9.9:
-            return "Anemia moderada"
-        elif 10.0 <= hb <= 10.9:
-            return "Anemia leve"
+            return "SEVERA"
+        elif 7.0 <= hb < 10.0:  # Cambiado <= 9.9 a < 10.0 para no perder decimales
+            return "MODERADA"
+        elif 10.0 <= hb < 11.0: # Cambiado <= 10.9 a < 11.0
+            return "LEVE"
         else:
-            return "Sin anemia"
-    except:
+            return "NORMAL" # O "SIN ANEMIA" según prefieras en el gráfico
+            
+    except (ValueError, TypeError):
         return "ERROR"
 
 # ==================================================
