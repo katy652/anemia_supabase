@@ -3213,7 +3213,7 @@ Sistema Nacional de Monitoreo de Anemia"""
                 st.code(resumen_texto, language="text")
                 st.success("✅ Copia el texto de arriba manualmente")
 
-        # ============================================
+      # ============================================
         # 📌 INFORMACIÓN ADICIONAL
         # ============================================
         
@@ -3221,31 +3221,30 @@ Sistema Nacional de Monitoreo de Anemia"""
             st.markdown("""
             **Definiciones utilizadas:**
             
-            **Prevalencia de anemia:** Porcentaje de pacientes con hemoglobina < 11 g/dL (OMS)
+            **Prevalencia de anemia:** Porcentaje de pacientes cuya **Hemoglobina Ajustada** es menor a 11.0 g/dL.
             
-            **Clasificación por niveles:**
-            - **Anemia severa:** Hb < 7 g/dL
-            - **Anemia moderada:** Hb 7-9.9 g/dL  
-            - **Anemia leve:** Hb 10-10.9 g/dL
-            - **Normal:** Hb ≥ 11 g/dL
+            **Clasificación unificada por niveles (Norma Técnica):**
+            - 🔴 **Anemia severa:** Hb < 7.0 g/dL
+            - 🟠 **Anemia moderada:** Hb 7.0 - 9.9 g/dL  
+            - 🟡 **Anemia leve:** Hb 10.0 - 10.9 g/dL
+            - 🟢 **Sin anemia:** Hb ≥ 11.0 g/dL
+            
+            **Nota sobre Altitud:** El sistema detecta automáticamente la región del paciente y aplica el factor de corrección de hemoglobina según los metros sobre el nivel del mar (msnm).
             
             **Indicadores de seguimiento:**
-            - **Tasa de seguimiento:** % de pacientes con anemia que están en control activo
-            - **Meta OMS:** Prevalencia < 20% en población infantil
+            - **Tasa de seguimiento:** Porcentaje de pacientes diagnosticados con anemia que cuentan con controles activos.
+            - **Meta OMS:** Reducción de la prevalencia por debajo del 20% en población infantil.
             
             **Interpretación de colores en el mapa:**
-            - 🔴 **Rojo:** Prevalencia > 40% (Alta prioridad)
+            - 🔴 **Rojo:** Prevalencia > 40% (Problema de salud pública grave)
             - 🟡 **Amarillo:** Prevalencia 20-40% (Atención requerida)
-            - 🟢 **Verde:** Prevalencia < 20% (Dentro de meta OMS)
+            - 🟢 **Verde:** Prevalencia < 20% (Controlado / Meta OMS)
             
             **Fuentes de datos:**
-            - Sistema Nixon v2.0
-            - Base de datos nacional consolidada
-            - Criterios OMS para diagnóstico de anemia
-            - Coordenadas aproximadas de regiones del Perú
+            - Sistema Nixon v2.0 (Sincronización Supabase)
+            - Norma Técnica de Salud NTS Nº 134-MINSA/2017/DGIESP
+            - Coordenadas geográficas regionales actualizadas 2026.
             """)
-    
-    else:
         # ============================================
         # SIN DATOS CARGADOS
         # ============================================
