@@ -3062,24 +3062,29 @@ with col_stat3:
     else:
         st.metric(label="⚠️ Anemia Severa", value="0.0%")
 
-# ============================================
-# ⚙️ FUNCIÓN DE CLASIFICACIÓN (LIMPIA)
-# ============================================
 
-def clasificar_estado_anemia(hb_ajustada):
-    """Clasificación unificada para Dashboard y Base de Datos"""
-    try:
-        if hb_ajustada is None or hb_ajustada == "":
-            return "NULO"
-            
-        hb = float(hb_ajustada)
-        if hb < 7.0: return "SEVERA"
-        if 7.0 <= hb < 10.0: return "MODERADA"
-        if 10.0 <= hb < 11.0: return "LEVE"
-        return "NORMAL"
-    except:
-        return "ERROR"
 
+
+        with col_stat3:
+    
+        col_busqueda = df['nivel_anemia'].astype(str).str.upper().str.strip()
+    
+        casos_severos = len(df[col_busqueda == 'SEVERA'])
+    
+        # Universo de pacientes con diagnóstico de anemia
+        pacientes_anemia = len(df[col_busqueda.isin(['SEVERA', 'MODERADA', 'LEVE'])])
+    
+        # 2. Cálculo y visualización
+             if pacientes_anemia > 0:
+                tasa_severidad = (casos_severos / pacientes_anemia) * 100
+                st.metric(
+                label="⚠️ Anemia Severa",
+                value=f"{tasa_severidad:.1f}%",
+                delta=f"{casos_severos} pacientes" if casos_severos > 0 else None,
+                delta_color="inverse"
+                )
+             else:
+        st.metric(label="⚠️ Anemia Severa", value="0.0%")
         with col_stat3:
             # Estadística: Proporción anemia severa
             if indicadores['con_anemia'] > 0:
