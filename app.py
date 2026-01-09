@@ -3798,7 +3798,7 @@ with tab_citas2:
             st.info("👆 Presiona 'Cargar Recordatorios' para ver citas próximas")
     
 # ============================================
-# TAB 4: HISTORIAL DE CITAS - CON PDF FPDF
+# TAB 4: HISTORIAL DE CITAS - VERSIÓN CORREGIDA
 # ============================================
 with tab_citas4:
     st.markdown('<div class="section-title-purple">📋 HISTORIAL COMPLETO DE CITAS</div>', unsafe_allow_html=True)
@@ -3859,7 +3859,6 @@ with tab_citas4:
             pdf.set_font("Arial", '', 11)
             
             diagnostico = cita_data.get('diagnostico', 'No especificado')
-            # Manejar texto largo con multi_cell
             pdf.multi_cell(0, 8, diagnostico)
             pdf.ln(5)
             
@@ -3952,13 +3951,11 @@ with tab_citas4:
             pdf.set_font("Arial", '', 9)
             pdf.set_fill_color(255, 255, 255)
             
-            for cita in citas_data[:30]:  # Limitar a 30 citas por página
-                # Formatear nombre para que quepa
+            for cita in citas_data[:30]:
                 nombre = cita.get('nombre_paciente', 'N/A')
                 if len(nombre) > 20:
                     nombre = nombre[:17] + "..."
                 
-                # Formatear fecha
                 fecha = cita.get('fecha_cita', 'N/A')
                 if isinstance(fecha, str) and len(fecha) > 10:
                     fecha = fecha[:10]
@@ -4083,14 +4080,14 @@ with tab_citas4:
     col_load1, col_load2 = st.columns([3, 1])
     
     with col_load1:
-        if st.button("🔄 Cargar historial completo", key="cargar_historial_pdf", use_container_width=True):
+        if st.button("🔄 Cargar historial completo", use_container_width=True):
             with st.spinner("Cargando..."):
                 citas_vinculadas = obtener_citas_con_info_anemia()
                 st.session_state.citas_historial = citas_vinculadas
                 st.success(f"✅ {len(citas_vinculadas)} citas cargadas")
     
     with col_load2:
-        if st.button("🧹 Limpiar cache", type="secondary", use_container_width=True, key="limpiar_cache_pdf"):
+        if st.button("🧹 Limpiar cache", type="secondary", use_container_width=True):
             st.session_state.citas_historial = []
             st.rerun()
     
@@ -4120,18 +4117,18 @@ with tab_citas4:
         with col_filt1:
             if 'tipo_consulta' in citas_df.columns and not citas_df['tipo_consulta'].empty:
                 tipos = citas_df['tipo_consulta'].dropna().unique()
-                filtro_tipo = st.multiselect("Tipo de consulta", tipos, default=tipos[:min(3, len(tipos))], key="filtro_tipo_pdf")
+                filtro_tipo = st.multiselect("Tipo de consulta", tipos, default=tipos[:min(3, len(tipos))])
         
         with col_filt2:
             if 'clasificacion_anemia' in citas_df.columns:
                 clasificaciones = citas_df['clasificacion_anemia'].dropna().unique()
-                filtro_anemia = st.multiselect("Estado anemia", clasificaciones, default=clasificaciones, key="filtro_anemia_pdf")
+                filtro_anemia = st.multiselect("Estado anemia", clasificaciones, default=clasificaciones)
         
         with col_filt3:
             fecha_min = citas_df['fecha_cita'].min().date() if not citas_df['fecha_cita'].isnull().all() else datetime.now().date() - timedelta(days=30)
             fecha_max = citas_df['fecha_cita'].max().date() if not citas_df['fecha_cita'].isnull().all() else datetime.now().date()
-            fecha_min_sel = st.date_input("Desde", value=fecha_min, key="fecha_desde_pdf")
-            fecha_max_sel = st.date_input("Hasta", value=fecha_max, key="fecha_hasta_pdf")
+            fecha_min_sel = st.date_input("Desde", value=fecha_min)
+            fecha_max_sel = st.date_input("Hasta", value=fecha_max)
         
         # Aplicar filtros
         citas_filtradas = citas_df.copy()
@@ -4193,11 +4190,10 @@ with tab_citas4:
                     cita_seleccionada_idx = st.selectbox(
                         "Seleccionar cita para generar PDF:",
                         range(len(opciones_citas)),
-                        format_func=lambda x: opciones_citas[x],
-                        key="select_cita_pdf"
+                        format_func=lambda x: opciones_citas[x]
                     )
                     
-                    if st.button("🖨️ Generar PDF de esta cita", use_container_width=True, key="btn_generar_pdf_individual"):
+                    if st.button("🖨️ Generar PDF de esta cita", use_container_width=True):
                         cita_seleccionada = citas_lista[cita_seleccionada_idx]
                         
                         with st.spinner("Generando PDF..."):
@@ -4212,16 +4208,15 @@ with tab_citas4:
                                     data=pdf_bytes,
                                     file_name=f"cita_{nombre_paciente}_{fecha}.pdf",
                                     mime="application/pdf",
-                                    use_container_width=True,
-                                    key="download_pdf_individual"
+                                    use_container_width=True
                                 )
             
             with col_pdf2:
                 # PDF del historial completo
                 st.markdown("###")
-                if st.button("📚 Generar PDF del historial", use_container_width=True, key="btn_pdf_historial"):
+                if st.button("📚 Generar PDF del historial", use_container_width=True):
                     with st.spinner("Generando PDF del historial..."):
-                        pdf_bytes = generar_pdf_historial_fpdf(citas_lista[:50])  # Limitar a 50 citas
+                        pdf_bytes = generar_pdf_historial_fpdf(citas_lista[:50])
                         
                         if pdf_bytes:
                             st.download_button(
@@ -4229,8 +4224,7 @@ with tab_citas4:
                                 data=pdf_bytes,
                                 file_name=f"historial_citas_{datetime.now().strftime('%Y%m%d')}.pdf",
                                 mime="application/pdf",
-                                use_container_width=True,
-                                key="download_pdf_historial"
+                                use_container_width=True
                             )
             
             # ====== SECCIÓN DE EXPORTACIÓN ======
@@ -4247,8 +4241,7 @@ with tab_citas4:
                     data=csv_data,
                     file_name=f"historial_citas_{datetime.now().strftime('%Y%m%d')}.csv",
                     mime="text/csv",
-                    use_container_width=True,
-                    key="download_csv"
+                    use_container_width=True
                 )
             
             with col_exp2:
@@ -4266,15 +4259,14 @@ with tab_citas4:
                         data=excel_buffer.getvalue(),
                         file_name=f"historial_citas_{datetime.now().strftime('%Y%m%d')}.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                        use_container_width=True,
-                        key="download_excel"
+                        use_container_width=True
                     )
                 except ImportError:
                     st.info("Para Excel, instala: pip install openpyxl")
                 except Exception as e:
                     st.error(f"Error Excel: {str(e)}")
             
-            # ====== ESTADÍSTICAS ======
+            # ====== ESTADÍSTICAS - VERSIÓN CORREGIDA (sin key=) ======
             st.markdown("---")
             st.markdown("### 📊 Estadísticas")
             
@@ -4282,20 +4274,20 @@ with tab_citas4:
             
             with col_stat1:
                 total = len(citas_filtradas)
-                st.metric("Total citas", total, key="metric_total")
+                st.metric("Total citas", total)  # CORREGIDO: sin key=
             
             with col_stat2:
                 con_anemia = len([c for c in citas_lista if c.get('clasificacion_anemia') in ['Leve', 'Moderada', 'Severa']])
-                st.metric("Con anemia", con_anemia, key="metric_anemia")
+                st.metric("Con anemia", con_anemia)  # CORREGIDO: sin key=
             
             with col_stat3:
                 severas = len([c for c in citas_lista if c.get('clasificacion_anemia') == 'Severa'])
-                st.metric("Severas", severas, key="metric_severas")
+                st.metric("Severas", severas)  # CORREGIDO: sin key=
             
             with col_stat4:
                 if 'fecha_cita' in citas_filtradas.columns and not citas_filtradas.empty:
                     ultima = citas_filtradas['fecha_cita'].max()
-                    st.metric("Última cita", ultima.strftime('%d/%m') if pd.notna(ultima) else "N/A", key="metric_ultima")
+                    st.metric("Última cita", ultima.strftime('%d/%m') if pd.notna(ultima) else "N/A")  # CORREGIDO: sin key=
         
         else:
             st.info("📝 No hay citas con los filtros seleccionados")
@@ -4304,7 +4296,7 @@ with tab_citas4:
         st.info("👈 Haz clic en 'Cargar historial completo' para ver las citas")
         
         # Estadísticas rápidas
-        if st.button("📊 Ver estadísticas rápidas", type="secondary", key="btn_stats_rapidas"):
+        if st.button("📊 Ver estadísticas rápidas", type="secondary"):
             try:
                 response = supabase.table("citas").select("count", count="exact").execute()
                 total_citas = response.count if response.count else 0
