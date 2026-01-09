@@ -3028,60 +3028,6 @@ with tab3:
             )
 
         with col_stat3:
-            # 1. Conteo directo sobre el DataFrame para evitar fallos de sincronización
-            # Usamos las etiquetas en MAYÚSCULAS para coincidir con tu base de datos y gráficos
-            casos_severos = len(df[df['nivel_anemia'].str.upper() == 'SEVERA'])
-    
-            # Definimos el universo de pacientes con anemia (Leve + Moderada + Severa)
-            pacientes_con_anemia = len(df[df['nivel_anemia'].str.upper().isin(['SEVERA', 'MODERADA', 'LEVE'])])
-
-
-# ============================================
-# 📊 SECCIÓN DE MÉTRICAS (LIMPIA)
-# ============================================
-
-with col_stat3:
-    # 1. Conteo directo y robusto (ignora mayúsculas/minúsculas y espacios)
-    col_busqueda = df['nivel_anemia'].astype(str).str.upper().str.strip()
-    
-    casos_severos = len(df[col_busqueda == 'SEVERA'])
-    
-    # Universo de pacientes con diagnóstico de anemia
-    pacientes_anemia = len(df[col_busqueda.isin(['SEVERA', 'MODERADA', 'LEVE'])])
-    
-    # 2. Cálculo y visualización
-    if pacientes_anemia > 0:
-        tasa_severidad = (casos_severos / pacientes_anemia) * 100
-        
-        st.metric(
-            label="⚠️ Anemia Severa",
-            value=f"{tasa_severidad:.1f}%",
-            delta=f"{casos_severos} pacientes" if casos_severos > 0 else None,
-            delta_color="inverse"
-        )
-    else:
-        st.metric(label="⚠️ Anemia Severa", value="0.0%")
-
-
-        with col_stat3:
-        # 1. Preparación de datos y conteo
-        col_busqueda = df['nivel_anemia'].astype(str).str.upper().str.strip()
-        casos_severos = len(df[col_busqueda == 'SEVERA'])
-        pacientes_anemia = len(df[col_busqueda.isin(['SEVERA', 'MODERADA', 'LEVE'])])
-           if pacientes_anemia > 0:
-            tasa_severidad = (casos_severos / pacientes_anemia) * 100
-            st.metric(
-            label="⚠️ Anemia Severa",
-            value=f"{tasa_severidad:.1f}%",
-            delta=f"{casos_severos} pacientes" if casos_severos > 0 else None,
-            delta_color="inverse"
-            )
-            else:
-            st.metric(
-            label="⚠️ Anemia Severa", 
-            value="0.0%"
-            )
-        with col_stat3:
             # Estadística: Proporción anemia severa
             if indicadores['con_anemia'] > 0:
                 prop_severa = (indicadores['severa'] / indicadores['con_anemia']) * 100
