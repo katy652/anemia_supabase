@@ -9,18 +9,17 @@ import time
 from datetime import datetime, timedelta
 from fpdf import FPDF
 
-def generar_pdf_historial(paciente, historial):
-    """
-    Genera un PDF profesional. 
-    CORRECCIÓN: Se usa 'latin-1' para el output de FPDF (estándar) 
-    pero se maneja el buffer correctamente para evitar archivos en blanco.
-    """
-    try:
-        from fpdf import FPDF
-        from datetime import datetime
-        import io
+import streamlit as st
+from fpdf import FPDF
+from datetime import datetime
+import io
+import time
 
-        # 1. Configuración Inicial
+# 1. FUNCIÓN GENERADORA DE PDF (Tu lógica corregida)
+def generar_pdf_historial(paciente, historial):
+    """Genera los bytes del PDF profesional para el historial clínico."""
+    try:
+        # Configuración Inicial
         pdf = FPDF()
         pdf.add_page()
         pdf.set_auto_page_break(auto=True, margin=15)
@@ -36,9 +35,7 @@ def generar_pdf_historial(paciente, historial):
         pdf.set_text_color(0, 0, 0)
         pdf.set_font('Arial', 'B', 12)
         pdf.cell(0, 10, 'DATOS DEL PACIENTE', 0, 1)
-        pdf.set_font('Arial', '', 10)
-
-        # Función auxiliar interna para limpiar texto
+        
         def clean(txt):
             if not txt or str(txt).lower() == 'nan': return "N/A"
             return str(txt).replace('á', 'a').replace('é', 'e').replace('í', 'i').replace('ó', 'o').replace('ú', 'u').replace('ñ', 'n')
@@ -57,35 +54,27 @@ def generar_pdf_historial(paciente, historial):
             pdf.cell(40, 7, label, 0, 0)
             pdf.set_font('Arial', '', 10)
             pdf.cell(0, 7, value, 0, 1)
-
         pdf.ln(5)
 
         # --- TABLA DE CONTROLES ---
         if historial:
             pdf.set_font('Arial', 'B', 12)
             pdf.cell(0, 10, 'HISTORIAL DE CONTROLES', 0, 1)
-            
-            # Encabezados
             pdf.set_fill_color(59, 130, 246)
             pdf.set_text_color(255, 255, 255)
             pdf.set_font('Arial', 'B', 9)
             
             cols = [30, 30, 25, 60, 45]
             headers = ['Fecha', 'Tipo', 'Hb', 'Responsable', 'Proximo']
-            
             for i, h in enumerate(headers):
                 pdf.cell(cols[i], 8, h, 1, 0, 'C', True)
             pdf.ln()
 
-            # Filas
             pdf.set_text_color(0, 0, 0)
             pdf.set_font('Arial', '', 8)
-            
             for idx, c in enumerate(historial):
-                # Alternar color
                 bg = (idx % 2 == 0)
                 pdf.set_fill_color(245, 247, 250)
-                
                 pdf.cell(cols[0], 7, clean(c.get('fecha_seguimiento'))[:10], 1, 0, 'C', bg)
                 pdf.cell(cols[1], 7, clean(c.get('tipo_seguimiento'))[:15], 1, 0, 'C', bg)
                 pdf.cell(cols[2], 7, f"{c.get('hemoglobina_actual', 'N/A')}", 1, 0, 'C', bg)
@@ -98,18 +87,54 @@ def generar_pdf_historial(paciente, historial):
         pdf.set_text_color(150, 150, 150)
         pdf.cell(0, 10, f'Generado el {datetime.now().strftime("%d/%m/%Y")} - Sistema Nixon', 0, 0, 'C')
 
-        # --- SOLUCIÓN AL ERROR DE DESCARGA EN BLANCO ---
-        # En lugar de .encode('utf-8'), usamos el output directo como string 
-        # y lo convertimos a bytes. Esto es lo más estable.
+        # Retornar como bytes
         pdf_output = pdf.output(dest='S')
         if isinstance(pdf_output, str):
             return pdf_output.encode('latin-1', errors='replace')
         return pdf_output
-
     except Exception as e:
-        print(f"Error fatal: {e}")
-        return _generar_texto_plano(paciente, historial, e)
+        return f"Error: {str(e)}".encode('utf-8')
 
+# 2. INTERFAZ DE EXPORTACIÓN (Donde están tus botones)
+def mostrar_seccion_exportar(paciente, historial, df_historial):
+    st.markdown("---")
+    st.markdown("### 📤 Exportar Historial Clínico")
+    
+    # Creamos las 3 columnas para que los botones estén alineados
+    col_exp1, col_exp2, col_exp3 = st.columns(3)
+    
+    with col_exp1:
+        # Botón para CSV
+        csv = df_historial.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            label="📊 Exportar a CSV",
+            data=csv,
+            file_name=f"historial_{paciente.get('dni', 'paciente')}.csv",
+            mime="text/csv",
+            use_container_width=True,
+            key="btn_csv_hist"
+        )
+    
+    with col_exp2:
+        # ACCIÓN CLAVE: Generar y Descargar PDF
+        try:
+            pdf_bytes = generar_pdf_historial(paciente, historial)
+            st.download_button(
+                label="📄 Descargar Informe PDF",
+                data=pdf_bytes,
+                file_name=f"Informe_NIXON_{paciente.get('dni', 'paciente')}.pdf",
+                mime="application/pdf",
+                use_container_width=True,
+                key="btn_pdf_hist_real",
+                type="primary" # Resalta el botón en azul
+            )
+        except:
+            st.error("No se pudo preparar el PDF")
+
+    with col_exp3:
+        # Botón para vista rápida (opcional)
+        if st.button("🖨️ Vista de Impresión", use_container_width=True):
+            st.info("Use el botón de PDF para obtener una versión lista para imprimir.")
 
 def generar_pdf_dashboard_nacional(indicadores, datos, mapa_df=None):
     """Genera reporte PDF manejando errores de columnas y datos vacíos"""
