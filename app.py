@@ -402,21 +402,7 @@ def show_login_page():
             </div>
             """, unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
-    
-    # Footer del login
-    st.markdown("""
-    <div style="text-align: center; margin-top: 40px; color: #6b7280; font-size: 14px;">
-        <p>© 2024 Sistema Nixon - Control de Anemia Infantil</p>
-        <p>Sistema exclusivo para personal de salud autorizado</p>
-        <div style="height: 1px; background: #e5e7eb; margin: 20px 0;"></div>
-        <p style="font-size: 12px; margin-top: 20px;">
-            <strong>🔒 Acceso restringido:</strong> Solo personal médico autorizado<br>
-            <strong>📞 Soporte técnico:</strong> soporte@sistemasnixon.com
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    st.markdown('</div>', unsafe_allow_html=True)
+ 
 
 # ==================================================
 # VERIFICAR SI EL USUARIO ESTÁ LOGUEADO
