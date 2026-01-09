@@ -1555,87 +1555,6 @@ with tab1:
                 type="primary", 
                 use_container_width=True
             )
-# ==================================================
-# PESTAÑA 1: REGISTRO Y CALCULADORA DE PREDICCIÓN
-# ==================================================
-with tab1:
-    # --------------------------------------------------
-    # BLOQUE A: CALCULADORA DE PREDICCIÓN (SOLO ANÁLISIS)
-    # --------------------------------------------------
-    st.markdown('<div style="background-color: #f0f2f6; padding: 20px; border-radius: 10px; border-left: 5px solid #007bff;">', unsafe_allow_html=True)
-    st.markdown('### 🔍 Calculadora de Predicción Etiológica')
-    st.caption("Use esta sección solo para predecir el tipo de anemia según laboratorio. Estos datos NO se guardarán.")
-
-    with st.container():
-        c_lab1, c_lab2 = st.columns(2)
-        with c_lab1:
-            st.markdown('**🩸 Perfil de Hierro**')
-            v_ferritina = st.number_input("Ferritina (ng/mL)", 0.0, 500.0, 15.0, key="lab_fer")
-            v_hierro = st.number_input("Hierro sérico (µg/dL)", 0.0, 300.0, 60.0, key="lab_hie")
-        with c_lab2:
-            st.markdown('**🦠 Inflamación**')
-            v_pcr = st.number_input("PCR (mg/dL)", 0.0, 100.0, 0.1, key="lab_pcr")
-            v_vsg = st.number_input("VSG (mm/h)", 0.0, 150.0, 10.0, key="lab_vsg")
-
-        if st.button("📊 ANALIZAR TIPO DE ANEMIA", use_container_width=True):
-            st.markdown("---")
-            # Lógica de predicción
-            if v_ferritina < 12 and v_pcr <= 0.5:
-                st.error("🔬 **Predicción:** Probable Anemia Ferropénica (Déficit de hierro puro).")
-            elif v_pcr > 0.5:
-                st.warning("🔬 **Predicción:** Anemia con componente inflamatorio / Anemia de enfermedad crónica.")
-            else:
-                st.info("🔬 **Predicción:** Perfil indeterminado. Evaluar otros biomarcadores.")
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    st.markdown("<br><br>", unsafe_allow_html=True)
-
-    # --------------------------------------------------
-    # BLOQUE B: FORMULARIO DE REGISTRO (SÍ VA A SUPABASE)
-    # --------------------------------------------------
-    st.markdown('<div class="section-title-blue">📝 Registro Oficial del Paciente</div>', unsafe_allow_html=True)
-    
-    with st.form("form_registro_supabase", clear_on_submit=False):
-        col1, col2 = st.columns(2)
-        with col1:
-            st.markdown('**👤 Identidad**')
-            dni_reg = st.text_input("DNI*", max_chars=8)
-            nom_reg = st.text_input("Nombre Completo*")
-            edad_reg = st.number_input("Edad (meses)*", 1, 240, 24)
-            tel_reg = st.text_input("Teléfono*")
-        
-        with col2:
-            st.markdown('**🌍 Ubicación y Social**')
-            reg_reg = st.selectbox("Región*", PERU_REGIONS)
-            alt_reg = st.number_input("Altitud (msnm)*", 0, 5000, 500)
-            edu_reg = st.selectbox("Nivel Educativo Apoderado", NIVELES_EDUCATIVOS)
-            agua_reg = st.checkbox("Acceso a agua potable")
-
-        st.markdown("---")
-        
-        col3, col4 = st.columns(2)
-        with col3:
-            st.markdown('**🩺 Parámetros Clínicos**')
-            hb_reg = st.number_input("Hemoglobina medida (g/dL)*", 5.0, 20.0, 11.0)
-            hb_ajustada = calcular_hemoglobina_ajustada(hb_reg, alt_reg)
-            clasif, rec, alerta = clasificar_anemia(hb_ajustada, edad_reg)
-            st.info(f"HB Ajustada: {hb_ajustada:.1f}")
-            
-        with col4:
-            st.markdown('**📋 Seguimiento**')
-            factores_reg = st.multiselect("Factores de Riesgo:", FACTORES_CLINICOS)
-            seg_reg = st.checkbox("Activar seguimiento", value=True)
-
-        # Botón de guardado para Supabase
-        btn_guardar = st.form_submit_button("💾 GUARDAR REGISTRO EN BASE DE DATOS", use_container_width=True, type="primary")
-
-    if btn_guardar:
-        if len(dni_reg) == 8 and nom_reg:
-            # Aquí va tu código de insertar_en_supabase()
-            st.success(f"✅ Paciente {nom_reg} guardado oficialmente.")
-            st.balloons()
-        else:
-            st.error("❌ El DNI debe tener 8 dígitos.")
     # ============================================
     # ACCIONES FUERA DEL FORMULARIO
     # ============================================
@@ -1765,6 +1684,88 @@ with tab1:
                     st.error(f"❌ Error: {str(e)}")
             else:
                 st.error("🔴 Sin conexión a Supabase")
+# ==================================================
+# PESTAÑA 1: REGISTRO Y CALCULADORA DE PREDICCIÓN
+# ==================================================
+with tab1:
+    # --------------------------------------------------
+    # BLOQUE A: CALCULADORA DE PREDICCIÓN (SOLO ANÁLISIS)
+    # --------------------------------------------------
+    st.markdown('<div style="background-color: #f0f2f6; padding: 20px; border-radius: 10px; border-left: 5px solid #007bff;">', unsafe_allow_html=True)
+    st.markdown('### 🔍 Calculadora de Predicción Etiológica')
+    st.caption("Use esta sección solo para predecir el tipo de anemia según laboratorio. Estos datos NO se guardarán.")
+
+    with st.container():
+        c_lab1, c_lab2 = st.columns(2)
+        with c_lab1:
+            st.markdown('**🩸 Perfil de Hierro**')
+            v_ferritina = st.number_input("Ferritina (ng/mL)", 0.0, 500.0, 15.0, key="lab_fer")
+            v_hierro = st.number_input("Hierro sérico (µg/dL)", 0.0, 300.0, 60.0, key="lab_hie")
+        with c_lab2:
+            st.markdown('**🦠 Inflamación**')
+            v_pcr = st.number_input("PCR (mg/dL)", 0.0, 100.0, 0.1, key="lab_pcr")
+            v_vsg = st.number_input("VSG (mm/h)", 0.0, 150.0, 10.0, key="lab_vsg")
+
+        if st.button("📊 ANALIZAR TIPO DE ANEMIA", use_container_width=True):
+            st.markdown("---")
+            # Lógica de predicción
+            if v_ferritina < 12 and v_pcr <= 0.5:
+                st.error("🔬 **Predicción:** Probable Anemia Ferropénica (Déficit de hierro puro).")
+            elif v_pcr > 0.5:
+                st.warning("🔬 **Predicción:** Anemia con componente inflamatorio / Anemia de enfermedad crónica.")
+            else:
+                st.info("🔬 **Predicción:** Perfil indeterminado. Evaluar otros biomarcadores.")
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    st.markdown("<br><br>", unsafe_allow_html=True)
+
+    # --------------------------------------------------
+    # BLOQUE B: FORMULARIO DE REGISTRO (SÍ VA A SUPABASE)
+    # --------------------------------------------------
+    st.markdown('<div class="section-title-blue">📝 Registro Oficial del Paciente</div>', unsafe_allow_html=True)
+    
+    with st.form("form_registro_supabase", clear_on_submit=False):
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown('**👤 Identidad**')
+            dni_reg = st.text_input("DNI*", max_chars=8)
+            nom_reg = st.text_input("Nombre Completo*")
+            edad_reg = st.number_input("Edad (meses)*", 1, 240, 24)
+            tel_reg = st.text_input("Teléfono*")
+        
+        with col2:
+            st.markdown('**🌍 Ubicación y Social**')
+            reg_reg = st.selectbox("Región*", PERU_REGIONS)
+            alt_reg = st.number_input("Altitud (msnm)*", 0, 5000, 500)
+            edu_reg = st.selectbox("Nivel Educativo Apoderado", NIVELES_EDUCATIVOS)
+            agua_reg = st.checkbox("Acceso a agua potable")
+
+        st.markdown("---")
+        
+        col3, col4 = st.columns(2)
+        with col3:
+            st.markdown('**🩺 Parámetros Clínicos**')
+            hb_reg = st.number_input("Hemoglobina medida (g/dL)*", 5.0, 20.0, 11.0)
+            hb_ajustada = calcular_hemoglobina_ajustada(hb_reg, alt_reg)
+            clasif, rec, alerta = clasificar_anemia(hb_ajustada, edad_reg)
+            st.info(f"HB Ajustada: {hb_ajustada:.1f}")
+            
+        with col4:
+            st.markdown('**📋 Seguimiento**')
+            factores_reg = st.multiselect("Factores de Riesgo:", FACTORES_CLINICOS)
+            seg_reg = st.checkbox("Activar seguimiento", value=True)
+
+        # Botón de guardado para Supabase
+        btn_guardar = st.form_submit_button("💾 GUARDAR REGISTRO EN BASE DE DATOS", use_container_width=True, type="primary")
+
+    if btn_guardar:
+        if len(dni_reg) == 8 and nom_reg:
+            # Aquí va tu código de insertar_en_supabase()
+            st.success(f"✅ Paciente {nom_reg} guardado oficialmente.")
+            st.balloons()
+        else:
+            st.error("❌ El DNI debe tener 8 dígitos.")
+
 # ==================================================
 # PESTAÑA 2: SEGUIMIENTO CLÍNICO - VERSIÓN CORREGIDA
 # ==================================================
