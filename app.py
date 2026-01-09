@@ -4727,6 +4727,14 @@ with tab_seg3:
 # ============================================
 # EXPORTAR REPORTES (Pestaña Nacional)
 # ============================================
+
+# ============================================
+# CREACIÓN DE COLUMNAS PARA BOTONES
+# ============================================
+# Creamos 3 columnas. Puedes ajustar los números [1, 1, 1] 
+# para cambiar el ancho de cada una si lo deseas.
+col_exp1, col_exp2, col_exp3 = st.columns([1, 1, 1])
+
 # ============================================
 # EXPORTAR REPORTES (SOLUCIÓN FINAL)
 # ============================================
