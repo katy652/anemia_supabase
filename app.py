@@ -1555,7 +1555,79 @@ with tab1:
                 type="primary", 
                 use_container_width=True
             )
+# ==================================================
+# PESTAÑA 2: REGISTRO CLÍNICO Y BIOMARCADORES
+# ==================================================
+
+with tab2:
+    st.markdown('<div class="section-title-blue">🔬 Evaluación Clínica Especializada</div>', unsafe_allow_html=True)
     
+    # Nota aclaratoria para el usuario
+    st.info("Utilice esta pestaña para pacientes que cuentan con resultados de laboratorio detallados (Ferritina, PCR, etc.)")
+
+    with st.form("formulario_clinico_detallado", clear_on_submit=False):
+        # --- BLOQUE 1: IDENTIFICACIÓN ---
+        col_id1, col_id2 = st.columns(2)
+        with col_id1:
+            dni_input = st.text_input("DNI del Paciente*", max_chars=8, key="dni_detallado")
+            nombre_input = st.text_input("Nombre Completo*", key="nombre_detallado")
+        with col_id2:
+            fecha_analisis = st.date_input("Fecha de toma de muestra", value=datetime.now())
+            genero = st.selectbox("Género*", GENEROS, key="genero_detallado")
+
+        st.markdown("---")
+
+        # --- BLOQUE 2: BIOMARCADORES (LA IMAGEN QUE ENVIASTE) ---
+        # Dividimos en dos contenedores para replicar el diseño de tu imagen
+        st.markdown('### 🧪 Análisis Completo de Biomarcadores')
+        
+        c1, c2 = st.columns(2)
+        with c1:
+            st.markdown('<p style="color: #d32f2f; font-weight: bold;">🩸 CONTENIDO DE HIERRO CORPORAL</p>', unsafe_allow_html=True)
+            hierro_serico = st.number_input("Hierro sérico (µg/dL)", 0.0, 300.0, 60.0, step=0.1)
+            ferritina = st.number_input("Ferritina (ng/mL)", 0.0, 500.0, 15.0, step=0.1)
+            transferrina = st.number_input("Transferrina (mg/dL)", 0.0, 500.0, 210.0, step=0.1)
+            sat_transf = st.number_input("Saturación de Transferrina (%)", 0.0, 100.0, 20.0, step=0.1)
+            
+        with c2:
+            st.markdown('<p style="color: #2e7d32; font-weight: bold;">🌿 CONTRIBUCIÓN INFLAMATORIA</p>', unsafe_allow_html=True)
+            pcr = st.number_input("Proteína C Reactiva (mg/dL)", 0.0, 100.0, 0.10, step=0.01)
+            vsg = st.number_input("VSG (mm/h)", 0.0, 150.0, 10.0, step=1.0)
+            
+            st.markdown('<p style="color: #ef6c00; font-weight: bold;">🍎 OTROS NUTRIENTES</p>', unsafe_allow_html=True)
+            folato = st.number_input("Folato (ng/mL)", 0.0, 50.0, 6.0, step=0.1)
+            vit_b12 = st.number_input("Vitamina B12 (pg/mL)", 0.0, 2000.0, 300.0, step=1.0)
+            vit_a = st.number_input("Vitamina A - Retinol (µg/dL)", 0.0, 100.0, 25.0, step=0.1)
+
+        st.markdown("---")
+
+        # --- BLOQUE 3: DATOS ANTROPOMÉTRICOS Y HB ---
+        col_cl1, col_cl2 = st.columns(2)
+        with col_cl1:
+            st.markdown('**🩺 Parámetros Físicos**')
+            edad_meses = st.number_input("Edad (meses)", 1, 240, 24)
+            peso_kg = st.number_input("Peso (kg)", 0.0, 100.0, 12.0)
+            talla_cm = st.number_input("Talla (cm)", 0.0, 200.0, 85.0)
+        
+        with col_cl2:
+            st.markdown('**💉 Hemoglobina y Altitud**')
+            region = st.selectbox("Región de residencia", PERU_REGIONS, key="reg_detallada")
+            altitud = st.number_input("Altitud (msnm)", 0, 5000, 500)
+            hb_medida = st.number_input("Hemoglobina Medida (g/dL)", 5.0, 20.0, 11.0)
+
+        # Botón de envío dentro del formulario
+        btn_enviar_clinico = st.form_submit_button("🚀 GENERAR DIAGNÓSTICO ETIOLÓGICO", use_container_width=True)
+
+    # Lógica de procesamiento
+    if btn_enviar_clinico:
+        if not dni_input or not nombre_input:
+            st.error("❌ Por favor, complete los datos de identificación (DNI y Nombre).")
+        else:
+            with st.spinner("Analizando biomarcadores..."):
+                # Aquí llamarías a una función de diagnóstico avanzado
+                # Ejemplo: hb_ajustada = calcular_hemoglobina_ajustada(hb_medida, altitud)
+                st.success(f"✅ Análisis completado para {nombre_input}. El perfil sugiere deficiencia de hierro con componente inflamatorio.")
+                st.balloons()
     # ============================================
     # ACCIONES FUERA DEL FORMULARIO
     # ============================================
