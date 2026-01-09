@@ -1797,36 +1797,47 @@ with tab1:
             btn_guardar = st.button("💾 GUARDAR REGISTRO COMPLETO", type="primary", use_container_width=True)
 
     # --- LÓGICA DE INTERPRETACIÓN (Debe estar fuera de cualquier form) ---
-    if btn_analizar:
+if btn_analizar:
+    # 1. Ejecutar la función lógica
     resultado = interpretar_analisis_hematologico(
         f_ferritina, f_chcm, f_retic, f_transf, hb_ajustada, edad_meses, f_pcr
     )
     
-    # Cuadro principal de interpretación
+    # 2. CUADRO PRINCIPAL (Resumen visual con color)
     st.markdown(f"""
-        <div style="background-color: {resultado['codigo_color']}; padding: 20px; border-radius: 10px; color: white;">
-            <h3>🔍 Resultado del Análisis Automático</h3>
-            <p style="font-size: 1.2rem;">{resultado['interpretacion']}</p>
-            <hr>
-            <p><strong>RECOMENDACIÓN:</strong> {resultado['recomendacion']}</p>
+        <div style="background-color: {resultado['codigo_color']}; padding: 25px; border-radius: 15px; color: white; border: 3px solid rgba(255,255,255,0.5); margin-top: 20px;">
+            <h2 style="margin:0; color: white;">📋 Resultado del Análisis Etiológico</h2>
+            <hr style="border: 0.5px solid rgba(255,255,255,0.3); margin: 15px 0;">
+            <p style="font-size: 1.3rem; font-weight: bold;">{resultado['interpretacion']}</p>
+            <div style="background: rgba(0,0,0,0.15); padding: 15px; border-radius: 10px; border-left: 5px solid white;">
+                <p style="margin:0; font-size: 1.1rem;">
+                    <strong>🩺 RECOMENDACIÓN CLÍNICA:</strong><br>{resultado['recomendacion']}
+                </p>
+            </div>
         </div>
     """, unsafe_allow_html=True)
     
-    # NUEVO: Cuadro de Diagnóstico Diferencial (Descartes)
-    st.markdown("### ❌ Diagnóstico Diferencial (Descartes)")
-    for item in resultado['descartes']:
-        st.write(item)
-        # Mostrar el cuadro de color según la severidad
-        st.markdown(f"""
-            <div style="background-color: {resultado['codigo_color']}; padding: 25px; border-radius: 15px; color: white; border: 3px solid rgba(255,255,255,0.5); margin-top: 20px;">
-                <h2 style="margin:0; color: white;">📋 Resultado del Análisis</h2>
-                <hr style="border: 0.5px solid rgba(255,255,255,0.3);">
-                <p style="font-size: 1.3rem;">{resultado['interpretacion']}</p>
-                <p style="font-size: 1.1rem; background: rgba(0,0,0,0.1); padding: 10px; border-radius: 5px;">
-                    <strong>🩺 RECOMENDACIÓN:</strong> {resultado['recomendacion']}
-                </p>
-            </div>
-        """, unsafe_allow_html=True)
+    # 3. SECCIÓN DE DIAGNÓSTICO DIFERENCIAL (Explicación de por qué se descartan otras)
+    st.markdown("### ❌ Diagnóstico Diferencial (Sustento de Descartes)")
+    
+    # Creamos columnas para que los descartes no ocupen tanto espacio vertical
+    col_desc1, col_desc2 = st.columns(2)
+    
+    for i, item in enumerate(resultado['descartes']):
+        # Alternamos entre columna 1 y columna 2
+        if i % 2 == 0:
+            col_desc1.info(item)
+        else:
+            col_desc2.info(item)
+            
+    # 4. BOTÓN EXTRA: EXPLICACIÓN CIENTÍFICA (Opcional)
+    with st.expander("📚 Ver criterios científicos aplicados"):
+        st.write("""
+        * **Ferritina < 15/30:** Agotamiento de reservas (Gold Standard).
+        * **PCR Normal:** Asegura que la ferritina no esté elevada por infección.
+        * **CHCM < 32:** Confirma hipocromía (típico de ferropenia).
+        * **Reticulocitos normales/bajos:** Indica que la médula no tiene hierro para producir sangre.
+        """)
 
     # --- LÓGICA DE GUARDADO ---
     if btn_guardar:
