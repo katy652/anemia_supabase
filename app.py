@@ -1176,7 +1176,62 @@ def generar_parametros_hematologicos(hemoglobina_ajustada, edad_meses):
         'transferrina': round(transferrina, 0),
         'reticulocitos': round(reticulocitos, 1)
     }
+def interpretar_analisis_hematologico(ferritina, chcm, reticulocitos, transferrina, hemoglobina_ajustada, edad_meses, pcr):
+    """Sistema avanzado de interpretación con descarte de diagnósticos"""
+    
+    interpretacion = ""
+    severidad = ""
+    recomendacion = ""
+    codigo_color = ""
+    descarte_clinico = []
+    
+    # 1. EVALUAR ESTADO DE HIERRO (Ferritina + PCR)
+    if ferritina < 15 and pcr <= 0.5:
+        interpretacion += "🚨 **DEFICIENCIA REAL DE HIERRO**. "
+        severidad = "CRITICO"
+        descarte_clinico.append("✅ **Anemia Inflamatoria descartada**: PCR normal confirma déficit de hierro real.")
+    elif ferritina < 30:
+        interpretacion += "⚠️ **RESERVAS BAJAS DE HIERRO**. "
+        severidad = "MODERADO"
+    else:
+        interpretacion += "✅ **RESERVAS DE HIERRO NORMALES**. "
+        severidad = "NORMAL"
+        if pcr > 0.5:
+            descarte_clinico.append("🦠 **Ojo**: PCR elevada. La ferritina podría estar falsamente normal.")
 
+    # 2. EVALUAR MORFOLOGÍA (CHCM)
+    if chcm < 32:
+        interpretacion += "📉 **HIPOCROMÍA**. "
+        descarte_clinico.append("✅ **Anemia Megaloblástica descartada**: CHCM bajo sugiere falta de hierro, no de B12.")
+    elif chcm >= 32 and chcm <= 36:
+        interpretacion += "✅ **NORMOCROMÍA**. "
+    
+    # 3. EVALUAR PRODUCCIÓN (Reticulocitos)
+    if reticulocitos > 1.5:
+        interpretacion += "🔄 **MÉDULA HIPERACTIVA**. "
+        descarte_clinico.append("⚠️ **Anemia Hemolítica**: Considerar esta opción por reticulocitos altos.")
+    else:
+        interpretacion += "🟡 **PRODUCCIÓN MEDULAR NO COMPENSATORIA**. "
+        descarte_clinico.append("✅ **Anemia Hemolítica descartada**: Reticulocitos normales indican falta de materia prima.")
+
+    # 4. CLASIFICACIÓN FINAL Y COLORES
+    if severidad == "CRITICO":
+        recomendacion = "🚨 **INTERVENCIÓN INMEDIATA**: Hierro elemental 3-6 mg/kg/día + Control en 15 días."
+        codigo_color = "#DC2626"
+    elif severidad == "MODERADO":
+        recomendacion = "⚠️ **ACCIÓN PRIORITARIA**: Suplementación con hierro + Educación nutricional."
+        codigo_color = "#D97706"
+    else:
+        recomendacion = "✅ **SEGUIMIENTO**: Alimentación balanceada y control preventivo."
+        codigo_color = "#16A34A"
+        
+    return {
+        "interpretacion": interpretacion,
+        "severidad": severidad,
+        "recomendacion": recomendacion,
+        "codigo_color": codigo_color,
+        "descartes": descarte_clinico
+    }
 # ==================================================
 # CLASIFICACIÓN DE ANEMIA
 # ==================================================
@@ -1743,11 +1798,24 @@ with tab1:
 
     # --- LÓGICA DE INTERPRETACIÓN (Debe estar fuera de cualquier form) ---
     if btn_analizar:
-        # Llamada directa a tu función hematológica
-        resultado = interpretar_analisis_hematologico(
-            f_ferritina, f_chcm, f_retic, f_transf, hb_ajustada, edad_meses
-        )
-        
+    resultado = interpretar_analisis_hematologico(
+        f_ferritina, f_chcm, f_retic, f_transf, hb_ajustada, edad_meses, f_pcr
+    )
+    
+    # Cuadro principal de interpretación
+    st.markdown(f"""
+        <div style="background-color: {resultado['codigo_color']}; padding: 20px; border-radius: 10px; color: white;">
+            <h3>🔍 Resultado del Análisis Automático</h3>
+            <p style="font-size: 1.2rem;">{resultado['interpretacion']}</p>
+            <hr>
+            <p><strong>RECOMENDACIÓN:</strong> {resultado['recomendacion']}</p>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    # NUEVO: Cuadro de Diagnóstico Diferencial (Descartes)
+    st.markdown("### ❌ Diagnóstico Diferencial (Descartes)")
+    for item in resultado['descartes']:
+        st.write(item)
         # Mostrar el cuadro de color según la severidad
         st.markdown(f"""
             <div style="background-color: {resultado['codigo_color']}; padding: 25px; border-radius: 15px; color: white; border: 3px solid rgba(255,255,255,0.5); margin-top: 20px;">
