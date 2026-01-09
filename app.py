@@ -1071,28 +1071,42 @@ AJUSTE_HEMOGLOBINA = [
 ]
 
 def obtener_ajuste_hemoglobina(altitud):
-    for ajuste in AJUSTE_HEMOGLOBINA:
-        if ajuste["altitud_min"] <= altitud <= ajuste["altitud_max"]:
-            return ajuste["ajuste"]
-    return 0.0
+    """Retorna el valor de ajuste según la tabla de altitud"""
+    try:
+        alt = float(altitud)
+        for ajuste in AJUSTE_HEMOGLOBINA:
+            if ajuste["altitud_min"] <= alt <= ajuste["altitud_max"]:
+                return ajuste["ajuste"]
+        return 0.0
+    except:
+        return 0.0
 
 def calcular_hemoglobina_ajustada(hemoglobina_medida, altitud):
-    ajuste = obtener_ajuste_hemoglobina(altitud)
-    return hemoglobina_medida + ajuste
+    """Aplica la resta del factor de altitud a la Hb observada"""
+    try:
+        if hemoglobina_medida is None: return None
+        ajuste = obtener_ajuste_hemoglobina(altitud)
+        # Sumamos porque los valores en AJUSTE_HEMOGLOBINA ya son negativos
+        return round(float(hemoglobina_medida) + ajuste, 2)
+    except:
+        return None
+
 def clasificar_estado_anemia(hb_ajustada):
-    """Clasifica el nivel de anemia según la Hb Ajustada"""
+    """Lógica unificada para todas las pestañas según Norma Técnica"""
+    if hb_ajustada is None:
+        return "SIN DATOS"
     try:
         hb = float(hb_ajustada)
         if hb < 7.0:
-            return "Anemia Severa"
-        elif 7.0 <= hb < 10.0:
-            return "Anemia Moderada"
-        elif 10.0 <= hb < 11.0:
-            return "Anemia Leve"
+            return "Anemia severa"  # <--- CRUCIAL: Detecta casos críticos
+        elif 7.0 <= hb <= 9.9:
+            return "Anemia moderada"
+        elif 10.0 <= hb <= 10.9:
+            return "Anemia leve"
         else:
-            return "Normal"
+            return "Sin anemia"
     except:
-        return "Sin Datos"
+        return "ERROR"
 
 # ==================================================
 # SISTEMA DE INTERPRETACIÓN AUTOMÁTICA
