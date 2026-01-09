@@ -1556,7 +1556,7 @@ with tab1:
                 use_container_width=True
             )
 # ==================================================
-# PESTAÑA 2: REGISTRO CLÍNICO Y BIOMARCADORES
+# PESTAÑA 1: REGISTRO CLÍNICO Y BIOMARCADORES
 # ==================================================
 
 with tab2:
