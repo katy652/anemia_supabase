@@ -3798,153 +3798,249 @@ with tab_citas2:
             st.info("👆 Presiona 'Cargar Recordatorios' para ver citas próximas")
     
     # ============================================
-    # TAB 4: HISTORIAL DE CITAS - VERSIÓN CORREGIDA
-    # ============================================
-    with tab_citas4:
-        st.markdown('<div class="section-title-purple">📋 HISTORIAL COMPLETO DE CITAS</div>', unsafe_allow_html=True)
-        
-        # Función para obtener citas con información de anemia
-        def obtener_citas_con_info_anemia():
-            try:
-                response_citas = supabase.table("citas").select("*").order("fecha_cita", desc=True).execute()
-                citas = response_citas.data if response_citas.data else []
-                
-                if not citas:
-                    return []
-                
-                citas_con_info = []
-                
-                for cita in citas:
-                    dni = cita.get('dni_paciente')
-                    if dni:
-                        response_paciente = supabase.table("alertas_hemoglobina")\
-                            .select("*")\
-                            .eq("dni", dni)\
-                            .execute()
-                        
-                        info_anemia = response_paciente.data[0] if response_paciente.data else {}
-                        
-                        cita_completa = {
-                            **cita,
-                            "info_anemia": info_anemia,
-                            "nombre_paciente": info_anemia.get('nombre_apellido', 'Desconocido'),
-                            "hemoglobina": info_anemia.get('hemoglobina_dl1', 'N/A'),
-                            "clasificacion_anemia": clasificar_anemia_simple(
-                                info_anemia.get('hemoglobina_dl1', 0),
-                                info_anemia.get('edad_meses', 0)
-                            ),
-                            "riesgo": info_anemia.get('riesgo', 'N/A'),
-                            "en_seguimiento": info_anemia.get('en_seguimiento', False)
-                        }
-                        citas_con_info.append(cita_completa)
-                    else:
-                        citas_con_info.append({
-                            **cita,
-                            "nombre_paciente": "Sin información",
-                            "hemoglobina": "N/A",
-                            "clasificacion_anemia": "N/A",
-                            "riesgo": "N/A",
-                            "en_seguimiento": False
-                        })
-                
-                return citas_con_info
-                
-            except Exception as e:
-                st.error(f"❌ Error al obtener citas: {str(e)}")
-                return []
-        
-        def clasificar_anemia_simple(hemoglobina, edad_meses):
-            if hemoglobina == 'N/A' or not hemoglobina:
-                return "Sin datos"
+# TAB 4: HISTORIAL DE CITAS - VERSIÓN CORREGIDA
+# ============================================
+with tab_citas4:
+    st.markdown('<div class="section-title-purple">📋 HISTORIAL COMPLETO DE CITAS</div>', unsafe_allow_html=True)
+    
+    # Función para obtener citas con información de anemia
+    def obtener_citas_con_info_anemia():
+        try:
+            # Primero obtener todas las citas
+            response_citas = supabase.table("citas").select("*").order("fecha_cita", desc=True).execute()
+            citas = response_citas.data if response_citas.data else []
             
-            if edad_meses < 60:
-                if hemoglobina >= 11.0:
-                    return "Normal"
-                elif hemoglobina >= 10.0:
-                    return "Leve"
-                elif hemoglobina >= 9.0:
-                    return "Moderada"
+            if not citas:
+                return []
+            
+            citas_con_info = []
+            
+            # Obtener todos los DNIs únicos para hacer una sola consulta
+            dnis_unicos = list(set([c.get('dni_paciente') for c in citas if c.get('dni_paciente')]))
+            
+            # Obtener información de pacientes en batch
+            pacientes_info = {}
+            if dnis_unicos:
+                # Consultar todos los pacientes de una vez
+                response_pacientes = supabase.table("alertas_hemoglobina")\
+                    .select("*")\
+                    .in_("dni", dnis_unicos)\
+                    .execute()
+                
+                # Crear diccionario para acceso rápido
+                for paciente in response_pacientes.data:
+                    pacientes_info[paciente['dni']] = paciente
+            
+            # Procesar cada cita
+            for cita in citas:
+                dni = cita.get('dni_paciente')
+                
+                if dni and dni in pacientes_info:
+                    info_anemia = pacientes_info[dni]
+                    
+                    # Clasificar anemia
+                    hemoglobina = info_anemia.get('hemoglobina_dl1', 0)
+                    edad_meses = info_anemia.get('edad_meses', 0)
+                    
+                    if edad_meses < 60:
+                        if hemoglobina >= 11.0:
+                            clasificacion = "Normal"
+                        elif hemoglobina >= 10.0:
+                            clasificacion = "Leve"
+                        elif hemoglobina >= 9.0:
+                            clasificacion = "Moderada"
+                        else:
+                            clasificacion = "Severa"
+                    else:
+                        if hemoglobina >= 12.0:
+                            clasificacion = "Normal"
+                        elif hemoglobina >= 11.0:
+                            clasificacion = "Leve"
+                        elif hemoglobina >= 10.0:
+                            clasificacion = "Moderada"
+                        else:
+                            clasificacion = "Severa"
+                    
+                    cita_completa = {
+                        **cita,
+                        "nombre_paciente": info_anemia.get('nombre_apellido', 'Desconocido'),
+                        "hemoglobina": hemoglobina,
+                        "clasificacion_anemia": clasificacion,
+                        "riesgo": info_anemia.get('riesgo', 'N/A'),
+                        "en_seguimiento": info_anemia.get('en_seguimiento', False),
+                        "edad_meses": edad_meses,
+                        "peso_kg": info_anemia.get('peso_kg', 'N/A'),
+                        "talla_cm": info_anemia.get('talla_cm', 'N/A')
+                    }
                 else:
-                    return "Severa"
-            else:
-                if hemoglobina >= 12.0:
-                    return "Normal"
-                elif hemoglobina >= 11.0:
-                    return "Leve"
-                elif hemoglobina >= 10.0:
-                    return "Moderada"
-                else:
-                    return "Severa"
-        
-        def obtener_color_anemia(clasificacion):
-            colores = {
-                "Normal": "🟢",
-                "Leve": "🟡",
-                "Moderada": "🟠",
-                "Severa": "🔴",
-                "Sin datos": "⚪"
-            }
-            return colores.get(clasificacion, "⚪")
-        
-        # Mostrar citas existentes
-        if st.button("🔄 Cargar historial completo", key="cargar_historial"):
-            with st.spinner("Cargando historial..."):
+                    cita_completa = {
+                        **cita,
+                        "nombre_paciente": cita.get('nombre_paciente', 'Sin información'),
+                        "hemoglobina": "N/A",
+                        "clasificacion_anemia": "Sin datos",
+                        "riesgo": "N/A",
+                        "en_seguimiento": False,
+                        "edad_meses": "N/A",
+                        "peso_kg": "N/A",
+                        "talla_cm": "N/A"
+                    }
+                
+                citas_con_info.append(cita_completa)
+            
+            return citas_con_info
+            
+        except Exception as e:
+            st.error(f"❌ Error al obtener citas: {str(e)}")
+            import traceback
+            st.error(f"Detalles: {traceback.format_exc()}")
+            return []
+    
+    # Función para obtener icono de anemia
+    def obtener_color_anemia(clasificacion):
+        colores = {
+            "Normal": "🟢",
+            "Leve": "🟡",
+            "Moderada": "🟠",
+            "Severa": "🔴",
+            "Sin datos": "⚪"
+        }
+        return colores.get(clasificacion, "⚪")
+    
+    # Botón para cargar/cargar automáticamente
+    if 'citas_historial' not in st.session_state:
+        st.session_state.citas_historial = []
+    
+    col_load1, col_load2 = st.columns([3, 1])
+    
+    with col_load1:
+        if st.button("🔄 Cargar historial completo", key="cargar_historial", use_container_width=True):
+            with st.spinner("Cargando historial de citas..."):
                 citas_vinculadas = obtener_citas_con_info_anemia()
                 st.session_state.citas_historial = citas_vinculadas
+                st.success(f"✅ {len(citas_vinculadas)} citas cargadas")
+    
+    with col_load2:
+        if st.button("🧹 Limpiar cache", type="secondary", use_container_width=True):
+            st.session_state.citas_historial = []
+            st.rerun()
+    
+    # Mostrar contenido si hay datos
+    if st.session_state.citas_historial:
+        citas_df = pd.DataFrame(st.session_state.citas_historial)
         
-        if 'citas_historial' in st.session_state and st.session_state.citas_historial:
-            citas_df = pd.DataFrame(st.session_state.citas_historial)
-            citas_df['anemia_icono'] = citas_df['clasificacion_anemia'].apply(obtener_color_anemia)
-            citas_df['anemia_mostrar'] = citas_df['anemia_icono'] + " " + citas_df['clasificacion_anemia']
-            
-            # Filtros
-            col_filt1, col_filt2, col_filt3 = st.columns(3)
-            
-            with col_filt1:
+        # Asegurar que las columnas necesarias existan
+        if 'clasificacion_anemia' not in citas_df.columns:
+            citas_df['clasificacion_anemia'] = "Sin datos"
+        
+        # Agregar icono
+        citas_df['anemia_icono'] = citas_df['clasificacion_anemia'].apply(obtener_color_anemia)
+        citas_df['anemia_mostrar'] = citas_df['anemia_icono'] + " " + citas_df['clasificacion_anemia']
+        
+        # Asegurar que la columna de fecha sea datetime
+        citas_df['fecha_cita'] = pd.to_datetime(citas_df['fecha_cita'], errors='coerce')
+        
+        # Filtros
+        st.markdown("### 🔍 Filtros de búsqueda")
+        
+        col_filt1, col_filt2, col_filt3, col_filt4 = st.columns(4)
+        
+        with col_filt1:
+            if 'tipo_consulta' in citas_df.columns and not citas_df['tipo_consulta'].empty:
+                tipos_disponibles = citas_df['tipo_consulta'].dropna().unique()
                 filtro_tipo = st.multiselect(
-                    "Filtrar por tipo",
-                    citas_df['tipo_consulta'].unique(),
-                    default=citas_df['tipo_consulta'].unique()
+                    "Tipo de consulta",
+                    tipos_disponibles,
+                    default=tipos_disponibles[:min(3, len(tipos_disponibles))]
                 )
-            
-            with col_filt2:
+            else:
+                filtro_tipo = []
+                st.info("No hay tipos de consulta")
+        
+        with col_filt2:
+            if 'clasificacion_anemia' in citas_df.columns:
+                clasificaciones = citas_df['clasificacion_anemia'].dropna().unique()
                 filtro_anemia = st.multiselect(
-                    "Filtrar por anemia",
-                    citas_df['clasificacion_anemia'].unique(),
-                    default=citas_df['clasificacion_anemia'].unique()
+                    "Estado anemia",
+                    clasificaciones,
+                    default=clasificaciones
                 )
+            else:
+                filtro_anemia = []
+        
+        with col_filt3:
+            fecha_min = citas_df['fecha_cita'].min().date() if not citas_df['fecha_cita'].isnull().all() else datetime.now().date() - timedelta(days=30)
+            fecha_max = citas_df['fecha_cita'].max().date() if not citas_df['fecha_cita'].isnull().all() else datetime.now().date()
             
-            with col_filt3:
-                fecha_min = st.date_input("Desde", value=datetime.now() - timedelta(days=30))
-                fecha_max = st.date_input("Hasta", value=datetime.now())
-            
-            # Aplicar filtros
-            citas_filtradas = citas_df[
-                (citas_df['tipo_consulta'].isin(filtro_tipo)) &
-                (citas_df['clasificacion_anemia'].isin(filtro_anemia)) &
-                (pd.to_datetime(citas_df['fecha_cita']).dt.date >= fecha_min) &
-                (pd.to_datetime(citas_df['fecha_cita']).dt.date <= fecha_max)
+            fecha_min_sel = st.date_input("Desde", value=fecha_min)
+            fecha_max_sel = st.date_input("Hasta", value=fecha_max)
+        
+        with col_filt4:
+            if 'dni_paciente' in citas_df.columns:
+                dni_options = ["Todos"] + list(citas_df['dni_paciente'].dropna().unique())
+                filtro_dni = st.selectbox("Filtrar por DNI", dni_options)
+            else:
+                filtro_dni = "Todos"
+        
+        # Aplicar filtros
+        citas_filtradas = citas_df.copy()
+        
+        # Filtrar por tipo
+        if filtro_tipo:
+            citas_filtradas = citas_filtradas[citas_filtradas['tipo_consulta'].isin(filtro_tipo)]
+        
+        # Filtrar por anemia
+        if filtro_anemia:
+            citas_filtradas = citas_filtradas[citas_filtradas['clasificacion_anemia'].isin(filtro_anemia)]
+        
+        # Filtrar por fechas
+        if not citas_filtradas.empty:
+            citas_filtradas = citas_filtradas[
+                (citas_filtradas['fecha_cita'].dt.date >= fecha_min_sel) &
+                (citas_filtradas['fecha_cita'].dt.date <= fecha_max_sel)
+            ]
+        
+        # Filtrar por DNI
+        if filtro_dni != "Todos" and filtro_dni:
+            citas_filtradas = citas_filtradas[citas_filtradas['dni_paciente'] == filtro_dni]
+        
+        # Mostrar tabla filtrada
+        st.markdown("### 📋 Listado de citas")
+        
+        if not citas_filtradas.empty:
+            # Seleccionar columnas para mostrar
+            columnas_mostrar = [
+                'fecha_cita', 'hora_cita', 'nombre_paciente', 'dni_paciente',
+                'anemia_mostrar', 'hemoglobina', 'tipo_consulta', 'diagnostico'
             ]
             
+            # Añadir columnas adicionales si existen
+            columnas_disponibles = citas_filtradas.columns.tolist()
+            for col in ['riesgo', 'edad_meses', 'peso_kg']:
+                if col in columnas_disponibles:
+                    columnas_mostrar.append(col)
+            
+            # Mostrar dataframe
             st.dataframe(
-                citas_filtradas[['fecha_cita', 'hora_cita', 'nombre_paciente', 'dni_paciente',
-                               'anemia_mostrar', 'hemoglobina', 'tipo_consulta', 'diagnostico', 'riesgo']],
+                citas_filtradas[columnas_mostrar],
                 use_container_width=True,
                 height=400,
                 column_config={
-                    "fecha_cita": "Fecha",
+                    "fecha_cita": st.column_config.DateColumn("Fecha", format="DD/MM/YYYY"),
                     "hora_cita": "Hora",
                     "nombre_paciente": "Paciente",
                     "dni_paciente": "DNI",
                     "anemia_mostrar": st.column_config.TextColumn("Estado Anemia", width="small"),
                     "hemoglobina": st.column_config.NumberColumn("Hb (g/dL)", format="%.1f"),
                     "tipo_consulta": "Tipo Consulta",
-                    "diagnostico": st.column_config.TextColumn("Diagnóstico", width="large"),
-                    "riesgo": "Riesgo"
+                    "diagnostico": st.column_config.TextColumn("Diagnóstico", width="medium"),
+                    "riesgo": "Riesgo",
+                    "edad_meses": st.column_config.NumberColumn("Edad (meses)", format="%d"),
+                    "peso_kg": st.column_config.NumberColumn("Peso (kg)", format="%.1f")
                 }
             )
             
             # ESTADÍSTICAS DEL HISTORIAL - VERSIÓN CORREGIDA
+            st.markdown("---")
             st.markdown('<div class="section-title-purple" style="font-size: 1.2rem;">📊 ESTADÍSTICAS DEL HISTORIAL</div>', unsafe_allow_html=True)
             
             col_stat1, col_stat2, col_stat3, col_stat4 = st.columns(4)
@@ -3954,29 +4050,144 @@ with tab_citas2:
                 st.metric("Total citas", total_citas)
             
             with col_stat2:
-                # CORRECCIÓN: Cambiar "con_anaeia" por "con_anemia"
-                con_anemia = len(citas_filtradas[citas_filtradas['clasificacion_anemia'].isin(["Leve", "Moderada", "Severa"])])
-                st.metric("Con anemia", con_anemia)  # ← CORREGIDO
+                # CORRECCIÓN: Variable correctamente escrita
+                con_anemia = len(citas_filtradas[
+                    citas_filtradas['clasificacion_anemia'].isin(["Leve", "Moderada", "Severa"])
+                ])
+                st.metric("Con anemia", con_anemia)
             
             with col_stat3:
                 severas = len(citas_filtradas[citas_filtradas['clasificacion_anemia'] == "Severa"])
                 st.metric("Anemia severa", severas)
             
             with col_stat4:
-                ultima_cita = citas_filtradas['fecha_cita'].max() if not citas_filtradas.empty else "N/A"
-                st.metric("Última cita", str(ultima_cita)[:10])
+                if not citas_filtradas.empty and 'fecha_cita' in citas_filtradas.columns:
+                    ultima_fecha = citas_filtradas['fecha_cita'].max()
+                    if pd.notna(ultima_fecha):
+                        st.metric("Última cita", ultima_fecha.strftime('%d/%m/%Y'))
+                    else:
+                        st.metric("Última cita", "N/A")
+                else:
+                    st.metric("Última cita", "N/A")
             
-            # Exportar
+            # Más estadísticas
+            col_stat5, col_stat6, col_stat7, col_stat8 = st.columns(4)
+            
+            with col_stat5:
+                if 'tipo_consulta' in citas_filtradas.columns:
+                    seguimientos = len(citas_filtradas[citas_filtradas['tipo_consulta'].str.contains('Seguimiento', case=False, na=False)])
+                    st.metric("Seguimientos", seguimientos)
+            
+            with col_stat6:
+                if 'hemoglobina' in citas_filtradas.columns:
+                    try:
+                        promedio_hb = citas_filtradas['hemoglobina'].apply(pd.to_numeric, errors='coerce').mean()
+                        st.metric("Promedio Hb", f"{promedio_hb:.1f}" if not pd.isna(promedio_hb) else "N/A")
+                    except:
+                        st.metric("Promedio Hb", "N/A")
+            
+            with col_stat7:
+                if 'en_seguimiento' in citas_filtradas.columns:
+                    try:
+                        en_seguimiento = citas_filtradas['en_seguimiento'].sum()
+                        st.metric("En seguimiento", int(en_seguimiento))
+                    except:
+                        st.metric("En seguimiento", "N/A")
+            
+            with col_stat8:
+                pacientes_unicos = citas_filtradas['dni_paciente'].nunique() if 'dni_paciente' in citas_filtradas.columns else 0
+                st.metric("Pacientes únicos", pacientes_unicos)
+            
+            # Gráfico de distribución por estado de anemia
+            st.markdown("### 📈 Distribución por estado de anemia")
+            
+            if 'clasificacion_anemia' in citas_filtradas.columns:
+                distribucion = citas_filtradas['clasificacion_anemia'].value_counts()
+                
+                col_chart1, col_chart2 = st.columns([2, 1])
+                
+                with col_chart1:
+                    if not distribucion.empty:
+                        fig, ax = plt.subplots(figsize=(8, 4))
+                        bars = ax.bar(distribucion.index, distribucion.values, 
+                                     color=['green', 'yellow', 'orange', 'red', 'gray'])
+                        ax.set_ylabel('Número de citas')
+                        ax.set_title('Distribución por estado de anemia')
+                        
+                        # Añadir valores en las barras
+                        for bar in bars:
+                            height = bar.get_height()
+                            ax.text(bar.get_x() + bar.get_width()/2., height,
+                                   f'{int(height)}', ha='center', va='bottom')
+                        
+                        st.pyplot(fig)
+                
+                with col_chart2:
+                    st.dataframe(distribucion.reset_index().rename(
+                        columns={'index': 'Estado', 'clasificacion_anemia': 'Citas'}
+                    ))
+            
+            # Exportar datos
             st.markdown("---")
-            if st.button("📥 Exportar historial completo", use_container_width=True):
-                csv = citas_df.to_csv(index=False)
+            st.markdown("### 📤 Exportar datos")
+            
+            col_exp1, col_exp2 = st.columns(2)
+            
+            with col_exp1:
+                # Exportar CSV
+                csv_data = citas_filtradas.to_csv(index=False, encoding='utf-8')
                 st.download_button(
                     label="📊 Descargar CSV",
-                    data=csv,
-                    file_name=f"historial_citas_{datetime.now().strftime('%Y%m%d')}.csv",
+                    data=csv_data,
+                    file_name=f"historial_citas_filtrado_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
                     mime="text/csv",
                     use_container_width=True
                 )
+            
+            with col_exp2:
+                # Exportar Excel
+                try:
+                    import io
+                    output = io.BytesIO()
+                    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                        citas_filtradas.to_excel(writer, sheet_name='Citas', index=False)
+                    
+                    st.download_button(
+                        label="📄 Descargar Excel",
+                        data=output.getvalue(),
+                        file_name=f"historial_citas_{datetime.now().strftime('%Y%m%d')}.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        use_container_width=True
+                    )
+                except Exception as e:
+                    st.warning(f"No se pudo generar Excel: {str(e)}")
+            
+        else:
+            st.info("📝 No hay citas que coincidan con los filtros seleccionados")
+    
+    else:
+        st.info("👈 Haz clic en 'Cargar historial completo' para ver las citas")
+        
+        # Botón para ver estadísticas rápidas
+        if st.button("📊 Ver estadísticas rápidas", type="secondary"):
+            try:
+                # Conteo simple de citas
+                response = supabase.table("citas").select("count", count="exact").execute()
+                total_citas = response.count if response.count else 0
+                
+                # Citas del último mes
+                fecha_limite = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
+                response_recientes = supabase.table("citas")\
+                    .select("count", count="exact")\
+                    .gte("fecha_cita", fecha_limite)\
+                    .execute()
+                citas_recientes = response_recientes.count if response_recientes.count else 0
+                
+                st.info(f"**Total de citas en sistema:** {total_citas}")
+                st.info(f"**Citas en los últimos 30 días:** {citas_recientes}")
+                
+            except Exception as e:
+                st.error(f"Error al obtener estadísticas: {str(e)}")
 
 # ==================================================
 # PESTAÑA 5: CONFIGURACIÓN
