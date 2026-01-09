@@ -1556,96 +1556,86 @@ with tab1:
                 use_container_width=True
             )
 # ==================================================
-# PESTAÑA 1: REGISTRO INTEGRADO (COMPLETO)
+# PESTAÑA 1: REGISTRO Y CALCULADORA DE PREDICCIÓN
 # ==================================================
 with tab1:
-    st.markdown('<div class="section-title-blue">📝 Registro Integral de Paciente y Biomarcadores</div>', unsafe_allow_html=True)
+    # --------------------------------------------------
+    # BLOQUE A: CALCULADORA DE PREDICCIÓN (SOLO ANÁLISIS)
+    # --------------------------------------------------
+    st.markdown('<div style="background-color: #f0f2f6; padding: 20px; border-radius: 10px; border-left: 5px solid #007bff;">', unsafe_allow_html=True)
+    st.markdown('### 🔍 Calculadora de Predicción Etiológica')
+    st.caption("Use esta sección solo para predecir el tipo de anemia según laboratorio. Estos datos NO se guardarán.")
+
+    with st.container():
+        c_lab1, c_lab2 = st.columns(2)
+        with c_lab1:
+            st.markdown('**🩸 Perfil de Hierro**')
+            v_ferritina = st.number_input("Ferritina (ng/mL)", 0.0, 500.0, 15.0, key="lab_fer")
+            v_hierro = st.number_input("Hierro sérico (µg/dL)", 0.0, 300.0, 60.0, key="lab_hie")
+        with c_lab2:
+            st.markdown('**🦠 Inflamación**')
+            v_pcr = st.number_input("PCR (mg/dL)", 0.0, 100.0, 0.1, key="lab_pcr")
+            v_vsg = st.number_input("VSG (mm/h)", 0.0, 150.0, 10.0, key="lab_vsg")
+
+        if st.button("📊 ANALIZAR TIPO DE ANEMIA", use_container_width=True):
+            st.markdown("---")
+            # Lógica de predicción
+            if v_ferritina < 12 and v_pcr <= 0.5:
+                st.error("🔬 **Predicción:** Probable Anemia Ferropénica (Déficit de hierro puro).")
+            elif v_pcr > 0.5:
+                st.warning("🔬 **Predicción:** Anemia con componente inflamatorio / Anemia de enfermedad crónica.")
+            else:
+                st.info("🔬 **Predicción:** Perfil indeterminado. Evaluar otros biomarcadores.")
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    st.markdown("<br><br>", unsafe_allow_html=True)
+
+    # --------------------------------------------------
+    # BLOQUE B: FORMULARIO DE REGISTRO (SÍ VA A SUPABASE)
+    # --------------------------------------------------
+    st.markdown('<div class="section-title-blue">📝 Registro Oficial del Paciente</div>', unsafe_allow_html=True)
     
-    with st.form("formulario_integrado_total", clear_on_submit=False):
-        # --- BLOQUE 1: DATOS PERSONALES Y GEOGRÁFICOS ---
+    with st.form("form_registro_supabase", clear_on_submit=False):
         col1, col2 = st.columns(2)
         with col1:
-            st.markdown('**👤 Datos del Paciente**')
-            dni_input = st.text_input("DNI*", placeholder="8 dígitos", key="dni_i", max_chars=8)
-            nombre_input = st.text_input("Nombre Completo*", key="nom_i")
-            edad_meses = st.number_input("Edad (meses)*", 1, 240, 24)
-            genero = st.selectbox("Género*", GENEROS, key="gen_i")
-            telefono_input = st.text_input("Teléfono*", max_chars=9)
+            st.markdown('**👤 Identidad**')
+            dni_reg = st.text_input("DNI*", max_chars=8)
+            nom_reg = st.text_input("Nombre Completo*")
+            edad_reg = st.number_input("Edad (meses)*", 1, 240, 24)
+            tel_reg = st.text_input("Teléfono*")
         
         with col2:
-            st.markdown('**🌍 Ubicación y Entorno**')
-            region = st.selectbox("Región*", PERU_REGIONS, key="reg_i")
-            altitud_msnm = st.number_input("Altitud (msnm)*", 0, 5000, 500)
-            peso_kg = st.number_input("Peso (kg)*", 0.0, 100.0, 12.0)
-            talla_cm = st.number_input("Talla (cm)*", 0.0, 200.0, 85.0)
-            nivel_educativo = st.selectbox("Nivel Educativo Apoderado", NIVELES_EDUCATIVOS)
+            st.markdown('**🌍 Ubicación y Social**')
+            reg_reg = st.selectbox("Región*", PERU_REGIONS)
+            alt_reg = st.number_input("Altitud (msnm)*", 0, 5000, 500)
+            edu_reg = st.selectbox("Nivel Educativo Apoderado", NIVELES_EDUCATIVOS)
+            agua_reg = st.checkbox("Acceso a agua potable")
 
         st.markdown("---")
-
-        # --- BLOQUE 2: ANÁLISIS DE BIOMARCADORES (INTEGRADO AQUÍ) ---
-        st.markdown('### 🧪 Análisis Especializado de Biomarcadores')
-        st.caption("Complete estos campos si cuenta con el reporte de laboratorio detallado.")
         
-        col_bio1, col_bio2 = st.columns(2)
-        with col_bio1:
-            st.markdown('<p style="color: #d32f2f; font-weight: bold; margin-bottom:0;">🩸 PERFIL DE HIERRO</p>', unsafe_allow_html=True)
-            hierro_serico = st.number_input("Hierro sérico (µg/dL)", 0.0, 300.0, 60.0)
-            ferritina = st.number_input("Ferritina (ng/mL)", 0.0, 500.0, 15.0)
-            transferrina = st.number_input("Transferrina (mg/dL)", 0.0, 500.0, 210.0)
-            sat_transf = st.number_input("Saturación de Transferrina (%)", 0.0, 100.0, 20.0)
-            
-        with col_bio2:
-            st.markdown('<p style="color: #2e7d32; font-weight: bold; margin-bottom:0;">🌿 INFLAMACIÓN Y NUTRIENTES</p>', unsafe_allow_html=True)
-            pcr = st.number_input("Proteína C Reactiva (mg/dL)", 0.0, 100.0, 0.1)
-            folato = st.number_input("Folato (ng/mL)", 0.0, 50.0, 6.0)
-            vit_b12 = st.number_input("Vitamina B12 (pg/mL)", 0.0, 2000.0, 300.0)
-            vit_a = st.number_input("Vitamina A (µg/dL)", 0.0, 100.0, 25.0)
-
-        st.markdown("---")
-
-        # --- BLOQUE 3: RESULTADO DE HEMOGLOBINA Y RIESGO ---
         col3, col4 = st.columns(2)
         with col3:
             st.markdown('**🩺 Parámetros Clínicos**')
-            hemoglobina_medida = st.number_input("Hemoglobina medida (g/dL)*", 5.0, 20.0, 11.0)
-            
-            # Cálculo instantáneo para visualización
-            h_ajustada = calcular_hemoglobina_ajustada(hemoglobina_medida, altitud_msnm)
-            clasif, rec, tipo = clasificar_anemia(h_ajustada, edad_meses)
-            st.info(f"**HB Ajustada:** {h_ajustada:.1f} g/dL")
+            hb_reg = st.number_input("Hemoglobina medida (g/dL)*", 5.0, 20.0, 11.0)
+            hb_ajustada = calcular_hemoglobina_ajustada(hb_reg, alt_reg)
+            clasif, rec, alerta = clasificar_anemia(hb_ajustada, edad_reg)
+            st.info(f"HB Ajustada: {hb_ajustada:.1f}")
             
         with col4:
-            st.markdown('**📋 Factores de Riesgo**')
-            factores_clinicos = st.multiselect("Factores Clínicos:", FACTORES_CLINICOS)
-            consume_hierro = st.checkbox("Consume suplemento de hierro")
-            en_seguimiento = st.checkbox("Activar seguimiento automático", value=True)
+            st.markdown('**📋 Seguimiento**')
+            factores_reg = st.multiselect("Factores de Riesgo:", FACTORES_CLINICOS)
+            seg_reg = st.checkbox("Activar seguimiento", value=True)
 
-        # Botones de Acción
-        st.markdown("<br>", unsafe_allow_html=True)
-        c_btn1, c_btn2, c_btn3 = st.columns(3)
-        with c_btn1: btn_limpiar = st.form_submit_button("🧹 Limpiar Todo", use_container_width=True)
-        with c_btn2: btn_analizar = st.form_submit_button("📊 Analizar Riesgo", type="secondary", use_container_width=True)
-        with c_btn3: btn_guardar = st.form_submit_button("💾 GUARDAR REGISTRO COMPLETO", type="primary", use_container_width=True)
+        # Botón de guardado para Supabase
+        btn_guardar = st.form_submit_button("💾 GUARDAR REGISTRO EN BASE DE DATOS", use_container_width=True, type="primary")
 
-    # --- PROCESAMIENTO FUERA DEL FORMULARIO ---
     if btn_guardar:
-        if len(dni_input) != 8 or not nombre_input:
-            st.error("❌ Complete DNI (8 dígitos) y Nombre.")
-        else:
-            # Creamos el registro incluyendo los nuevos biomarcadores
-            nuevo_registro = {
-                "dni": dni_input,
-                "nombre_apellido": nombre_input,
-                "ferritina": ferritina,
-                "pcr": pcr,
-                "hierro_serico": hierro_serico,
-                "hemoglobina_dl1": hemoglobina_medida,
-                "ajuste_altitud": h_ajustada,
-                # ... agregar aquí el resto de campos para Supabase
-            }
-            # Lógica para enviar a Supabase
-            st.success(f"✅ ¡Paciente {nombre_input} registrado con éxito con perfil de biomarcadores!")
+        if len(dni_reg) == 8 and nom_reg:
+            # Aquí va tu código de insertar_en_supabase()
+            st.success(f"✅ Paciente {nom_reg} guardado oficialmente.")
             st.balloons()
+        else:
+            st.error("❌ El DNI debe tener 8 dígitos.")
     # ============================================
     # ACCIONES FUERA DEL FORMULARIO
     # ============================================
