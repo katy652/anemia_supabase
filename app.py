@@ -227,7 +227,7 @@ def show_login_page():
     <style>
     .login-container {
         max-width: 500px;
-        margin: 80px auto;
+        margin: 10px auto;
         padding: 40px;
         background: white;
         border-radius: 20px;
