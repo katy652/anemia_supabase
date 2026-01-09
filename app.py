@@ -1094,15 +1094,6 @@ def clasificar_estado_anemia(hb_ajustada):
     except:
         return "Sin Datos"
 
-def clasificar_anemia_objetivo(hb_aj):
-    try:
-        val = float(hb_aj)
-        if val < 7.0: return "Anemia Severa"
-        elif val < 10.0: return "Anemia Moderada"
-        elif val < 11.0: return "Anemia Leve"
-        else: return "Normal"
-    except:
-        return "Sin Datos"
 # ==================================================
 # SISTEMA DE INTERPRETACIÓN AUTOMÁTICA
 # ==================================================
