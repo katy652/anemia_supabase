@@ -112,38 +112,45 @@ def generar_pdf_historial(paciente, historial):
 
 
 def generar_pdf_dashboard_nacional(indicadores, datos, mapa_df=None):
-    """Genera el reporte PDF validando nombres de columnas y datos binarios"""
+    """Genera reporte PDF manejando errores de columnas y datos vacíos"""
     try:
-        from fpdf import FPDF
         pdf = FPDF()
         pdf.add_page()
+        
+        # Título
         pdf.set_font("Arial", 'B', 16)
         pdf.cell(0, 10, "REPORTE NACIONAL DE ANEMIA", ln=True, align='C')
         pdf.ln(10)
         
-        # Indicadores principales
-        pdf.set_font("Arial", size=12)
-        pdf.cell(0, 10, f"Prevalencia Nacional: {indicadores.get('prevalencia_nacional', 0)}%", ln=True)
-        pdf.cell(0, 10, f"Total Pacientes: {indicadores.get('total_pacientes', 0)}", ln=True)
+        # Indicadores Clave
+        pdf.set_font("Arial", 'B', 12)
+        pdf.cell(0, 10, "RESUMEN DE INDICADORES:", ln=True)
+        pdf.set_font("Arial", size=11)
+        pdf.cell(0, 8, f"- Prevalencia Nacional: {indicadores.get('prevalencia_nacional', 0)}%", ln=True)
+        pdf.cell(0, 8, f"- Total Pacientes: {indicadores.get('total_pacientes', 0)}", ln=True)
+        pdf.cell(0, 8, f"- Hemoglobina Promedio: {indicadores.get('hb_promedio_nacional', 0):.1f} g/dL", ln=True)
         
-        # Validación de tabla de regiones
+        # Tabla Regional con validación de nombres de columna
         if mapa_df is not None and not mapa_df.empty:
             pdf.ln(5)
             pdf.set_font("Arial", 'B', 12)
-            pdf.cell(0, 10, "RESUMEN REGIONAL:", ln=True)
+            pdf.cell(0, 10, "DETALLE POR REGIONES:", ln=True)
             pdf.set_font("Arial", size=10)
             
-            # Detectar automáticamente si es 'Region' o 'Región'
-            col_nombre = 'Región' if 'Región' in mapa_df.columns else 'Region'
-            col_prev = 'Prevalencia' if 'Prevalencia' in mapa_df.columns else mapa_df.columns[1]
+            # Detectar columna de región (maneja tildes)
+            col_reg = next((c for c in mapa_df.columns if 'regi' in c.lower()), None)
+            col_prev = next((c for c in mapa_df.columns if 'preval' in c.lower()), mapa_df.columns[1])
 
-            for i, row in mapa_df.head(10).iterrows():
-                pdf.cell(0, 7, f"- {row[col_nombre]}: {row[col_prev]}%", ln=True)
+            if col_reg:
+                for i, row in mapa_df.head(10).iterrows():
+                    pdf.cell(0, 7, f"* {row[col_reg]}: {row[col_prev]}%", ln=True)
+            else:
+                pdf.cell(0, 7, "(No se encontró columna de regiones)", ln=True)
 
-        # Retorno seguro de datos binarios
+        # Retornar como bytes binarios
         return pdf.output(dest='S').encode('latin-1')
     except Exception as e:
-        st.error(f"Error interno al construir PDF: {str(e)}")
+        print(f"Error crítico en PDF: {e}")
         return None
 # ==================================================
 # SISTEMA DE LOGIN PARA 5 USUARIOS DE SALUD
@@ -4564,35 +4571,40 @@ with tab_seg3:
 # ============================================
 # EXPORTAR REPORTES (Pestaña Nacional)
 # ============================================
+# ============================================
+# EXPORTAR REPORTES (SOLUCIÓN FINAL)
+# ============================================
 with col_exp3:
-    # Verificamos que existan los datos mínimos
+    # Verificamos si los indicadores existen
     if 'indicadores_anemia' in st.session_state and st.session_state.indicadores_anemia:
         try:
-            # Obtenemos el dataframe del mapa del estado de sesión
-            df_para_pdf = st.session_state.get('mapa_nacional_df', None)
+            # Obtenemos el DataFrame del mapa si existe
+            df_mapa = st.session_state.get('mapa_nacional_df', None)
             
-            pdf_data = generar_pdf_dashboard_nacional(
+            # Generar contenido binario
+            pdf_content = generar_pdf_dashboard_nacional(
                 st.session_state.indicadores_anemia, 
                 st.session_state.datos_nacionales,
-                mapa_df=df_para_pdf
+                mapa_df=df_mapa
             )
             
-            # Si la función devolvió datos (no es None)
-            if pdf_data is not None:
+            # Validamos que no sea None antes de mostrar el botón
+            if pdf_content is not None:
                 st.download_button(
                     label="📄 Descargar PDF Profesional",
-                    data=pdf_data,
-                    file_name=f"Reporte_Anemia_{datetime.now().strftime('%Y%m%d')}.pdf",
+                    data=pdf_content,
+                    file_name=f"Reporte_Nacional_{datetime.now().strftime('%Y%m%d')}.pdf",
                     mime="application/pdf",
                     use_container_width=True,
                     key="btn_pdf_nacional_final"
                 )
             else:
-                st.error("❌ El generador devolvió un archivo vacío.")
+                st.error("❌ Falló la creación del archivo binario.")
+                
         except Exception as e:
-            st.error(f"❌ Error al procesar: {str(e)[:50]}")
+            st.error(f"❌ Error en el proceso: {str(e)[:50]}")
     else:
-        st.warning("⚠️ Cargue los datos antes de exportar.")
+        st.warning("⚠️ Cargue los datos nacionales primero.")
 # ==================================================
 # PESTAÑA 5: CONFIGURACIÓN
 # ==================================================
