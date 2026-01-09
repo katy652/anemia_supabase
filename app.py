@@ -1805,17 +1805,17 @@ if btn_analizar:
     
     # 2. CUADRO PRINCIPAL (Resumen visual con color)
     st.markdown(f"""
-        <div style="background-color: {resultado['codigo_color']}; padding: 25px; border-radius: 15px; color: white; border: 3px solid rgba(255,255,255,0.5); margin-top: 20px;">
-            <h2 style="margin:0; color: white;">📋 Resultado del Análisis Etiológico</h2>
-            <hr style="border: 0.5px solid rgba(255,255,255,0.3); margin: 15px 0;">
-            <p style="font-size: 1.3rem; font-weight: bold;">{resultado['interpretacion']}</p>
-            <div style="background: rgba(0,0,0,0.15); padding: 15px; border-radius: 10px; border-left: 5px solid white;">
-                <p style="margin:0; font-size: 1.1rem;">
-                    <strong>🩺 RECOMENDACIÓN CLÍNICA:</strong><br>{resultado['recomendacion']}
-                </p>
-            </div>
+    <div style="background-color: #1e3a8a; padding: 25px; border-radius: 15px; color: white; border: 3px solid rgba(255,255,255,0.5); margin-top: 20px;">
+        <h2 style="margin:0; color: white;">📋 Resultado del Análisis Etiológico</h2>
+        <hr style="border: 0.5px solid rgba(255,255,255,0.3); margin: 15px 0;">
+        <p style="font-size: 1.3rem; font-weight: bold;">{resultado['interpretacion']}</p>
+        <div style="background: rgba(0,0,0,0.15); padding: 15px; border-radius: 10px; border-left: 5px solid white;">
+            <p style="margin:0; font-size: 1.1rem;">
+                <strong>🩺 RECOMENDACIÓN CLÍNICA:</strong><br>{resultado['recomendacion']}
+            </p>
         </div>
-    """, unsafe_allow_html=True)
+    </div>
+""", unsafe_allow_html=True)
     
     # 3. SECCIÓN DE DIAGNÓSTICO DIFERENCIAL (Explicación de por qué se descartan otras)
     st.markdown("### ❌ Diagnóstico Diferencial (Sustento de Descartes)")
