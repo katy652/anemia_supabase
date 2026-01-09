@@ -3415,189 +3415,155 @@ with tab4:
         else:
             st.info("👆 Presiona 'Actualizar Calendario' para cargar el calendario de seguimiento")
     
-   # ============================================
-# TAB 2: GENERAR CITAS AUTOMÁTICAS
+  # ============================================
+# TAB 2: GENERAR CITAS AUTOMÁTICAS - VERSIÓN SIMPLIFICADA
 # ============================================
 with tab_citas2:
     st.markdown('<div class="section-title-purple">🔄 GENERAR CITAS AUTOMÁTICAS POR NIVEL DE ANEMIA</div>', unsafe_allow_html=True)
     
-    # ====== FUNCIÓN PARA CREAR CITAS AUTOMÁTICAS (SI NO LA TIENES) ======
-    def crear_cita_automatica(dni_paciente, hemoglobina_actual, edad_meses, nombre_paciente=""):
-        """
-        Crea una cita automática basada en el nivel de hemoglobina
-        """
-        try:
-            # 1. Calcular frecuencia basada en hemoglobina
-            if hemoglobina_actual < 7:
-                frecuencia_dias = 30  # MENSUAL
-                frecuencia_texto = "MENSUAL"
-            elif hemoglobina_actual < 10:
-                frecuencia_dias = 90  # TRIMESTRAL
-                frecuencia_texto = "TRIMESTRAL"
-            elif hemoglobina_actual < 11:
-                frecuencia_dias = 180  # SEMESTRAL
-                frecuencia_texto = "SEMESTRAL"
-            else:
-                frecuencia_dias = 365  # ANUAL
-                frecuencia_texto = "ANUAL"
-            
-            # 2. Calcular fechas
-            fecha_actual = datetime.now()
-            proxima_cita = fecha_actual + timedelta(days=frecuencia_dias)
-            
-            # 3. Obtener nombre del paciente si no se proporciona
-            if not nombre_paciente:
-                paciente_resp = supabase.table("alertas_hemoglobina")\
-                    .select("nombre_apellido")\
-                    .eq("dni", dni_paciente)\
+    # ====== SOLUCIÓN DIRECTA: PRIMERO DIAGNOSTICAR ======
+    st.markdown("### 🔍 Paso 1: Diagnosticar el problema")
+    
+    # Botón para diagnosticar
+    if st.button("🔧 EJECUTAR DIAGNÓSTICO COMPLETO", type="primary"):
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.markdown("**1. Verificar tabla alertas_hemoglobina**")
+            try:
+                pacientes = supabase.table("alertas_hemoglobina").select("dni, nombre_apellido, hemoglobina_dl1, en_seguimiento").limit(10).execute()
+                if pacientes.data:
+                    st.success(f"✅ Tabla encontrada: {len(pacientes.data)} pacientes")
+                    for p in pacientes.data[:3]:  # Mostrar solo 3
+                        st.write(f"- {p['dni']}: Hb={p['hemoglobina_dl1']}, Seg={p['en_seguimiento']}")
+                else:
+                    st.warning("⚠️ Tabla vacía o sin datos")
+            except Exception as e:
+                st.error(f"❌ Error: {str(e)}")
+        
+        with col2:
+            st.markdown("**2. Verificar tabla citas**")
+            try:
+                citas = supabase.table("citas").select("dni_paciente, fecha_cita").limit(5).execute()
+                if citas.data:
+                    st.success(f"✅ Tabla citas: {len(citas.data)} registros")
+                    for c in citas.data[:3]:
+                        st.write(f"- {c['dni_paciente']}: {c['fecha_cita']}")
+                else:
+                    st.info("ℹ️ Tabla citas vacía")
+            except Exception as e:
+                st.error(f"❌ Error: {str(e)}")
+        
+        with col3:
+            st.markdown("**3. Probar consulta combinada**")
+            try:
+                # Prueba la consulta que debería funcionar
+                test_query = supabase.table("alertas_hemoglobina")\
+                    .select("count", count="exact")\
+                    .lt("hemoglobina_dl1", 11)\
                     .execute()
-                if paciente_resp.data:
-                    nombre_paciente = paciente_resp.data[0]['nombre_apellido']
-            
-            # 4. Crear datos de la cita
-            cita_data = {
-                "dni_paciente": dni_paciente,
-                "nombre_paciente": nombre_paciente,
-                "fecha_cita": fecha_actual.strftime('%Y-%m-%d'),
-                "hora_cita": fecha_actual.strftime('%H:%M:%S'),
-                "tipo_consulta": "Seguimiento Automático",
-                "diagnostico": f"Control por anemia (Hb: {hemoglobina_actual:.1f} g/dL)",
-                "tratamiento": "Seguimiento según protocolo",
-                "observaciones": f"Frecuencia {frecuencia_texto} programada automáticamente. Edad: {edad_meses} meses.",
-                "investigador_responsable": "Sistema Automático",
-                "proxima_cita": proxima_cita.strftime('%Y-%m-%d'),
-                "frecuencia_dias": frecuencia_dias,
-                "hemoglobina_registrada": hemoglobina_actual,
-                "edad_paciente_meses": edad_meses,
-                "created_at": fecha_actual.strftime('%Y-%m-%d %H:%M:%S')
-            }
-            
-            # 5. Insertar en tabla de citas
-            response = supabase.table("citas").insert(cita_data).execute()
-            
-            if response.data:
-                return True, f"Cita {frecuencia_texto} programada para {proxima_cita.strftime('%d/%m/%Y')}"
-            else:
-                return False, "Error al crear cita en base de datos"
-                
-        except Exception as e:
-            return False, f"Error: {str(e)}"
+                st.success(f"✅ Pacientes con Hb < 11: {test_query.count}")
+            except Exception as e:
+                st.error(f"❌ Error en consulta: {str(e)}")
     
-    # ====== BOTONES DE DIAGNÓSTICO (TEMPORALES) ======
-    with st.expander("🔧 Diagnóstico - Click aquí si hay problemas", expanded=False):
-        col_d1, col_d2, col_d3 = st.columns(3)
-        
-        with col_d1:
-            if st.button("Ver tabla citas"):
-                try:
-                    citas = supabase.table("citas").select("*").limit(5).execute()
-                    st.write("**Últimas 5 citas:**")
-                    for c in citas.data if citas.data else []:
-                        st.write(f"- {c.get('dni_paciente', 'N/A')} - {c.get('fecha_cita', 'N/A')}")
-                except Exception as e:
-                    st.error(f"Error tabla citas: {str(e)}")
-        
-        with col_d2:
-            if st.button("Ver pacientes anemia"):
-                try:
-                    pacientes = supabase.table("alertas_hemoglobina")\
-                        .select("dni, nombre_apellido, hemoglobina_dl1")\
-                        .lt("hemoglobina_dl1", 11)\
-                        .limit(5)\
-                        .execute()
-                    st.write("**Pacientes con Hb < 11:**")
-                    for p in pacientes.data if pacientes.data else []:
-                        st.write(f"- {p['dni']}: {p['nombre_apellido']} - Hb: {p['hemoglobina_dl1']}")
-                except Exception as e:
-                    st.error(f"Error: {str(e)}")
-        
-        with col_d3:
-            if st.button("Ver columnas alertas"):
-                try:
-                    ejemplo = supabase.table("alertas_hemoglobina").select("*").limit(1).execute()
-                    if ejemplo.data:
-                        st.write("**Columnas alertas_hemoglobina:**")
-                        for col in ejemplo.data[0].keys():
-                            st.write(f"- {col}")
-                except Exception as e:
-                    st.error(f"Error: {str(e)}")
+    st.markdown("---")
     
-    # ====== Obtener pacientes que necesitan citas (CÓDIGO CORREGIDO) ======
+    # ====== SOLUCIÓN ALTERNA: USAR CONSULTA SIMPLE ======
     try:
-        # CONSULTA CORREGIDA: Usar .or_() correctamente o consultas separadas
-        response = supabase.table("alertas_hemoglobina")\
+        # CONSULTA MÁS SIMPLE Y SEGURA
+        st.markdown("### 📋 Pacientes que necesitan citas")
+        
+        # Opción 1: Solo por hemoglobina baja
+        pacientes_hb_baja = supabase.table("alertas_hemoglobina")\
             .select("dni, nombre_apellido, hemoglobina_dl1, edad_meses, en_seguimiento, riesgo")\
-            .lt("hemoglobina_dl1", 11)\
+            .lt("hemoglobina_dl1", 11.0)\
             .execute()
         
-        # También obtener pacientes con seguimiento activo
-        response_seguimiento = supabase.table("alertas_hemoglobina")\
+        # Opción 2: Solo por seguimiento activo
+        pacientes_seguimiento = supabase.table("alertas_hemoglobina")\
             .select("dni, nombre_apellido, hemoglobina_dl1, edad_meses, en_seguimiento, riesgo")\
             .eq("en_seguimiento", True)\
             .execute()
         
-        # Combinar resultados únicos
-        pacientes_todos = []
-        pacientes_vistos = set()
+        # Combinar listas únicas
+        todos_pacientes = []
+        dnis_vistos = set()
         
-        if response.data:
-            for p in response.data:
-                if p['dni'] not in pacientes_vistos:
-                    pacientes_todos.append(p)
-                    pacientes_vistos.add(p['dni'])
+        if pacientes_hb_baja.data:
+            for p in pacientes_hb_baja.data:
+                if p['dni'] not in dnis_vistos:
+                    todos_pacientes.append(p)
+                    dnis_vistos.add(p['dni'])
         
-        if response_seguimiento.data:
-            for p in response_seguimiento.data:
-                if p['dni'] not in pacientes_vistos:
-                    pacientes_todos.append(p)
-                    pacientes_vistos.add(p['dni'])
+        if pacientes_seguimiento.data:
+            for p in pacientes_seguimiento.data:
+                if p['dni'] not in dnis_vistos:
+                    todos_pacientes.append(p)
+                    dnis_vistos.add(p['dni'])
         
-        if pacientes_todos:
-            pacientes_necesitan = []
+        if not todos_pacientes:
+            st.info("📝 No se encontraron pacientes que necesiten citas automáticas")
+            st.write("**Sugerencia:** Verifica que haya pacientes con:")
+            st.write("- Hemoglobina menor a 11 g/dL")
+            st.write("- O marcados para seguimiento activo")
             
-            for paciente in pacientes_todos:
-                # Verificar si ya tiene cita próxima
+            # Mostrar algunos pacientes para referencia
+            st.markdown("**Algunos pacientes en el sistema:**")
+            try:
+                muestra = supabase.table("alertas_hemoglobina")\
+                    .select("dni, nombre_apellido, hemoglobina_dl1, en_seguimiento")\
+                    .limit(5)\
+                    .execute()
+                if muestra.data:
+                    for p in muestra.data:
+                        st.write(f"- {p['nombre_apellido']}: Hb={p['hemoglobina_dl1']}, Seg={p['en_seguimiento']}")
+            except:
+                pass
+        else:
+            st.success(f"✅ Encontrados {len(todos_pacientes)} pacientes que necesitan citas")
+            
+            # Filtrar pacientes que YA TIENEN citas futuras
+            pacientes_sin_cita = []
+            
+            for paciente in todos_pacientes:
                 try:
-                    citas_response = supabase.table("citas")\
-                        .select("proxima_cita")\
+                    # Verificar si ya tiene cita futura
+                    citas_existentes = supabase.table("citas")\
+                        .select("id")\
                         .eq("dni_paciente", paciente['dni'])\
-                        .gte("proxima_cita", datetime.now().strftime('%Y-%m-%d'))\
+                        .gte("fecha_cita", datetime.now().strftime('%Y-%m-%d'))\
                         .execute()
                     
-                    # Solo agregar si NO tiene cita próxima
-                    if not citas_response.data:
-                        pacientes_necesitan.append({
+                    if not citas_existentes.data:
+                        pacientes_sin_cita.append({
                             'dni': paciente['dni'],
                             'nombre': paciente['nombre_apellido'],
                             'hemoglobina': float(paciente['hemoglobina_dl1']),
                             'edad_meses': paciente['edad_meses'],
-                            'en_seguimiento': paciente['en_seguimiento'],
-                            'riesgo': paciente.get('riesgo', 'N/A')
+                            'riesgo': paciente.get('riesgo', 'No evaluado')
                         })
-                except Exception as e:
-                    st.warning(f"Error verificando citas para {paciente['dni']}: {str(e)}")
-                    # Si hay error, asumimos que no tiene cita
-                    pacientes_necesitan.append({
+                except:
+                    # Si hay error, asumir que no tiene cita
+                    pacientes_sin_cita.append({
                         'dni': paciente['dni'],
                         'nombre': paciente['nombre_apellido'],
                         'hemoglobina': float(paciente['hemoglobina_dl1']),
                         'edad_meses': paciente['edad_meses'],
-                        'en_seguimiento': paciente['en_seguimiento'],
-                        'riesgo': paciente.get('riesgo', 'N/A')
+                        'riesgo': paciente.get('riesgo', 'No evaluado')
                     })
             
-            if pacientes_necesitan:
-                st.info(f"📋 **{len(pacientes_necesitan)} pacientes necesitan cita programada**")
+            if pacientes_sin_cita:
+                st.info(f"📋 **{len(pacientes_sin_cita)} pacientes sin citas programadas**")
                 
-                # Crear tabla de pacientes
-                df_pacientes_citas = pd.DataFrame(pacientes_necesitan)
-                df_pacientes_citas['frecuencia'] = df_pacientes_citas['hemoglobina'].apply(
+                # Crear DataFrame
+                df_citas = pd.DataFrame(pacientes_sin_cita)
+                df_citas['frecuencia'] = df_citas['hemoglobina'].apply(
                     lambda x: "MENSUAL" if x < 7 else "TRIMESTRAL" if x < 10 else "SEMESTRAL" if x < 11 else "ANUAL"
                 )
                 
                 # Mostrar tabla
-                edited_df = st.data_editor(
-                    df_pacientes_citas[['nombre', 'dni', 'hemoglobina', 'frecuencia', 'riesgo']],
+                st.dataframe(
+                    df_citas[['nombre', 'dni', 'hemoglobina', 'frecuencia', 'riesgo']],
                     column_config={
                         "nombre": "Paciente",
                         "dni": "DNI",
@@ -3605,208 +3571,147 @@ with tab_citas2:
                         "frecuencia": "Frecuencia",
                         "riesgo": "Riesgo"
                     },
-                    use_container_width=True,
-                    key="editor_citas"
+                    use_container_width=True
                 )
                 
-                # Botón para generar citas automáticas
-                col_gen1, col_gen2 = st.columns(2)
+                # Botones para generar citas
+                col_btn1, col_btn2 = st.columns(2)
                 
-                with col_gen1:
-                    if st.button("🎯 Generar Citas Seleccionadas", type="primary", use_container_width=True, key="btn_generar_seleccionadas"):
+                with col_btn1:
+                    if st.button("🎯 Generar Citas Automáticas", type="primary", use_container_width=True):
                         with st.spinner("Generando citas..."):
-                            resultados = []
-                            for _, paciente in df_pacientes_citas.iterrows():
-                                success, message = crear_cita_automatica(
-                                    paciente['dni'],
-                                    paciente['hemoglobina'],
-                                    paciente['edad_meses'],
-                                    paciente['nombre']
-                                )
-                                resultados.append({
-                                    'paciente': paciente['nombre'],
-                                    'exito': success,
-                                    'mensaje': message
-                                })
+                            exitos = 0
+                            for paciente in pacientes_sin_cita:
+                                try:
+                                    # Calcular frecuencia
+                                    if paciente['hemoglobina'] < 7:
+                                        dias = 30
+                                    elif paciente['hemoglobina'] < 10:
+                                        dias = 90
+                                    elif paciente['hemoglobina'] < 11:
+                                        dias = 180
+                                    else:
+                                        dias = 365
+                                    
+                                    # Crear cita
+                                    cita_data = {
+                                        "dni_paciente": paciente['dni'],
+                                        "nombre_paciente": paciente['nombre'],
+                                        "fecha_cita": datetime.now().strftime('%Y-%m-%d'),
+                                        "hora_cita": datetime.now().strftime('%H:%M:%S'),
+                                        "tipo_consulta": "Seguimiento Automático",
+                                        "diagnostico": f"Control por anemia (Hb: {paciente['hemoglobina']:.1f} g/dL)",
+                                        "tratamiento": "Seguimiento según protocolo",
+                                        "observaciones": f"Cita automática generada. Edad: {paciente['edad_meses']} meses.",
+                                        "investigador_responsable": "Sistema Automático",
+                                        "proxima_cita": (datetime.now() + timedelta(days=dias)).strftime('%Y-%m-%d'),
+                                        "hemoglobina_registrada": paciente['hemoglobina'],
+                                        "created_at": datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                                    }
+                                    
+                                    supabase.table("citas").insert(cita_data).execute()
+                                    exitos += 1
+                                    
+                                except Exception as e:
+                                    st.error(f"Error con {paciente['nombre']}: {str(e)}")
                             
-                            # Mostrar resultados
-                            exitos = len([r for r in resultados if r['exito']])
-                            st.success(f"✅ Citas generadas: {exitos}/{len(resultados)}")
-                            
-                            for resultado in resultados:
-                                if resultado['exito']:
-                                    st.info(f"✅ {resultado['paciente']}: {resultado['mensaje']}")
-                                else:
-                                    st.error(f"❌ {resultado['paciente']}: {resultado['mensaje']}")
-                
-                with col_gen2:
-                    if st.button("📋 Generar Todas las Citas", type="secondary", use_container_width=True, key="btn_generar_todas"):
-                        with st.spinner("Generando todas las citas..."):
-                            contador = 0
-                            for _, paciente in df_pacientes_citas.iterrows():
-                                success, _ = crear_cita_automatica(
-                                    paciente['dni'],
-                                    paciente['hemoglobina'],
-                                    paciente['edad_meses'],
-                                    paciente['nombre']
-                                )
-                                if success:
-                                    contador += 1
-                            
-                            st.success(f"✅ {contador} citas generadas automáticamente")
-                            time.sleep(2)
+                            st.success(f"✅ {exitos}/{len(pacientes_sin_cita)} citas generadas")
                             st.rerun()
+                
+                with col_btn2:
+                    if st.button("📊 Ver solo (sin generar)", type="secondary", use_container_width=True):
+                        st.info("Modo de visualización activado")
+                        
             else:
                 st.success("🎉 Todos los pacientes ya tienen citas programadas")
                 
-        else:
-            st.info("📝 No hay pacientes que requieran seguimiento (Hb < 11 o en seguimiento activo)")
-            
     except Exception as e:
-        st.error(f"❌ Error al obtener pacientes: {str(e)}")
+        st.error(f"❌ Error general: {str(e)}")
         import traceback
-        st.error(f"Detalles: {traceback.format_exc()}")
+        st.code(traceback.format_exc())
     
-    # ====== Sección para crear cita manual (CÓDIGO MEJORADO) ======
+    # ====== FORMULARIO MANUAL MÁS SIMPLE ======
     st.markdown("---")
-    st.markdown('<div class="section-title-purple" style="font-size: 1.2rem;">➕ CREAR CITA MANUAL</div>', unsafe_allow_html=True)
+    st.markdown("### ➕ Crear Cita Manual")
     
-    with st.form("form_cita_manual", clear_on_submit=True):
-        col_man1, col_man2 = st.columns(2)
-        
-        with col_man1:
-            # Buscar paciente
-            try:
-                pacientes_response = supabase.table("alertas_hemoglobina").select("dni, nombre_apellido, hemoglobina_dl1").execute()
-                
-                if pacientes_response.data:
-                    opciones_pacientes = {f"{p['nombre_apellido']} (DNI: {p['dni']}) - Hb: {p['hemoglobina_dl1']} g/dL": p['dni'] 
-                                         for p in pacientes_response.data}
-                    
-                    paciente_seleccionado = st.selectbox("Seleccionar paciente:", 
-                                                        list(opciones_pacientes.keys()),
-                                                        key="select_paciente_manual")
-                    dni_paciente = opciones_pacientes[paciente_seleccionado] if paciente_seleccionado else None
-                    
-                    if dni_paciente:
-                        # Obtener datos del paciente
-                        paciente_data_response = supabase.table("alertas_hemoglobina")\
-                            .select("*")\
-                            .eq("dni", dni_paciente)\
-                            .execute()
-                        
-                        if paciente_data_response.data:
-                            paciente_data = paciente_data_response.data[0]
-                            st.info(f"**Hb actual:** {paciente_data['hemoglobina_dl1']} g/dL")
-                            st.info(f"**Riesgo:** {paciente_data.get('riesgo', 'N/A')}")
-                            st.info(f"**Edad:** {paciente_data.get('edad_meses', 'N/A')} meses")
-                else:
-                    st.warning("No hay pacientes registrados")
-                    dni_paciente = None
-                    
-            except Exception as e:
-                st.error(f"Error al cargar pacientes: {str(e)}")
-                dni_paciente = None
-        
-        with col_man2:
-            fecha_cita = st.date_input("Fecha de la cita", 
-                                      min_value=datetime.now().date(),
-                                      key="fecha_cita_manual")
-            hora_cita = st.time_input("Hora de la cita", 
-                                     value=datetime.now().time(),
-                                     key="hora_cita_manual")
-            tipo_consulta = st.selectbox("Tipo de consulta", 
-                                        ["Control", "Seguimiento", "Urgencia", "Reevaluación", "Vacunación"],
-                                        key="tipo_consulta_manual")
+    # Formulario simplificado
+    with st.form("cita_manual_simple"):
+        # Seleccionar paciente
+        try:
+            pacientes_lista = supabase.table("alertas_hemoglobina")\
+                .select("dni, nombre_apellido, hemoglobina_dl1")\
+                .execute()
             
-            # Campo para actualizar hemoglobina
-            if 'paciente_data' in locals():
-                hemoglobina_actual = paciente_data['hemoglobina_dl1']
-                nueva_hemoglobina = st.number_input(
-                    "Nueva hemoglobina (g/dL)", 
-                    min_value=5.0, 
-                    max_value=20.0, 
-                    value=float(hemoglobina_actual),
-                    step=0.1,
-                    key="nueva_hemoglobina_input"
-                )
+            if pacientes_lista.data:
+                paciente_opciones = [f"{p['nombre_apellido']} (DNI: {p['dni']})" for p in pacientes_lista.data]
+                paciente_selec = st.selectbox("Paciente:", paciente_opciones)
                 
-                # Sugerir frecuencia según hemoglobina
-                frecuencia_sugerida = "MENSUAL" if nueva_hemoglobina < 7 else "TRIMESTRAL" if nueva_hemoglobina < 10 else "SEMESTRAL" if nueva_hemoglobina < 11 else "ANUAL"
-                st.info(f"**Frecuencia sugerida:** {frecuencia_sugerida}")
-        
-        diagnostico = st.text_area("Diagnóstico", 
-                                  placeholder="Ej: Anemia leve por deficiencia de hierro",
-                                  key="diagnostico_manual")
-        tratamiento = st.text_area("Tratamiento prescrito", 
-                                  placeholder="Ej: Sulfato ferroso 15 mg/día",
-                                  key="tratamiento_manual")
-        observaciones = st.text_area("Observaciones", 
-                                    placeholder="Observaciones adicionales...",
-                                    key="observaciones_manual")
-        
-        col_b1, col_b2 = st.columns(2)
-        with col_b1:
-            submit_cita = st.form_submit_button("💾 GUARDAR CITA MANUAL", use_container_width=True)
-        
-        with col_b2:
-            limpiar_form = st.form_submit_button("🧹 LIMPIAR FORMULARIO", type="secondary", use_container_width=True)
-        
-        if submit_cita and dni_paciente:
-            try:
-                # Calcular próxima cita según frecuencia sugerida
-                if nueva_hemoglobina < 7:
-                    dias_proxima = 30
-                elif nueva_hemoglobina < 10:
-                    dias_proxima = 90
-                elif nueva_hemoglobina < 11:
-                    dias_proxima = 180
-                else:
-                    dias_proxima = 365
+                # Extraer DNI
+                dni = paciente_selec.split("DNI: ")[1].replace(")", "") if "DNI:" in paciente_selec else ""
                 
-                cita_data = {
-                    "dni_paciente": dni_paciente,
-                    "nombre_paciente": paciente_seleccionado.split('(')[0].strip(),
-                    "fecha_cita": fecha_cita.strftime('%Y-%m-%d'),
-                    "hora_cita": hora_cita.strftime('%H:%M:%S'),
-                    "tipo_consulta": tipo_consulta,
-                    "diagnostico": diagnostico,
-                    "tratamiento": tratamiento,
-                    "observaciones": observaciones,
-                    "investigador_responsable": "Usuario Manual",
-                    "proxima_cita": (fecha_cita + timedelta(days=dias_proxima)).strftime('%Y-%m-%d'),
-                    "hemoglobina_registrada": nueva_hemoglobina,
-                    "frecuencia_dias": dias_proxima,
-                    "created_at": datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                }
-                
-                response = supabase.table("citas").insert(cita_data).execute()
-                
-                if response.data:
-                    # ACTUALIZAR HEMOGLOBINA EN TABLA PRINCIPAL
-                    try:
-                        supabase.table("alertas_hemoglobina")\
-                            .update({
-                                "hemoglobina_dl1": nueva_hemoglobina,
-                                "updated_at": datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                            })\
-                            .eq("dni", dni_paciente)\
-                            .execute()
-                        
-                        st.success(f"✅ Cita guardada y hemoglobina actualizada a {nueva_hemoglobina} g/dL")
-                    except Exception as update_error:
-                        st.success("✅ Cita guardada")
-                        st.warning(f"⚠️ No se pudo actualizar hemoglobina: {str(update_error)}")
+                # Mostrar info actual
+                paciente_info = next((p for p in pacientes_lista.data if p['dni'] == dni), None)
+                if paciente_info:
+                    st.info(f"Hemoglobina actual: **{paciente_info['hemoglobina_dl1']} g/dL**")
                     
-                    time.sleep(1.5)
+                    # Campo para nueva hemoglobina
+                    nueva_hb = st.number_input(
+                        "Nueva hemoglobina (g/dL):",
+                        min_value=5.0,
+                        max_value=20.0,
+                        value=float(paciente_info['hemoglobina_dl1']),
+                        step=0.1
+                    )
+        except:
+            st.warning("No se pudieron cargar los pacientes")
+            dni = ""
+            nueva_hb = 11.0
+        
+        # Datos de la cita
+        col_f1, col_f2 = st.columns(2)
+        with col_f1:
+            fecha = st.date_input("Fecha:", datetime.now())
+            hora = st.time_input("Hora:", datetime.now().time())
+        
+        with col_f2:
+            tipo = st.selectbox("Tipo:", ["Control", "Seguimiento", "Urgencia"])
+            diagnostico = st.text_input("Diagnóstico:", "Anemia por deficiencia de hierro")
+        
+        observaciones = st.text_area("Observaciones:")
+        
+        # Botón de guardar
+        if st.form_submit_button("💾 Guardar Cita"):
+            if dni:
+                try:
+                    # Actualizar hemoglobina en tabla principal
+                    supabase.table("alertas_hemoglobina")\
+                        .update({"hemoglobina_dl1": nueva_hb})\
+                        .eq("dni", dni)\
+                        .execute()
+                    
+                    # Crear cita
+                    cita_data = {
+                        "dni_paciente": dni,
+                        "nombre_paciente": paciente_selec.split("(")[0].strip(),
+                        "fecha_cita": fecha.strftime('%Y-%m-%d'),
+                        "hora_cita": hora.strftime('%H:%M:%S'),
+                        "tipo_consulta": tipo,
+                        "diagnostico": diagnostico,
+                        "observaciones": observaciones,
+                        "hemoglobina_registrada": nueva_hb,
+                        "created_at": datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                    }
+                    
+                    supabase.table("citas").insert(cita_data).execute()
+                    
+                    st.success("✅ Cita creada y hemoglobina actualizada")
+                    time.sleep(1)
                     st.rerun()
-                else:
-                    st.error("❌ Error al guardar la cita")
                     
-            except Exception as e:
-                st.error(f"❌ Error: {str(e)}")
-                import traceback
-                st.error(f"Detalles: {traceback.format_exc()}")
+                except Exception as e:
+                    st.error(f"❌ Error: {str(e)}")
+            else:
+                st.error("❌ Selecciona un paciente")
     # ============================================
     # TAB 3: RECORDATORIOS PRÓXIMOS - VERSIÓN CORREGIDA (SIN EMAIL/SMS)
     # ============================================
