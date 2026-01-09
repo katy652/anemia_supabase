@@ -111,22 +111,41 @@ def generar_pdf_historial(paciente, historial):
         return _generar_texto_plano(paciente, historial, e)
 
 
-def generar_pdf_dashboard_nacional(indicadores, datos):
-    """Crea el PDF para el Dashboard Nacional"""
+def generar_pdf_dashboard_nacional(indicadores, datos, mapa_df=None):
+    """
+    Genera el reporte PDF aceptando indicadores, datos base y el dataframe del mapa.
+    """
     try:
+        from fpdf import FPDF
         pdf = FPDF()
         pdf.add_page()
+        
+        # --- ENCABEZADO ---
         pdf.set_font("Arial", 'B', 16)
         pdf.cell(0, 10, "REPORTE NACIONAL DE ANEMIA", ln=True, align='C')
-        pdf.ln(10)
+        pdf.ln(5)
         
-        pdf.set_font("Arial", size=12)
-        pdf.cell(0, 10, f"Prevalencia: {indicadores.get('prevalencia_nacional', 0)}%", ln=True)
-        pdf.cell(0, 10, f"Total Pacientes: {indicadores.get('total_pacientes', 0)}", ln=True)
-        pdf.cell(0, 10, f"Fecha: {datetime.now().strftime('%d/%m/%Y')}", ln=True)
+        # --- INDICADORES ---
+        pdf.set_font("Arial", 'B', 12)
+        pdf.cell(0, 10, "RESUMEN DE INDICADORES NACIONALES:", ln=True)
+        pdf.set_font("Arial", size=11)
+        pdf.cell(0, 8, f"- Prevalencia Nacional: {indicadores.get('prevalencia_nacional', 0)}%", ln=True)
+        pdf.cell(0, 8, f"- Total Pacientes: {indicadores.get('total_pacientes', 0)}", ln=True)
+        pdf.cell(0, 8, f"- Hemoglobina Promedio: {indicadores.get('hb_promedio_nacional', 0):.1f} g/dL", ln=True)
         
+        # --- DATOS DEL MAPA (Si existe) ---
+        if mapa_df is not None:
+            pdf.ln(5)
+            pdf.set_font("Arial", 'B', 12)
+            pdf.cell(0, 10, "DETALLE POR REGIONES (TOP 5):", ln=True)
+            pdf.set_font("Arial", size=10)
+            # Tomamos las primeras 5 filas del dataframe del mapa
+            for i, row in mapa_df.head(5).iterrows():
+                pdf.cell(0, 7, f"* {row['Region']}: {row['Prevalencia']}%", ln=True)
+
         return pdf.output(dest='S').encode('latin-1')
     except Exception as e:
+        st.error(f"Error interno al construir PDF: {e}")
         return None
 # ==================================================
 # SISTEMA DE LOGIN PARA 5 USUARIOS DE SALUD
@@ -4545,12 +4564,16 @@ with tab_seg3:
 # EXPORTAR REPORTES (DASHBOARD NACIONAL)
 # ============================================
 with col_exp3:
-    if 'indicadores_anemia' in st.session_state and st.session_state.indicadores_anemia:
+    if 'indicadores_anemia' in st.session_state:
         try:
-            # Intentamos generar el PDF Nacional
+            # Capturamos el dataframe del mapa si lo tienes guardado, si no, pasamos None
+            df_mapa = st.session_state.get('df_mapa_nacional', None)
+            
+            # LLAMADA CORREGIDA:
             pdf_data = generar_pdf_dashboard_nacional(
-                st.session_state.indicadores_anemia, 
-                st.session_state.datos_nacionales
+                indicadores=st.session_state.indicadores_anemia, 
+                datos=st.session_state.datos_nacionales,
+                mapa_df=df_mapa  # Aquí es donde fallaba antes
             )
             
             if pdf_data:
@@ -4560,14 +4583,10 @@ with col_exp3:
                     file_name=f"Reporte_Nacional_{datetime.now().strftime('%Y%m%d')}.pdf",
                     mime="application/pdf",
                     use_container_width=True,
-                    key="btn_descargar_pdf_nacional_ok"
+                    key="btn_descarga_nacional_final"
                 )
-            else:
-                st.error("⚠️ No se pudo generar el PDF profesional. Verifique la instalación de FPDF.")
         except Exception as e:
-            st.error(f"Error al procesar el archivo PDF: {str(e)[:50]}")
-    else:
-        st.warning("⚠️ No hay datos cargados para generar el reporte nacional")
+            st.error(f"❌ Error en exportación: {e}")
 # ==================================================
 # PESTAÑA 5: CONFIGURACIÓN
 # ==================================================
