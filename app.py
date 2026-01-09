@@ -112,7 +112,7 @@ def generar_pdf_historial(paciente, historial):
 
 
 def generar_pdf_dashboard_nacional(indicadores, datos):
-    """Crea el contenido binario del PDF para el reporte nacional"""
+    """Crea el PDF para el Dashboard Nacional"""
     try:
         pdf = FPDF()
         pdf.add_page()
@@ -120,16 +120,13 @@ def generar_pdf_dashboard_nacional(indicadores, datos):
         pdf.cell(0, 10, "REPORTE NACIONAL DE ANEMIA", ln=True, align='C')
         pdf.ln(10)
         
-        # Resumen de indicadores
         pdf.set_font("Arial", size=12)
-        pdf.cell(0, 10, f"Prevalencia Nacional: {indicadores.get('prevalencia_nacional', 0)}%", ln=True)
+        pdf.cell(0, 10, f"Prevalencia: {indicadores.get('prevalencia_nacional', 0)}%", ln=True)
         pdf.cell(0, 10, f"Total Pacientes: {indicadores.get('total_pacientes', 0)}", ln=True)
-        pdf.cell(0, 10, f"Fecha de reporte: {datetime.now().strftime('%d/%m/%Y')}", ln=True)
+        pdf.cell(0, 10, f"Fecha: {datetime.now().strftime('%d/%m/%Y')}", ln=True)
         
-        # Retornar como bytes para Streamlit
         return pdf.output(dest='S').encode('latin-1')
     except Exception as e:
-        st.error(f"Error interno en PDF: {e}")
         return None
 # ==================================================
 # SISTEMA DE LOGIN PARA 5 USUARIOS DE SALUD
@@ -4545,15 +4542,12 @@ with tab_seg3:
                 st.info("No hay datos suficientes para mostrar en la tabla")
             
 # ============================================
-# EXPORTAR REPORTES (Corrección de Sintaxis)
+# EXPORTAR REPORTES (DASHBOARD NACIONAL)
 # ============================================
-
-# Columna para el PDF
 with col_exp3:
-    # Verificamos que existan los datos en el estado de sesión
     if 'indicadores_anemia' in st.session_state and st.session_state.indicadores_anemia:
         try:
-            # Llamamos a la función definida arriba
+            # Intentamos generar el PDF Nacional
             pdf_data = generar_pdf_dashboard_nacional(
                 st.session_state.indicadores_anemia, 
                 st.session_state.datos_nacionales
@@ -4561,101 +4555,19 @@ with col_exp3:
             
             if pdf_data:
                 st.download_button(
-                    label="📄 Descargar PDF",
+                    label="📄 Descargar PDF Profesional",
                     data=pdf_data,
                     file_name=f"Reporte_Nacional_{datetime.now().strftime('%Y%m%d')}.pdf",
                     mime="application/pdf",
                     use_container_width=True,
-                    key="btn_descarga_nacional_ok"
+                    key="btn_descargar_pdf_nacional_ok"
                 )
+            else:
+                st.error("⚠️ No se pudo generar el PDF profesional. Verifique la instalación de FPDF.")
         except Exception as e:
-            st.error("Error al procesar el archivo PDF")
+            st.error(f"Error al procesar el archivo PDF: {str(e)[:50]}")
     else:
-        # Este es el 'else' que causaba error si no había un 'if' claro arriba
-        st.warning("⚠️ No hay datos cargados para generar el PDF")
-                   
-        if pdf_data:
-            st.download_button(
-                label="📄 Descargar PDF",
-                data=pdf_data,
-                file_name=f"Reporte_Anemia_Nacional_{datetime.now().strftime('%Y%m%d')}.pdf",
-                mime="application/pdf",
-                use_container_width=True,
-                type="primary",
-                key="btn_descargar_pdf_nacional"
-            )
-        else:
-            st.error("Instala fpdf para exportar")
-            if generar_pdf:
-                with st.spinner("🔄 Generando PDF profesional..."):
-                    try:
-                        # Importar FPDF si no está disponible
-                        try:
-                            from fpdf import FPDF
-                        except ImportError:
-                            st.error("⚠️ FPDF no está instalado")
-                            st.info("Instala con: pip install fpdf")
-                            # Usar alternativa simple
-                            pdf_content = generar_pdf_simple(paciente, historial)
-                        else:
-                            # Usar FPDF para PDF profesional
-                            pdf_content = generar_pdf_historial(paciente, historial)
-                        
-                        # Botón de descarga
-                        st.download_button(
-                            label="📥 Descargar PDF Completo",
-                            data=pdf_content,
-                            file_name=f"Historial_{paciente.get('nombre_apellido', 'paciente').replace(' ', '_')}_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf",
-                            mime="application/pdf",
-                            use_container_width=True,
-                            key="btn_descargar_pdf_completo"
-                        )
-                        
-                        st.success("✅ PDF generado exitosamente")
-                        
-                    except Exception as e:
-                        st.error(f"❌ Error al generar PDF: {str(e)[:100]}")
-                        st.info("⚠️ Para usar PDF completo, instala: pip install fpdf")
-                        
-                        # Generar PDF simple como alternativa
-                        try:
-                            pdf_simple = generar_pdf_simple(paciente, historial)
-                            st.download_button(
-                                label="📥 Descargar PDF Básico",
-                                data=pdf_simple,
-                                file_name=f"Historial_Basico_{paciente.get('nombre_apellido', 'paciente').replace(' ', '_')}.pdf",
-                                mime="application/pdf",
-                                use_container_width=True,
-                                key="btn_descargar_pdf_basico"
-                            )
-                            st.success("✅ PDF básico generado como alternativa")
-                        except Exception as e2:
-                            st.error(f"❌ Error al generar PDF básico: {str(e2)[:100]}")
-        
-        else:
-            st.info("""
-            📭 **No hay controles registrados para este paciente**
-            
-            Para agregar el primer control:
-            👉 Vaya a la pestaña **📝 Nuevo Seguimiento**
-            """)
-            
-            # Botón para crear primer seguimiento
-            if st.button("📝 Crear primer seguimiento", 
-                       use_container_width=True,
-                       type="primary",
-                       key="btn_primer_seguimiento"):
-                st.markdown("""
-                <script>
-                setTimeout(() => {
-                    const tabs = document.querySelectorAll('button[role="tab"]');
-                    if (tabs.length >= 3) {
-                        tabs[2].click();
-                    }
-                }, 500);
-                </script>
-                """, unsafe_allow_html=True)
-                st.rerun()
+        st.warning("⚠️ No hay datos cargados para generar el reporte nacional")
 # ==================================================
 # PESTAÑA 5: CONFIGURACIÓN
 # ==================================================
