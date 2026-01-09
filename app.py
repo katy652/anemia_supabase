@@ -3063,18 +3063,15 @@ with col_stat3:
         st.metric(label="⚠️ Anemia Severa", value="0.0%")
 
 
-
-
         with col_stat3:
+           col_busqueda = df['nivel_anemia'].astype(str).str.upper().str.strip()
     
-        col_busqueda = df['nivel_anemia'].astype(str).str.upper().str.strip()
+            casos_severos = len(df[col_busqueda == 'SEVERA'])
     
-        casos_severos = len(df[col_busqueda == 'SEVERA'])
+            # Universo de pacientes con diagnóstico de anemia
+            pacientes_anemia = len(df[col_busqueda.isin(['SEVERA', 'MODERADA', 'LEVE'])])
     
-        # Universo de pacientes con diagnóstico de anemia
-        pacientes_anemia = len(df[col_busqueda.isin(['SEVERA', 'MODERADA', 'LEVE'])])
-    
-        # 2. Cálculo y visualización
+            # 2. Cálculo y visualización
              if pacientes_anemia > 0:
                 tasa_severidad = (casos_severos / pacientes_anemia) * 100
                 st.metric(
