@@ -2500,34 +2500,35 @@ with tab3:
         if 'region' in datos.columns:
             region_stats = {}
             for region in datos['region'].unique():
-                region_df = datos[datos['region'] == region]
-                
-                # **MISMA LÓGICA EXACTA PARA REGIONES**
-                severa_region = len(region_df[region_df['hemoglobina_dl1'] < 7.0])
-                moderada_region = len(region_df[(region_df['hemoglobina_dl1'] >= 7.0) & (region_df['hemoglobina_dl1'] <= 9.9)])
-                leve_region = len(region_df[(region_df['hemoglobina_dl1'] >= 10.0) & (region_df['hemoglobina_dl1'] <= 10.9)])
-                
-                total_region = len(region_df)
-                con_anemia_region = severa_region + moderada_region + leve_region
-                
-                prevalencia_region = 0
-                if total_region > 0:
-                    prevalencia_region = round((con_anemia_region / total_region * 100), 1)
-                
-                region_stats[region] = {
-                    'total': total_region,
-                    'con_anemia': con_anemia_region,
-                    'prevalencia': prevalencia_region,
-                    'hb_promedio': region_df['hemoglobina_dl1'].mean() if 'hemoglobina_dl1' in region_df.columns else 0,
-                    'severa': severa_region,      # <-- CORRECTO
-                    'moderada': moderada_region,  # <-- CORRECTO
-                    'leve': leve_region,          # <-- CORRECTO
-                    'en_seguimiento': region_df['en_seguimiento'].sum() if 'en_seguimiento' in region_df.columns else 0
-                }
-            
-            indicadores['por_region'] = region_stats
-        
-        return indicadores
+            region_df = datos[datos['region'] == region]
+
+            # 🔑 USAR hemoglobina_ajustada
+            hb = region_df['hemoglobina_ajustada']
+
+            severa_region = (hb < 7.0).sum()
+            moderada_region = ((hb >= 7.0) & (hb <= 9.9)).sum()
+            leve_region = ((hb >= 10.0) & (hb <= 10.9)).sum()
+
+            total_region = len(region_df)
+            con_anemia_region = severa_region + moderada_region + leve_region
+
+            prevalencia_region = round((con_anemia_region / total_region * 100), 1) if total_region > 0 else 0
+
+            region_stats[region] = {
+                'total': total_region,
+                'con_anemia': con_anemia_region,
+                'prevalencia': prevalencia_region,
+                'hb_promedio': hb.mean(),
+                'severa': severa_region,
+                'moderada': moderada_region,
+                'leve': leve_region,
+                'en_seguimiento': region_df['en_seguimiento'].sum() if 'en_seguimiento' in region_df.columns else 0
+            }
+
+        indicadores['por_region'] = region_stats
+
+return indicadores
+
     
     def crear_mapa_peru(indicadores):
         """Crea un mapa del Perú con colores según prevalencia de anemia"""
