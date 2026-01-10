@@ -1091,26 +1091,17 @@ def calcular_hemoglobina_ajustada(hemoglobina_medida, altitud):
     except:
         return None
 
-def clasificar_estado_anemia(hb_ajustada):
-    """Lógica unificada: Sincroniza los resultados con las etiquetas del Dashboard"""
-    if hb_ajustada is None or hb_ajustada == "":
-        return "NULO"
-    
-    try:
-        hb = float(hb_ajustada)
-        
-        # Usamos MAYÚSCULAS para que el gráfico de barras y KPIs lo reconozcan
-        if hb < 7.0:
-            return "SEVERA"    # Antes decía "Anemia severa"
-        elif 7.0 <= hb < 10.0:
-            return "MODERADA"  # Antes decía "Anemia moderada"
-        elif 10.0 <= hb < 11.0:
-            return "LEVE"      # Antes decía "Anemia leve"
-        else:
-            return "NORMAL"    # Antes decía "Sin anemia"
-            
-    except (ValueError, TypeError):
-        return "ERROR"
+def clasificar_anemia_por_hb(hb_ajustada):
+    if pd.isna(hb_ajustada):
+        return "SIN DATO"
+    elif hb_ajustada < 7.0:
+        return "ANEMIA SEVERA"
+    elif hb_ajustada < 10.0:
+        return "ANEMIA MODERADA"
+    elif hb_ajustada < 11.0:
+        return "ANEMIA LEVE"
+    else:
+        return "SIN ANEMIA"
 
 # ==================================================
 # SISTEMA DE INTERPRETACIÓN AUTOMÁTICA
@@ -2618,14 +2609,7 @@ with tab3:
                 else:
                     st.error("❌ No se pudieron cargar datos nacionales")
     
-    with col_btn2:
-        if st.button("🗺️ VER SOLO MAPA", 
-                    type="secondary", 
-                    use_container_width=True,
-                    key="btn_ver_mapa_solo_tab3"):
-            if 'mapa_peru' in st.session_state:
-                st.session_state.modo_mapa = True
-    
+       
     # ============================================
     # MOSTRAR DASHBOARD SI HAY DATOS
     # ============================================
@@ -2690,12 +2674,29 @@ with tab3:
                 </div>
             </div>
             """, unsafe_allow_html=True)
-        
+
         with col_met4:
-            casos_severos = indicadores['severa']
-            severo_color = "#dc2626" if casos_severos > 10 else "#f59e0b" if casos_severos > 5 else "#10b981"
-            severo_porcentaje = (casos_severos / indicadores['con_anemia'] * 100) if indicadores['con_anemia'] > 0 else 0
-            
+            casos_severos = (df["clasificacion_anemia"] == "ANEMIA SEVERA").sum()
+
+            severo_color = (
+                "#dc2626" if casos_severos > 10
+                else "#f59e0b" if casos_severos > 5
+                else "#10b981"
+            )
+
+            total_con_anemia = df[
+                df["clasificacion_anemia"].isin([
+                    "ANEMIA LEVE",
+                    "ANEMIA MODERADA",
+                    "ANEMIA SEVERA"
+                ])
+            ].shape[0]
+
+            severo_porcentaje = (
+                casos_severos / total_con_anemia * 100
+                if total_con_anemia > 0 else 0
+            )
+
             st.markdown(f"""
             <div class="metric-card-yellow" style="background: linear-gradient(135deg, {severo_color}20 0%, {severo_color}10 100%); border-left: 5px solid {severo_color};">
                 <div class="metric-label">CASOS SEVEROS</div>
@@ -2705,6 +2706,7 @@ with tab3:
                 </div>
             </div>
             """, unsafe_allow_html=True)
+
         
         # ============================================
         # MAPA INTERACTIVO DEL PERÚ + ESTADÍSTICO DE REGIÓN
@@ -3027,18 +3029,22 @@ with tab3:
                 delta=f"{indicadores['en_seguimiento']} pacientes"
             )
 
-        with col_stat3:
-            # Estadística: Proporción anemia severa
-            if indicadores['con_anemia'] > 0:
-                prop_severa = (indicadores['severa'] / indicadores['con_anemia']) * 100
-                st.metric(
-                    "⚠️ Anemia Severa", 
-                    f"{prop_severa:.1f}%",
-                    help="Proporción de casos severos entre pacientes con anemia"
-                )
-            else:
-                st.metric("⚠️ Anemia Severa", "0%")
+        with tab3:
+            st.markdown("## 📈 Dashboard Nacional")
+            df = obtener_datos_supabase()
 
+            if df.empty:
+                st.warning("No hay datos registrados")
+                st.stop()
+
+            df["clasificacion_anemia"] = df["hemoglobina_ajustada"].apply(
+            clasificar_anemia_por_hb
+            )
+
+            total_severa = (df["clasificacion_anemia"] == "ANEMIA SEVERA").sum()
+
+            st.metric("Casos de Anemia Severa", total_severa)
+    
         with col_stat4:
             # Estadística: Meta OMS
             meta_oms = 20  # Meta OMS es <20%
