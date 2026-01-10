@@ -2449,7 +2449,7 @@ with tab3:
     # ============================================
     
     def calcular_indicadores_anemia(datos):
-        """Calcula indicadores específicos de anemia"""
+        """Calcula indicadores específicos de anemia - VERSIÓN CORREGIDA"""
         if datos.empty:
             return {}
         
@@ -2457,29 +2457,33 @@ with tab3:
         if 'hemoglobina_dl1' not in datos.columns:
             datos['hemoglobina_dl1'] = 11.0
         
-        # Clasificar pacientes por nivel de anemia
-        condiciones = [
-            (datos['hemoglobina_dl1'] < 7.0),
-            (datos['hemoglobina_dl1'] < 10.0),
-            (datos['hemoglobina_dl1'] < 11.0),
-            (datos['hemoglobina_dl1'] >= 11.0)
-        ]
+        # Convertir a numérico por si acaso
+        datos['hemoglobina_dl1'] = pd.to_numeric(datos['hemoglobina_dl1'], errors='coerce')
         
-        categorias = ['SEVERA', 'MODERADA', 'LEVE', 'NORMAL']
-        datos['nivel_anemia'] = np.select(condiciones, categorias, default='NORMAL')
+        # **CORRECCIÓN: CONTAR CON RANGOS EXACTOS COMO clasificar_estado_anemia**
+        # 1. Anemia severa: Hb < 7.0
+        severa = len(datos[datos['hemoglobina_dl1'] < 7.0])
         
-        # Calcular indicadores nacionales
+        # 2. Anemia moderada: 7.0 <= Hb <= 9.9
+        moderada = len(datos[(datos['hemoglobina_dl1'] >= 7.0) & (datos['hemoglobina_dl1'] <= 9.9)])
+        
+        # 3. Anemia leve: 10.0 <= Hb <= 10.9
+        leve = len(datos[(datos['hemoglobina_dl1'] >= 10.0) & (datos['hemoglobina_dl1'] <= 10.9)])
+        
+        # 4. Sin anemia: Hb >= 11.0
+        normal = len(datos[datos['hemoglobina_dl1'] >= 11.0])
+        
         total = len(datos)
-        con_anemia = len(datos[datos['nivel_anemia'].isin(['SEVERA', 'MODERADA', 'LEVE'])])
+        con_anemia = severa + moderada + leve
         
         indicadores = {
             'total_pacientes': total,
             'con_anemia': con_anemia,
             'prevalencia_nacional': round((con_anemia / total * 100), 1) if total > 0 else 0,
-            'severa': len(datos[datos['nivel_anemia'] == 'SEVERA']),
-            'moderada': len(datos[datos['nivel_anemia'] == 'MODERADA']),
-            'leve': len(datos[datos['nivel_anemia'] == 'LEVE']),
-            'normal': len(datos[datos['nivel_anemia'] == 'NORMAL']),
+            'severa': severa,           # <-- AHORA SÍ CUENTA CORRECTAMENTE
+            'moderada': moderada,       # <-- CORREGIDO
+            'leve': leve,               # <-- CORREGIDO
+            'normal': normal,           # <-- CORREGIDO
             'en_seguimiento': datos['en_seguimiento'].sum() if 'en_seguimiento' in datos.columns else 0,
             'tasa_seguimiento': 0,
             'hb_promedio_nacional': datos['hemoglobina_dl1'].mean() if 'hemoglobina_dl1' in datos.columns else 0
@@ -2487,17 +2491,24 @@ with tab3:
         
         # Calcular tasa de seguimiento
         if con_anemia > 0:
-            anemia_df = datos[datos['nivel_anemia'].isin(['SEVERA', 'MODERADA', 'LEVE'])]
+            anemia_df = datos[datos['hemoglobina_dl1'] < 11.0]  # Todos con anemia
             if len(anemia_df) > 0:
-                indicadores['tasa_seguimiento'] = round((anemia_df['en_seguimiento'].sum() / len(anemia_df)) * 100, 1)
+                seguimiento = anemia_df['en_seguimiento'].sum() if 'en_seguimiento' in anemia_df.columns else 0
+                indicadores['tasa_seguimiento'] = round((seguimiento / len(anemia_df)) * 100, 1)
         
         # Calcular por región
         if 'region' in datos.columns:
             region_stats = {}
             for region in datos['region'].unique():
                 region_df = datos[datos['region'] == region]
+                
+                # **MISMA LÓGICA EXACTA PARA REGIONES**
+                severa_region = len(region_df[region_df['hemoglobina_dl1'] < 7.0])
+                moderada_region = len(region_df[(region_df['hemoglobina_dl1'] >= 7.0) & (region_df['hemoglobina_dl1'] <= 9.9)])
+                leve_region = len(region_df[(region_df['hemoglobina_dl1'] >= 10.0) & (region_df['hemoglobina_dl1'] <= 10.9)])
+                
                 total_region = len(region_df)
-                con_anemia_region = len(region_df[region_df['nivel_anemia'].isin(['SEVERA', 'MODERADA', 'LEVE'])])
+                con_anemia_region = severa_region + moderada_region + leve_region
                 
                 prevalencia_region = 0
                 if total_region > 0:
@@ -2508,9 +2519,9 @@ with tab3:
                     'con_anemia': con_anemia_region,
                     'prevalencia': prevalencia_region,
                     'hb_promedio': region_df['hemoglobina_dl1'].mean() if 'hemoglobina_dl1' in region_df.columns else 0,
-                    'severa': len(region_df[region_df['nivel_anemia'] == 'SEVERA']),
-                    'moderada': len(region_df[region_df['nivel_anemia'] == 'MODERADA']),
-                    'leve': len(region_df[region_df['nivel_anemia'] == 'LEVE']),
+                    'severa': severa_region,      # <-- CORRECTO
+                    'moderada': moderada_region,  # <-- CORRECTO
+                    'leve': leve_region,          # <-- CORRECTO
                     'en_seguimiento': region_df['en_seguimiento'].sum() if 'en_seguimiento' in region_df.columns else 0
                 }
             
@@ -2605,17 +2616,13 @@ with tab3:
                     st.session_state.mapa_peru = mapa_data
                     
                     st.success(f"✅ {len(datos_nacionales)} registros cargados - {indicadores['prevalencia_nacional']}% de prevalencia")
+                    
+                    # Verificación rápida
+                    st.info(f"🔍 **Conteo corregido:** Severa={indicadores['severa']}, Moderada={indicadores['moderada']}, Leve={indicadores['leve']}")
                 else:
                     st.error("❌ No se pudieron cargar datos nacionales")
     
-    with col_btn2:
-        if st.button("🗺️ VER SOLO MAPA", 
-                    type="secondary", 
-                    use_container_width=True,
-                    key="btn_ver_mapa_solo_tab3"):
-            if 'mapa_peru' in st.session_state:
-                st.session_state.modo_mapa = True
-    
+       
     # ============================================
     # MOSTRAR DASHBOARD SI HAY DATOS
     # ============================================
@@ -2983,7 +2990,7 @@ with tab3:
                     }
                 )
 
-               # ============================================
+        # ============================================
         # 📊 ESTADÍSTICAS NACIONALES ADICIONALES
         # ============================================
         
@@ -3057,7 +3064,6 @@ with tab3:
 
         # Línea separadora
         st.markdown("---")
-
         # ============================================
         # 📥 EXPORTAR REPORTES CON PDF
         # ============================================
