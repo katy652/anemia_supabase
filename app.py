@@ -2527,7 +2527,7 @@ with tab3:
 
         indicadores['por_region'] = region_stats
 
-    return indicadores
+        return indicadores
 
     
     def crear_mapa_peru(indicadores):
