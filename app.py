@@ -2709,7 +2709,15 @@ with tab3:
             </div>
              """, unsafe_allow_html=True)
 
-             st.write(df["clasificacion_anemia"].value_counts())
+    if 'indicadores_anemia' in st.session_state and st.session_state.indicadores_anemia:
+        indicadores = st.session_state.indicadores_anemia
+
+        # 👇 ESTO ES CLAVE (DENTRO DEL IF)
+        df = st.session_state.datos_nacionales.copy()
+
+        df["clasificacion_anemia"] = df["hemoglobina_dl1"].apply(
+        clasificar_anemia_por_hb
+    )
 
         # ============================================
         # MAPA INTERACTIVO DEL PERÚ + ESTADÍSTICO DE REGIÓN
