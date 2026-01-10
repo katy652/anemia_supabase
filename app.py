@@ -2707,9 +2707,9 @@ with tab3:
                     {severo_porcentaje:.1f}% de los casos
                 </div>
             </div>
-            """, unsafe_allow_html=True)
+             """, unsafe_allow_html=True)
 
-       st.write(df["clasificacion_anemia"].value_counts())
+             st.write(df["clasificacion_anemia"].value_counts())
 
         # ============================================
         # MAPA INTERACTIVO DEL PERÚ + ESTADÍSTICO DE REGIÓN
