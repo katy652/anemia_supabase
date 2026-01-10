@@ -1765,6 +1765,7 @@ with tab1:
                     "acceso_agua_potable": acceso_agua_potable,
                     "tiene_servicio_salud": tiene_servicio_salud,
                     "hemoglobina_dl1": float(hemoglobina_medida),
+                    "hemoglobina_ajustada": float(hemoglobina_ajustada),  # ✅ CLAVE
                     "en_seguimiento": en_seguimiento,
                     "consumir_hierro": consume_hierro,
                     "tipo_suplemento_hierro": tipo_suplemento_hierro.strip() if consume_hierro and tipo_suplemento_hierro else "",
