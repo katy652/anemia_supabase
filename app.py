@@ -2675,49 +2675,66 @@ with tab3:
             </div>
             """, unsafe_allow_html=True)
 
-        with col_met4:
-            # Casos severos reales
-            casos_severos = (df["clasificacion_anemia"] == "ANEMIA SEVERA").sum()
-            severo_color = (
-                "#dc2626" if casos_severos > 10
-                else "#f59e0b" if casos_severos > 5
-                else "#10b981"
-            )
-            total_con_anemia = df[
-                df["clasificacion_anemia"].isin([
-                    "ANEMIA LEVE",
-                    "ANEMIA MODERADA",
-                    "ANEMIA SEVERA"
-                ])
-            ].shape[0]
-            severo_porcentaje = (
-                casos_severos / total_con_anemia * 100
-                if total_con_anemia > 0 else 0
-            )
-            st.markdown(f"""
-            <div class="metric-card-yellow"
-                 style="background: linear-gradient(135deg, {severo_color}20 0%, {severo_color}10 100%);
-                    border-left: 5px solid {severo_color};">
-                <div class="metric-label">CASOS SEVEROS</div>
-                <div class="highlight-number"
-                     style="color: {severo_color}; font-size: 2.5rem;">
-                     🚨 {casos_severos}
-                </div>
-                <div style="font-size: 0.9rem; color: #6b7280;">
-                    {severo_porcentaje:.1f}% de los casos
-                </div>
-            </div>
-             """, unsafe_allow_html=True)
+  # ============================================
+# MOSTRAR DASHBOARD SI HAY DATOS
+# ============================================
 
-    if 'indicadores_anemia' in st.session_state and st.session_state.indicadores_anemia:
-        indicadores = st.session_state.indicadores_anemia
+if 'indicadores_anemia' in st.session_state and st.session_state.indicadores_anemia:
+    indicadores = st.session_state.indicadores_anemia
 
-        # 👇 ESTO ES CLAVE (DENTRO DEL IF)
-        df = st.session_state.datos_nacionales.copy()
+    # 👇 DF SE CREA AQUÍ
+    df = st.session_state.datos_nacionales.copy()
 
-        df["clasificacion_anemia"] = df["hemoglobina_dl1"].apply(
+    df["clasificacion_anemia"] = df["hemoglobina_dl1"].apply(
         clasificar_anemia_por_hb
     )
+
+    # ============================================
+    # MÉTRICAS PRINCIPALES
+    # ============================================
+
+    col_met1, col_met2, col_met3, col_met4 = st.columns(4)
+
+    with col_met4:
+        casos_severos = (df["clasificacion_anemia"] == "ANEMIA SEVERA").sum()
+
+        severo_color = (
+            "#dc2626" if casos_severos > 10
+            else "#f59e0b" if casos_severos > 5
+            else "#10b981"
+        )
+
+        total_con_anemia = df[
+            df["clasificacion_anemia"].isin([
+                "ANEMIA LEVE",
+                "ANEMIA MODERADA",
+                "ANEMIA SEVERA"
+            ])
+        ].shape[0]
+
+        severo_porcentaje = (
+            casos_severos / total_con_anemia * 100
+            if total_con_anemia > 0 else 0
+        )
+
+        st.markdown(f"""
+        <div class="metric-card-yellow"
+             style="background: linear-gradient(135deg, {severo_color}20 0%, {severo_color}10 100%);
+                    border-left: 5px solid {severo_color};">
+            <div class="metric-label">CASOS SEVEROS</div>
+            <div class="highlight-number"
+                 style="color: {severo_color}; font-size: 2.5rem;">
+                 🚨 {casos_severos}
+            </div>
+            <div style="font-size: 0.9rem; color: #6b7280;">
+                {severo_porcentaje:.1f}% de los casos
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+else:
+    st.warning("⚠️ No hay datos nacionales para mostrar")
+
 
         # ============================================
         # MAPA INTERACTIVO DEL PERÚ + ESTADÍSTICO DE REGIÓN
